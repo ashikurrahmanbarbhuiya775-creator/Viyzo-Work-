@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Viyzo Worker - AI Master Manager</title>
+
+<style>
+*{box-sizing:border-box}
+
+body{
+margin:0;
+font-family:Arial,sans-serif;
+background:#0b1020;
+color:#fff;
+}
+
+header{
+padding:22px 16px;
+text-align:center;
+background:#121a30;
+border-bottom:1px solid #293653;
+}
+
+header h1{
+margin:0;
+font-size:27px;
+}
+
+header p{
+margin:7px 0 0;
+color:#aeb9d5;
+}
+
+.container{
+max-width:850px;
+margin:auto;
+padding:18px;
+}
+
+.card{
+background:#121a30;
+border:1px solid #293653;
+border-radius:16px;
+padding:18px;
+margin-bottom:18px;
+}
+
+h2{
+margin-top:0;
+}
+
+label{
+display:block;
+margin-top:15px;
+margin-bottom:7px;
+color:#b8c4df;
+}
+
+input,select,textarea{
+width:100%;
+padding:13px;
+border-radius:10px;
+border:1px solid #374666;
+background:#0b1020;
+color:#fff;
+font-size:16px;
+}
+
+textarea{
+min-height:100px;
+}
+
+button{
+width:100%;
+padding:15px;
+margin-top:18px;
+border:0;
+border-radius:10px;
+background:#246bfe;
+color:#fff;
+font-size:17px;
+font-weight:bold;
+}
+
+.result{
+display:none;
+}
+
+.ai{
+background:#101f40;
+border:1px solid #3159a5;
+border-radius:12px;
+padding:15px;
+line-height:1.6;
+margin-bottom:18px;
+}
+
+.stats{
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:10px;
+}
+
+.stat{
+background:#0b1020;
+border:1px solid #293653;
+border-radius:12px;
+padding:15px;
+text-align:center;
+}
+
+.stat strong{
+display:block;
+font-size:22px;
+margin-top:7px;
+}
+
+.row{
+display:flex;
+justify-content:space-between;
+gap:10px;
+padding:13px 0;
+border-bottom:1px solid #293653;
+}
+
+.success{
+margin-top:15px;
+padding:13px;
+border-radius:10px;
+background:#10351f;
+border:1px solid #277344;
+}
+
+.warning{
+margin-top:15px;
+padding:13px;
+border-radius:10px;
+background:#3d2b0e;
+border:1px solid #79551c;
+}
+
+.worker{
+background:#0b1020;
+border:1px solid #293653;
+border-radius:10px;
+padding:12px;
+margin-top:9px;
+}
+
+.small{
+font-size:13px;
+color:#9eabc9;
+}
+
+@media(max-width:600px){
+.stats{
+grid-template-columns:1fr;
+}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>Viyzo Worker</h1>
+<p>🤖 AI Master Manager</p>
+</header>
+
+<div class="container">
+
+<div class="card">
+
+<h2>Company Job</h2>
+
+<label>काम का नाम</label>
+<input id="jobName" value="Product Listing">
+
+<label>Company Budget ($)</label>
+<input id="budget" type="number" value="500">
+
+<label>काम का प्रकार</label>
+
+<select id="jobType">
+
+<option value="data">Data Entry</option>
+<option value="aiData">AI Data / Annotation</option>
+<option value="translation">Translation</option>
+<option value="transcription">Transcription</option>
+<option value="listing" selected>E-commerce Product Listing</option>
+<option value="research">Web Research</option>
+<option value="support">Customer Support</option>
+<option value="design">Graphic Design</option>
+<option value="video">Video Editing</option>
+<option value="development">Web Development</option>
+<option value="ai">AI Development</option>
+
+</select>
+
+<label>कुल Workload</label>
+<input id="workload" type="number" value="1000">
+
+<label>Deadline (दिन)</label>
+<input id="deadline" type="number" value="3">
+
+<label>काम की जानकारी</label>
+
+<textarea id="description">Company को 1000 product listings चाहिए। हर listing में product name, price, image और description डालना है।</textarea>
+
+<button onclick="runManager()">
+🤖 Master Manager से Analyze करवाएँ
+</button>
+
+</div>
+
+
+<div class="card result" id="result">
+
+<h2>🤖 Master Manager Decision</h2>
+
+<div class="ai" id="aiMessage"></div>
+
+<div class="stats">
+
+<div class="stat">
+Company Budget
+<strong id="companyAmount">$0</strong>
+</div>
+
+<div class="stat">
+Worker Pool
+<strong id="workerAmount">$0</strong>
+</div>
+
+<div class="stat">
+Viyzo
+<strong id="viyzoAmount">$0</strong>
+</div>
+
+</div>
+
+
+<div style="margin-top:18px">
+
+<div class="row">
+<span>कुल Company Budget</span>
+<strong id="totalBudget">$0</strong>
+</div>
+
+<div class="row">
+<span>Worker हिस्सा — 80%</span>
+<strong id="workerPool">$0</strong>
+</div>
+
+<div class="row">
+<span>Viyzo हिस्सा — 20%</span>
+<strong id="viyzoPool">$0</strong>
+</div>
+
+<div class="row">
+<span>Recommended Workers</span>
+<strong id="workersCount">0</strong>
+</div>
+
+<div class="row">
+<span>औसत Payment / Worker</span>
+<strong id="perWorker">$0</strong>
+</div>
+
+<div class="row">
+<span>Workload / Worker</span>
+<strong id="workPerWorker">0</strong>
+</div>
+
+</div>
+
+<div id="statusBox"></div>
+
+<h3>Worker Distribution</h3>
+
+<div id="workerList"></div>
+
+</div>
+
+</div>
+
+
+<script>
+
+function runManager(){
+
+const jobName =
+document.getElementById("jobName").value;
+
+const budget =
+Number(document.getElementById("budget").value);
+
+const type =
+document.getElementById("jobType").value;
+
+const workload =
+Number(document.getElementById("workload").value);
+
+const deadline =
+Number(document.getElementById("deadline").value);
+
+
+if(budget<=0 || workload<=0 || deadline<=0){
+
+alert("Budget, Workload और Deadline सही डालें।");
+return;
+
+}
+
+
+/* =========================
+   VIYZO 80/20 BUSINESS RULE
+   ========================= */
+
+const workerPool =
+budget * 0.80;
+
+const viyzoPool =
+budget * 0.20;
+
+
+/* =========================
+   MASTER MANAGER CAPACITY
+   ========================= */
+
+let capacity;
+
+
+switch(type){
+
+case "data":
+capacity=250;
+break;
+
+case "aiData":
+capacity=150;
+break;
+
+case "translation":
+capacity=100;
+break;
+
+case "transcription":
+capacity=120;
+break;
+
+case "listing":
+capacity=125;
+break;
+
+case "research":
+capacity=80;
+break;
+
+case "support":
+capacity=100;
+break;
+
+case "design":
+capacity=5;
+break;
+
+case "video":
+capacity=4;
+break;
+
+case "development":
+capacity=1;
+break;
+
+case "ai":
+capacity=1;
+break;
+
+default:
+capacity=100;
+
+}
+
+
+/* =========================
+   WORKER COUNT
+   ========================= */
+
+let workers =
+Math.ceil(workload / capacity);
+
+
+/* Deadline कम हो तो
+   ज्यादा workers */
+
+if(deadline<=1){
+
+workers=Math.ceil(workers*2);
+
+}
+
+else if(deadline<=2){
+
+workers=Math.ceil(workers*1.5);
+
+}
+
+
+/* कम से कम 1 Worker */
+
+workers=Math.max(1,workers);
+
+
+/* =========================
+   PAYMENT SAFETY
+   ========================= */
+
+const minimumWorkerPayment=5;
+
+const maximumAffordableWorkers=
+Math.max(
+1,
+Math.floor(workerPool/minimumWorkerPayment)
+);
+
+let budgetWarning=false;
+
+
+if(workers>maximumAffordableWorkers){
+
+workers=maximumAffordableWorkers;
+
+budgetWarning=true;
+
+}
+
+
+/* =========================
+   FINAL CALCULATION
+   ========================= */
+
+const paymentPerWorker=
+workerPool/workers;
+
+const workloadPerWorker=
+Math.ceil(workload/workers);
+
+
+/* =========================
+   SHOW RESULT
+   ========================= */
+
+document.getElementById("result")
+.style.display="block";
+
+
+document.getElementById("companyAmount")
+.innerText="$"+budget.toFixed(2);
+
+document.getElementById("workerAmount")
+.innerText="$"+workerPool.toFixed(2);
+
+document.getElementById("viyzoAmount")
+.innerText="$"+viyzoPool.toFixed(2);
+
+
+document.getElementById("totalBudget")
+.innerText="$"+budget.toFixed(2);
+
+document.getElementById("workerPool")
+.innerText="$"+workerPool.toFixed(2);
+
+document.getElementById("viyzoPool")
+.innerText="$"+viyzoPool.toFixed(2);
+
+document.getElementById("workersCount")
+.innerText=workers;
+
+document.getElementById("perWorker")
+.innerText="$"+paymentPerWorker.toFixed(2);
+
+document.getElementById("workPerWorker")
+.innerText=workloadPerWorker;
+
+
+/* =========================
+   AI MESSAGE
+   ========================= */
+
+document.getElementById("aiMessage")
+.innerHTML=
+"<strong>Master Manager Recommendation</strong><br><br>"+
+"Job: "+jobName+
+"<br>Company Budget: $"+budget.toFixed(2)+
+"<br>Worker Pool: $"+workerPool.toFixed(2)+
+"<br>Viyzo Fee: $"+viyzoPool.toFixed(2)+
+"<br>Recommended Workers: "+workers+
+"<br>Average Worker Payment: $"+paymentPerWorker.toFixed(2)+
+"<br>Workload per Worker: "+workloadPerWorker;
+
+
+/* =========================
+   STATUS
+   ========================= */
+
+if(budgetWarning){
+
+document.getElementById("statusBox")
+.innerHTML=
+'<div class="warning">⚠️ Budget के हिसाब से Worker संख्या सीमित की गई है। Production version में Master Manager Company को अधिक budget की recommendation देगा।</div>';
+
+}else{
+
+document.getElementById("statusBox")
+.innerHTML=
+'<div class="success">✅ Job distribution तैयार है।</div>';
+
+}
+
+
+/* =========================
+   WORKER LIST
+   ========================= */
+
+const list=
+document.getElementById("workerList");
+
+list.innerHTML="";
+
+
+const show=
+Math.min(workers,20);
+
+
+for(let i=1;i<=show;i++){
+
+const div=
+document.createElement("div");
+
+div.className="worker";
+
+div.innerHTML=
+"<strong>Worker #"+i+
+"</strong><br>"+
+"<span class='small'>"+
+"Payment: $"+
+paymentPerWorker.toFixed(2)+
+" | Workload: "+
+workloadPerWorker+
+"</span>";
+
+list.appendChild(div);
+
+}
+
+
+if(workers>20){
+
+const more=
+document.createElement("div");
+
+more.className="worker";
+
+more.innerHTML=
+"<strong>+"+
+(workers-20)+
+" और Workers</strong><br>"+
+"<span class='small'>"+
+"Production version में सभी Workers database से आएँगे।"+
+"</span>";
+
+list.appendChild(more);
+
+}
+
+}
+
+</script>
+
+</body>
+</html>
