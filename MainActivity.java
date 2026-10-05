@@ -3,25 +3,38 @@ package com.viyzo.worker;
 import android.app.Activity;
 import android.os.Bundle;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.view.Gravity;
+import android.view.View;
 import android.widget.*;
 
 public class MainActivity extends Activity {
 
     LinearLayout main;
+    int bg = Color.rgb(15, 16, 22);
+    int card = Color.rgb(28, 30, 40);
+    int white = Color.WHITE;
+    int gray = Color.LTGRAY;
 
     @Override
-    public void onCreate(Bundle b) {
-        super.onCreate(b);
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         showHome();
     }
 
     TextView text(String value, int size) {
         TextView t = new TextView(this);
         t.setText(value);
-        t.setTextColor(Color.WHITE);
+        t.setTextColor(white);
         t.setTextSize(size);
-        t.setPadding(10, 10, 10, 10);
+        t.setPadding(18, 14, 18, 14);
+        return t;
+    }
+
+    TextView title(String value) {
+        TextView t = text(value, 28);
+        t.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        t.setGravity(Gravity.CENTER);
         return t;
     }
 
@@ -29,16 +42,18 @@ public class MainActivity extends Activity {
         Button b = new Button(this);
         b.setText(value);
         b.setTextSize(16);
+        b.setAllCaps(false);
         return b;
     }
 
     void base() {
+        ScrollView scroll = new ScrollView(this);
+
         main = new LinearLayout(this);
         main.setOrientation(LinearLayout.VERTICAL);
-        main.setPadding(25, 25, 25, 25);
-        main.setBackgroundColor(Color.rgb(16, 16, 20));
+        main.setPadding(18, 18, 18, 30);
+        main.setBackgroundColor(bg);
 
-        ScrollView scroll = new ScrollView(this);
         scroll.addView(main);
         setContentView(scroll);
     }
@@ -46,18 +61,37 @@ public class MainActivity extends Activity {
     void showHome() {
         base();
 
-        TextView title = text("🤖 Viyzo Worker", 30);
-        title.setGravity(Gravity.CENTER);
-        main.addView(title);
+        main.addView(title("🤖 Viyzo Worker"));
 
-        TextView sub = text("AI Managed Global Work Platform", 16);
-        sub.setTextColor(Color.LTGRAY);
+        TextView sub = text(
+                "AI Managed Global Work Platform",
+                16
+        );
+        sub.setTextColor(gray);
         sub.setGravity(Gravity.CENTER);
         main.addView(sub);
 
-        main.addView(text("💰 Earnings: $0.00", 20));
+        main.addView(text(
+                "\n💰 Available Earnings\n$0.00\n\n" +
+                "📋 Active Jobs\n1\n\n" +
+                "⭐ Worker Rating\nNew Worker",
+                19
+        ));
 
-        Button jobs = button("🔎 Available Jobs");
+        main.addView(text(
+                "🔥 Recommended for You",
+                22
+        ));
+
+        main.addView(text(
+                "📦 Product Listing\n" +
+                "💵 Payment: $50\n" +
+                "📦 Workload: 125 products\n" +
+                "⏰ Deadline: 3 days",
+                17
+        ));
+
+        Button jobs = button("🔎 View Available Jobs");
         Button myJobs = button("📋 My Jobs");
         Button earnings = button("💰 Earnings");
         Button profile = button("👤 Worker Profile");
@@ -76,24 +110,24 @@ public class MainActivity extends Activity {
     void showJobs() {
         base();
 
-        main.addView(text("🔎 Available Jobs", 28));
+        main.addView(title("🔎 Available Jobs"));
 
         main.addView(text(
-            "📦 Product Listing\n\n" +
-            "Company: Demo Company\n" +
-            "Budget: $500\n" +
-            "Worker Pool: $400\n" +
-            "Workers Needed: 8\n" +
-            "Payment: $50 / worker\n" +
-            "Workload: 125 products\n" +
-            "Deadline: 3 days\n\n" +
-            "Task: Add product information, images and descriptions.",
-            17
+                "📦 PRODUCT LISTING\n\n" +
+                "Company: Demo Company\n\n" +
+                "💵 Worker Payment: $50\n" +
+                "📦 Workload: 125 products\n" +
+                "👥 Workers Needed: 8\n" +
+                "⏰ Deadline: 3 days\n" +
+                "⭐ Required Quality: High\n\n" +
+                "Task:\n" +
+                "Add product information, images and descriptions.",
+                17
         ));
 
         Button details = button("📄 Job Details");
         Button accept = button("✅ Accept Job");
-        Button back = button("⬅ Back");
+        Button back = button("⬅ Home");
 
         main.addView(details);
         main.addView(accept);
@@ -102,9 +136,12 @@ public class MainActivity extends Activity {
         details.setOnClickListener(v -> showJobDetails());
 
         accept.setOnClickListener(v -> {
-            Toast.makeText(this,
-                "✅ Job accepted successfully!",
-                Toast.LENGTH_LONG).show();
+            Toast.makeText(
+                    this,
+                    "✅ Job accepted successfully!",
+                    Toast.LENGTH_LONG
+            ).show();
+
             showMyJobs();
         });
 
@@ -114,41 +151,53 @@ public class MainActivity extends Activity {
     void showJobDetails() {
         base();
 
-        main.addView(text("📄 Job Details", 28));
+        main.addView(title("📄 Job Details"));
 
         main.addView(text(
-            "Product Listing Job\n\n" +
-            "💵 Worker Payment: $50\n" +
-            "📦 Workload: 125 products\n" +
-            "⏰ Deadline: 3 days\n" +
-            "⭐ Required Quality: High\n\n" +
-            "Complete the assigned product listings according to the company's instructions.",
-            17
+                "Product Listing Job\n\n" +
+                "Company: Demo Company\n\n" +
+                "💵 Payment: $50\n" +
+                "📦 Assigned Work: 125 products\n" +
+                "⏰ Deadline: 3 days\n" +
+                "⭐ Quality: High\n\n" +
+                "You must complete the assigned product listings " +
+                "according to the company's instructions.\n\n" +
+                "After submission, the company will review the work.",
+                17
         ));
 
         Button accept = button("✅ Accept This Job");
-        Button back = button("⬅ Back to Jobs");
+        Button back = button("⬅ Back");
 
         main.addView(accept);
         main.addView(back);
 
-        accept.setOnClickListener(v -> showMyJobs());
+        accept.setOnClickListener(v -> {
+            Toast.makeText(
+                    this,
+                    "✅ Job accepted!",
+                    Toast.LENGTH_LONG
+            ).show();
+
+            showMyJobs();
+        });
+
         back.setOnClickListener(v -> showJobs());
     }
 
     void showMyJobs() {
         base();
 
-        main.addView(text("📋 My Jobs", 28));
+        main.addView(title("📋 My Jobs"));
 
         main.addView(text(
-            "Active Job\n\n" +
-            "📦 Product Listing\n" +
-            "Payment: $50\n" +
-            "Progress: 0%\n" +
-            "Deadline: 3 days\n\n" +
-            "Status: 🟡 In Progress",
-            18
+                "🟡 ACTIVE JOB\n\n" +
+                "📦 Product Listing\n" +
+                "💵 Payment: $50\n" +
+                "📊 Progress: 0%\n" +
+                "⏰ Deadline: 3 days\n\n" +
+                "Status: In Progress",
+                18
         ));
 
         Button submit = button("📤 Submit Work");
@@ -164,19 +213,20 @@ public class MainActivity extends Activity {
     void showSubmit() {
         base();
 
-        main.addView(text("📤 Submit Work", 28));
+        main.addView(title("📤 Submit Work"));
 
         main.addView(text(
-            "Product Listing Job\n\n" +
-            "When your work is completed, submit it for company review.",
-            17
+                "Product Listing Job\n\n" +
+                "Complete your assigned work and submit the details below.\n",
+                17
         ));
 
         EditText work = new EditText(this);
         work.setHint("Enter your submission details...");
-        work.setTextColor(Color.WHITE);
-        work.setHintTextColor(Color.LTGRAY);
-
+        work.setTextColor(white);
+        work.setHintTextColor(gray);
+        work.setMinLines(5);
+        work.setGravity(Gravity.TOP);
         main.addView(work);
 
         Button submit = button("🚀 Submit for Review");
@@ -186,9 +236,21 @@ public class MainActivity extends Activity {
         main.addView(back);
 
         submit.setOnClickListener(v -> {
-            Toast.makeText(this,
-                "✅ Work submitted for review!",
-                Toast.LENGTH_LONG).show();
+            if (work.getText().toString().trim().isEmpty()) {
+                Toast.makeText(
+                        this,
+                        "Please enter submission details.",
+                        Toast.LENGTH_SHORT
+                ).show();
+                return;
+            }
+
+            Toast.makeText(
+                    this,
+                    "✅ Work submitted for review!",
+                    Toast.LENGTH_LONG
+            ).show();
+
             showMyJobs();
         });
 
@@ -198,16 +260,16 @@ public class MainActivity extends Activity {
     void showEarnings() {
         base();
 
-        main.addView(text("💰 Earnings", 28));
+        main.addView(title("💰 Earnings"));
 
         main.addView(text(
-            "Available Balance\n\n" +
-            "$0.00\n\n" +
-            "Pending Earnings\n" +
-            "$50.00\n\n" +
-            "Total Earned\n" +
-            "$50.00",
-            20
+                "Available Balance\n\n" +
+                "$0.00\n\n" +
+                "Pending Earnings\n\n" +
+                "$50.00\n\n" +
+                "Total Earned\n\n" +
+                "$50.00",
+                21
         ));
 
         Button withdraw = button("💸 Withdraw");
@@ -217,9 +279,11 @@ public class MainActivity extends Activity {
         main.addView(back);
 
         withdraw.setOnClickListener(v ->
-            Toast.makeText(this,
-                "Withdrawal system will be connected later.",
-                Toast.LENGTH_LONG).show()
+                Toast.makeText(
+                        this,
+                        "Withdrawal system will be connected with the real payment backend later.",
+                        Toast.LENGTH_LONG
+                ).show()
         );
 
         back.setOnClickListener(v -> showHome());
@@ -228,16 +292,17 @@ public class MainActivity extends Activity {
     void showProfile() {
         base();
 
-        main.addView(text("👤 Worker Profile", 28));
+        main.addView(title("👤 Worker Profile"));
 
         main.addView(text(
-            "Name: Viyzo Worker\n\n" +
-            "⭐ Rating: New Worker\n" +
-            "🛠 Skills: Product Listing\n" +
-            "🌍 Country: India\n" +
-            "📊 Jobs Completed: 0\n" +
-            "💰 Total Earnings: $0.00",
-            18
+                "Name: Viyzo Worker\n\n" +
+                "🌍 Country: India\n" +
+                "⭐ Rating: New Worker\n" +
+                "🛠 Skills: Product Listing\n" +
+                "📊 Jobs Completed: 0\n" +
+                "💰 Total Earnings: $0.00\n" +
+                "✅ Verification: Demo",
+                18
         ));
 
         Button back = button("⬅ Home");
