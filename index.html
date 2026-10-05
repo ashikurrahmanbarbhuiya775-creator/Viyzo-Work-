@@ -1,178 +1,229 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Viyzo Worker - AI Master Manager</title>
+<title>Viyzo Worker</title>
 
 <style>
-*{box-sizing:border-box}
+*{
+  box-sizing:border-box;
+}
 
 body{
-margin:0;
-font-family:Arial,sans-serif;
-background:#0b1020;
-color:#fff;
-}
-
-header{
-padding:22px 16px;
-text-align:center;
-background:#121a30;
-border-bottom:1px solid #293653;
-}
-
-header h1{
-margin:0;
-font-size:27px;
-}
-
-header p{
-margin:7px 0 0;
-color:#aeb9d5;
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#101014;
+  color:white;
 }
 
 .container{
-max-width:850px;
-margin:auto;
-padding:18px;
+  max-width:700px;
+  margin:auto;
+  padding:18px;
+}
+
+.header{
+  text-align:center;
+  padding:20px 10px;
+}
+
+.logo{
+  font-size:34px;
+  font-weight:bold;
+}
+
+.subtitle{
+  color:#aaa;
+  margin-top:6px;
 }
 
 .card{
-background:#121a30;
-border:1px solid #293653;
-border-radius:16px;
-padding:18px;
-margin-bottom:18px;
+  background:#1b1b22;
+  border-radius:16px;
+  padding:18px;
+  margin-bottom:16px;
+  border:1px solid #292933;
 }
 
 h2{
-margin-top:0;
+  margin-top:0;
 }
 
 label{
-display:block;
-margin-top:15px;
-margin-bottom:7px;
-color:#b8c4df;
+  display:block;
+  margin-top:14px;
+  margin-bottom:6px;
+  color:#ccc;
 }
 
 input,select,textarea{
-width:100%;
-padding:13px;
-border-radius:10px;
-border:1px solid #374666;
-background:#0b1020;
-color:#fff;
-font-size:16px;
+  width:100%;
+  padding:13px;
+  border-radius:10px;
+  border:1px solid #3a3a45;
+  background:#111116;
+  color:white;
+  font-size:15px;
 }
 
 textarea{
-min-height:100px;
+  min-height:90px;
+  resize:vertical;
 }
 
 button{
-width:100%;
-padding:15px;
-margin-top:18px;
-border:0;
-border-radius:10px;
-background:#246bfe;
-color:#fff;
-font-size:17px;
-font-weight:bold;
+  width:100%;
+  padding:14px;
+  margin-top:14px;
+  border:0;
+  border-radius:11px;
+  background:#ffffff;
+  color:#111;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
 }
 
-.result{
-display:none;
+button.secondary{
+  background:#292933;
+  color:white;
 }
 
-.ai{
-background:#101f40;
-border:1px solid #3159a5;
-border-radius:12px;
-padding:15px;
-line-height:1.6;
-margin-bottom:18px;
+.job{
+  padding:14px;
+  background:#14141a;
+  border:1px solid #30303a;
+  border-radius:12px;
+  margin-top:12px;
 }
 
-.stats{
-display:grid;
-grid-template-columns:repeat(3,1fr);
-gap:10px;
+.job-title{
+  font-size:18px;
+  font-weight:bold;
 }
 
-.stat{
-background:#0b1020;
-border:1px solid #293653;
-border-radius:12px;
-padding:15px;
-text-align:center;
+.job-info{
+  color:#aaa;
+  margin-top:7px;
+  line-height:1.6;
 }
 
-.stat strong{
-display:block;
-font-size:22px;
-margin-top:7px;
+.badge{
+  display:inline-block;
+  padding:5px 9px;
+  border-radius:20px;
+  background:#292933;
+  color:#ddd;
+  font-size:12px;
+  margin-top:8px;
+}
+
+.money{
+  font-size:28px;
+  font-weight:bold;
 }
 
 .row{
-display:flex;
-justify-content:space-between;
-gap:10px;
-padding:13px 0;
-border-bottom:1px solid #293653;
+  display:flex;
+  gap:10px;
+}
+
+.row > div{
+  flex:1;
+}
+
+.hidden{
+  display:none;
 }
 
 .success{
-margin-top:15px;
-padding:13px;
-border-radius:10px;
-background:#10351f;
-border:1px solid #277344;
+  background:#17251b;
+  border:1px solid #29452f;
+  color:#b8e8c0;
+  padding:13px;
+  border-radius:10px;
+  margin-top:12px;
 }
 
-.warning{
-margin-top:15px;
-padding:13px;
-border-radius:10px;
-background:#3d2b0e;
-border:1px solid #79551c;
+.nav{
+  display:flex;
+  gap:8px;
+  margin-bottom:16px;
 }
 
-.worker{
-background:#0b1020;
-border:1px solid #293653;
-border-radius:10px;
-padding:12px;
-margin-top:9px;
+.nav button{
+  margin:0;
+  padding:11px 8px;
+  font-size:13px;
+  background:#1e1e26;
+  color:#ccc;
+}
+
+.nav button.active{
+  background:white;
+  color:#111;
 }
 
 .small{
-font-size:13px;
-color:#9eabc9;
+  color:#999;
+  font-size:13px;
 }
 
-@media(max-width:600px){
-.stats{
-grid-template-columns:1fr;
+.worker-item{
+  display:flex;
+  justify-content:space-between;
+  padding:11px 0;
+  border-bottom:1px solid #292933;
 }
+
+@media(max-width:500px){
+  .row{
+    flex-direction:column;
+  }
+
+  .nav button{
+    font-size:11px;
+  }
 }
 </style>
 </head>
 
 <body>
 
-<header>
-<h1>Viyzo Worker</h1>
-<p>🤖 AI Master Manager</p>
-</header>
-
 <div class="container">
+
+<div class="header">
+  <div class="logo">🤖 Viyzo Worker</div>
+  <div class="subtitle">AI Managed Global Work Platform</div>
+</div>
+
+<div class="nav">
+  <button id="companyBtn" class="active" onclick="showPage('company')">
+    Company
+  </button>
+
+  <button id="workerBtn" onclick="showPage('worker')">
+    Worker
+  </button>
+
+  <button id="earnBtn" onclick="showPage('earnings')">
+    Earnings
+  </button>
+</div>
+
+
+<!-- COMPANY PAGE -->
+
+<div id="companyPage">
 
 <div class="card">
 
-<h2>Company Job</h2>
+<h2>🤖 AI Master Manager</h2>
+
+<p class="small">
+Company Job
+</p>
 
 <label>काम का नाम</label>
 <input id="jobName" value="Product Listing">
@@ -181,7 +232,6 @@ grid-template-columns:1fr;
 <input id="budget" type="number" value="500">
 
 <label>काम का प्रकार</label>
-
 <select id="jobType">
 
 <option value="data">Data Entry</option>
@@ -205,81 +255,210 @@ grid-template-columns:1fr;
 <input id="deadline" type="number" value="3">
 
 <label>काम की जानकारी</label>
-
-<textarea id="description">Company को 1000 product listings चाहिए। हर listing में product name, price, image और description डालना है।</textarea>
+<textarea id="description">Company को 1000 product listings चाहिए। प्रत्येक listing में product title, description, price और category की जानकारी पूरी करनी है।</textarea>
 
 <button onclick="runManager()">
-🤖 Master Manager से Analyze करवाएँ
+🤖 Master Manager से Analyze
+</button>
+
+<div id="managerResult"></div>
+
+</div>
+
+</div>
+
+
+<!-- WORKER PAGE -->
+
+<div id="workerPage" class="hidden">
+
+<div class="card">
+
+<h2>👤 Worker Dashboard</h2>
+
+<p class="small">
+Welcome Worker 👋
+</p>
+
+<div class="row">
+
+<div class="job">
+<div class="small">Available Jobs</div>
+<div class="money" id="jobCount">4</div>
+</div>
+
+<div class="job">
+<div class="small">Your Rating</div>
+<div class="money">4.8 ⭐</div>
+</div>
+
+</div>
+
+</div>
+
+
+<div class="card">
+
+<h2>🔎 Available Jobs</h2>
+
+<div class="job">
+
+<div class="job-title">
+Product Listing
+</div>
+
+<div class="job-info">
+💰 Worker Payment: $50<br>
+📦 Workload: 125 products<br>
+⏱ Deadline: 3 days<br>
+🏢 Category: E-commerce
+</div>
+
+<span class="badge">AI Matched</span>
+
+<button onclick="acceptJob('Product Listing')">
+✅ Accept Job
 </button>
 
 </div>
 
 
-<div class="card result" id="result">
+<div class="job">
 
-<h2>🤖 Master Manager Decision</h2>
-
-<div class="ai" id="aiMessage"></div>
-
-<div class="stats">
-
-<div class="stat">
-Company Budget
-<strong id="companyAmount">$0</strong>
+<div class="job-title">
+Web Research
 </div>
 
-<div class="stat">
-Worker Pool
-<strong id="workerAmount">$0</strong>
+<div class="job-info">
+💰 Worker Payment: $35<br>
+📦 Workload: 80 records<br>
+⏱ Deadline: 2 days<br>
+🏢 Category: Research
 </div>
 
-<div class="stat">
-Viyzo
-<strong id="viyzoAmount">$0</strong>
-</div>
+<span class="badge">Recommended</span>
+
+<button onclick="acceptJob('Web Research')">
+✅ Accept Job
+</button>
 
 </div>
 
 
-<div style="margin-top:18px">
+<div class="job">
 
-<div class="row">
-<span>कुल Company Budget</span>
-<strong id="totalBudget">$0</strong>
+<div class="job-title">
+Translation
 </div>
 
-<div class="row">
-<span>Worker हिस्सा — 80%</span>
-<strong id="workerPool">$0</strong>
+<div class="job-info">
+💰 Worker Payment: $40<br>
+📦 Workload: 1000 words<br>
+⏱ Deadline: 2 days<br>
+🏢 Category: Translation
 </div>
 
-<div class="row">
-<span>Viyzo हिस्सा — 20%</span>
-<strong id="viyzoPool">$0</strong>
-</div>
+<span class="badge">Available</span>
 
-<div class="row">
-<span>Recommended Workers</span>
-<strong id="workersCount">0</strong>
-</div>
-
-<div class="row">
-<span>औसत Payment / Worker</span>
-<strong id="perWorker">$0</strong>
-</div>
-
-<div class="row">
-<span>Workload / Worker</span>
-<strong id="workPerWorker">0</strong>
-</div>
+<button onclick="acceptJob('Translation')">
+✅ Accept Job
+</button>
 
 </div>
 
-<div id="statusBox"></div>
 
-<h3>Worker Distribution</h3>
+<div class="job">
 
-<div id="workerList"></div>
+<div class="job-title">
+AI Data Annotation
+</div>
+
+<div class="job-info">
+💰 Worker Payment: $45<br>
+📦 Workload: 150 tasks<br>
+⏱ Deadline: 3 days<br>
+🏢 Category: AI Data
+</div>
+
+<span class="badge">AI Matched</span>
+
+<button onclick="acceptJob('AI Data Annotation')">
+✅ Accept Job
+</button>
+
+</div>
+
+<div id="acceptResult"></div>
+
+</div>
+
+
+<div class="card">
+
+<h2>📦 My Assigned Work</h2>
+
+<div id="assignedWork">
+
+<p class="small">
+अभी कोई job accept नहीं किया गया है।
+</p>
+
+</div>
+
+</div>
+
+</div>
+
+
+<!-- EARNINGS PAGE -->
+
+<div id="earningsPage" class="hidden">
+
+<div class="card">
+
+<h2>💰 Worker Earnings</h2>
+
+<div class="job">
+
+<div class="small">
+Available Balance
+</div>
+
+<div class="money" id="balance">
+$0.00
+</div>
+
+</div>
+
+<button onclick="withdraw()">
+💳 Withdraw
+</button>
+
+<div id="withdrawResult"></div>
+
+</div>
+
+
+<div class="card">
+
+<h2>📊 Earnings History</h2>
+
+<div class="worker-item">
+<span>Completed Jobs</span>
+<strong id="completedJobs">0</strong>
+</div>
+
+<div class="worker-item">
+<span>Total Earned</span>
+<strong id="totalEarned">$0.00</strong>
+</div>
+
+<div class="worker-item">
+<span>Pending Payment</span>
+<strong>$0.00</strong>
+</div>
+
+</div>
 
 </div>
 
@@ -288,292 +467,324 @@ Viyzo
 
 <script>
 
+let balance = 0;
+let completedJobs = 0;
+
+
+/* PAGE SWITCH */
+
+function showPage(page){
+
+document.getElementById("companyPage").classList.add("hidden");
+document.getElementById("workerPage").classList.add("hidden");
+document.getElementById("earningsPage").classList.add("hidden");
+
+document.getElementById("companyBtn").classList.remove("active");
+document.getElementById("workerBtn").classList.remove("active");
+document.getElementById("earnBtn").classList.remove("active");
+
+if(page === "company"){
+
+document.getElementById("companyPage").classList.remove("hidden");
+document.getElementById("companyBtn").classList.add("active");
+
+}
+
+if(page === "worker"){
+
+document.getElementById("workerPage").classList.remove("hidden");
+document.getElementById("workerBtn").classList.add("active");
+
+}
+
+if(page === "earnings"){
+
+document.getElementById("earningsPage").classList.remove("hidden");
+document.getElementById("earnBtn").classList.add("active");
+
+}
+
+}
+
+
+/* AI MASTER MANAGER */
+
 function runManager(){
 
-const jobName =
+let jobName =
 document.getElementById("jobName").value;
 
-const budget =
+let budget =
 Number(document.getElementById("budget").value);
 
-const type =
-document.getElementById("jobType").value;
-
-const workload =
+let workload =
 Number(document.getElementById("workload").value);
 
-const deadline =
+let deadline =
 Number(document.getElementById("deadline").value);
 
+let type =
+document.getElementById("jobType").value;
 
-if(budget<=0 || workload<=0 || deadline<=0){
 
-alert("Budget, Workload और Deadline सही डालें।");
+/* 80 / 20 MODEL */
+
+let workerPool = budget * 0.80;
+let viyzoFee = budget * 0.20;
+
+
+/* WORK CAPACITY */
+
+let capacity = {
+
+data:250,
+aiData:150,
+translation:100,
+transcription:120,
+listing:125,
+research:80,
+support:100,
+design:5,
+video:4,
+development:1,
+ai:1
+
+};
+
+
+let workers =
+Math.ceil(workload / capacity[type]);
+
+
+/* DEADLINE */
+
+if(deadline <= 1){
+
+workers = Math.ceil(workers * 2);
+
+}
+
+else if(deadline <= 2){
+
+workers = Math.ceil(workers * 1.5);
+
+}
+
+
+/* MINIMUM WORKER PAYMENT */
+
+let maxWorkers =
+Math.floor(workerPool / 5);
+
+if(maxWorkers < 1){
+
+maxWorkers = 1;
+
+}
+
+workers =
+Math.min(workers,maxWorkers);
+
+
+let payment =
+workerPool / workers;
+
+let workloadPerWorker =
+Math.ceil(workload / workers);
+
+
+let result = `
+
+<div class="success">
+
+<b>🤖 Master Manager Decision</b>
+
+<br><br>
+
+<b>Master Manager Recommendation</b>
+
+<br><br>
+
+Job: ${jobName}<br>
+Company Budget: $${budget.toFixed(2)}<br>
+Worker Pool: $${workerPool.toFixed(2)}<br>
+Viyzo Fee: $${viyzoFee.toFixed(2)}<br>
+Recommended Workers: ${workers}<br>
+Average Worker Payment: $${payment.toFixed(2)}<br>
+Workload per Worker: ${workloadPerWorker}
+
+<br><br>
+
+<b>Distribution</b>
+
+<br><br>
+
+`;
+
+for(let i=1;i<=Math.min(workers,20);i++){
+
+result += `
+<div class="worker-item">
+<span>Worker #${i}</span>
+<span>$${payment.toFixed(2)} / ${workloadPerWorker} tasks</span>
+</div>
+`;
+
+}
+
+if(workers > 20){
+
+result += `<br>+ ${workers-20} और Workers`;
+
+}
+
+result += `
+
+<br>
+
+<b>Worker हिस्सा: 80%</b><br>
+<b>Viyzo हिस्सा: 20%</b>
+
+<br><br>
+
+✅ Job distribution तैयार है।
+
+</div>
+
+`;
+
+document.getElementById("managerResult").innerHTML = result;
+
+}
+
+
+/* ACCEPT JOB */
+
+function acceptJob(jobName){
+
+let payment = 50;
+
+balance += payment;
+
+completedJobs += 1;
+
+document.getElementById("balance").innerText =
+"$" + balance.toFixed(2);
+
+document.getElementById("totalEarned").innerText =
+"$" + balance.toFixed(2);
+
+document.getElementById("completedJobs").innerText =
+completedJobs;
+
+document.getElementById("acceptResult").innerHTML = `
+
+<div class="success">
+
+✅ ${jobName} successfully accepted.
+
+<br><br>
+
+🤖 AI Master Manager ने आपके लिए यह job assign किया है।
+
+<br><br>
+
+💰 Demo Worker Payment: $${payment}
+
+</div>
+
+`;
+
+document.getElementById("assignedWork").innerHTML = `
+
+<div class="job">
+
+<div class="job-title">
+${jobName}
+</div>
+
+<div class="job-info">
+
+Status: 🟡 Assigned<br>
+Payment: $${payment}<br>
+Work Status: 0%<br>
+Deadline: Active
+
+</div>
+
+<button onclick="submitWork()">
+📤 Submit Work
+</button>
+
+</div>
+
+`;
+
+}
+
+
+/* SUBMIT WORK */
+
+function submitWork(){
+
+document.getElementById("assignedWork").innerHTML = `
+
+<div class="success">
+
+📤 Work submitted successfully.
+
+<br><br>
+
+🤖 AI Master Manager is checking your work...
+
+<br><br>
+
+Status: 🟡 Under Review
+
+</div>
+
+`;
+
+}
+
+
+/* WITHDRAW */
+
+function withdraw(){
+
+if(balance <= 0){
+
+document.getElementById("withdrawResult").innerHTML = `
+
+<div class="success">
+
+⚠️ अभी withdraw करने के लिए कोई balance नहीं है।
+
+</div>
+
+`;
+
 return;
 
 }
 
+document.getElementById("withdrawResult").innerHTML = `
 
-/* =========================
-   VIYZO 80/20 BUSINESS RULE
-   ========================= */
+<div class="success">
 
-const workerPool =
-budget * 0.80;
+💳 Withdrawal request created.
 
-const viyzoPool =
-budget * 0.20;
+<br><br>
 
+Amount: $${balance.toFixed(2)}
 
-/* =========================
-   MASTER MANAGER CAPACITY
-   ========================= */
+<br><br>
 
-let capacity;
+⚠️ यह अभी Demo है। Real payment system बाद में secure backend/payment provider से जोड़ा जाएगा।
 
+</div>
 
-switch(type){
-
-case "data":
-capacity=250;
-break;
-
-case "aiData":
-capacity=150;
-break;
-
-case "translation":
-capacity=100;
-break;
-
-case "transcription":
-capacity=120;
-break;
-
-case "listing":
-capacity=125;
-break;
-
-case "research":
-capacity=80;
-break;
-
-case "support":
-capacity=100;
-break;
-
-case "design":
-capacity=5;
-break;
-
-case "video":
-capacity=4;
-break;
-
-case "development":
-capacity=1;
-break;
-
-case "ai":
-capacity=1;
-break;
-
-default:
-capacity=100;
-
-}
-
-
-/* =========================
-   WORKER COUNT
-   ========================= */
-
-let workers =
-Math.ceil(workload / capacity);
-
-
-/* Deadline कम हो तो
-   ज्यादा workers */
-
-if(deadline<=1){
-
-workers=Math.ceil(workers*2);
-
-}
-
-else if(deadline<=2){
-
-workers=Math.ceil(workers*1.5);
-
-}
-
-
-/* कम से कम 1 Worker */
-
-workers=Math.max(1,workers);
-
-
-/* =========================
-   PAYMENT SAFETY
-   ========================= */
-
-const minimumWorkerPayment=5;
-
-const maximumAffordableWorkers=
-Math.max(
-1,
-Math.floor(workerPool/minimumWorkerPayment)
-);
-
-let budgetWarning=false;
-
-
-if(workers>maximumAffordableWorkers){
-
-workers=maximumAffordableWorkers;
-
-budgetWarning=true;
-
-}
-
-
-/* =========================
-   FINAL CALCULATION
-   ========================= */
-
-const paymentPerWorker=
-workerPool/workers;
-
-const workloadPerWorker=
-Math.ceil(workload/workers);
-
-
-/* =========================
-   SHOW RESULT
-   ========================= */
-
-document.getElementById("result")
-.style.display="block";
-
-
-document.getElementById("companyAmount")
-.innerText="$"+budget.toFixed(2);
-
-document.getElementById("workerAmount")
-.innerText="$"+workerPool.toFixed(2);
-
-document.getElementById("viyzoAmount")
-.innerText="$"+viyzoPool.toFixed(2);
-
-
-document.getElementById("totalBudget")
-.innerText="$"+budget.toFixed(2);
-
-document.getElementById("workerPool")
-.innerText="$"+workerPool.toFixed(2);
-
-document.getElementById("viyzoPool")
-.innerText="$"+viyzoPool.toFixed(2);
-
-document.getElementById("workersCount")
-.innerText=workers;
-
-document.getElementById("perWorker")
-.innerText="$"+paymentPerWorker.toFixed(2);
-
-document.getElementById("workPerWorker")
-.innerText=workloadPerWorker;
-
-
-/* =========================
-   AI MESSAGE
-   ========================= */
-
-document.getElementById("aiMessage")
-.innerHTML=
-"<strong>Master Manager Recommendation</strong><br><br>"+
-"Job: "+jobName+
-"<br>Company Budget: $"+budget.toFixed(2)+
-"<br>Worker Pool: $"+workerPool.toFixed(2)+
-"<br>Viyzo Fee: $"+viyzoPool.toFixed(2)+
-"<br>Recommended Workers: "+workers+
-"<br>Average Worker Payment: $"+paymentPerWorker.toFixed(2)+
-"<br>Workload per Worker: "+workloadPerWorker;
-
-
-/* =========================
-   STATUS
-   ========================= */
-
-if(budgetWarning){
-
-document.getElementById("statusBox")
-.innerHTML=
-'<div class="warning">⚠️ Budget के हिसाब से Worker संख्या सीमित की गई है। Production version में Master Manager Company को अधिक budget की recommendation देगा।</div>';
-
-}else{
-
-document.getElementById("statusBox")
-.innerHTML=
-'<div class="success">✅ Job distribution तैयार है।</div>';
-
-}
-
-
-/* =========================
-   WORKER LIST
-   ========================= */
-
-const list=
-document.getElementById("workerList");
-
-list.innerHTML="";
-
-
-const show=
-Math.min(workers,20);
-
-
-for(let i=1;i<=show;i++){
-
-const div=
-document.createElement("div");
-
-div.className="worker";
-
-div.innerHTML=
-"<strong>Worker #"+i+
-"</strong><br>"+
-"<span class='small'>"+
-"Payment: $"+
-paymentPerWorker.toFixed(2)+
-" | Workload: "+
-workloadPerWorker+
-"</span>";
-
-list.appendChild(div);
-
-}
-
-
-if(workers>20){
-
-const more=
-document.createElement("div");
-
-more.className="worker";
-
-more.innerHTML=
-"<strong>+"+
-(workers-20)+
-" और Workers</strong><br>"+
-"<span class='small'>"+
-"Production version में सभी Workers database से आएँगे।"+
-"</span>";
-
-list.appendChild(more);
-
-}
+`;
 
 }
 
