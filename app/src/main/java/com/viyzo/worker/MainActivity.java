@@ -18,6 +18,7 @@ public class MainActivity extends Activity {
     private int BLUE = Color.rgb(60, 130, 255);
     private int GREEN = Color.rgb(40, 200, 120);
     private int CARD = Color.rgb(35, 35, 45);
+    private int RED = Color.rgb(150, 50, 50);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,7 +67,6 @@ public class MainActivity extends Activity {
         setContentView(root);
 
         login.setOnClickListener(v -> showLogin());
-
         signup.setOnClickListener(v -> showSignup());
     }
 
@@ -124,13 +124,11 @@ public class MainActivity extends Activity {
             String pass = password.getText().toString();
 
             if (user.isEmpty() || pass.isEmpty()) {
-
                 Toast.makeText(
                         this,
                         "Please enter Email/Mobile and Password",
                         Toast.LENGTH_SHORT
                 ).show();
-
                 return;
             }
 
@@ -212,13 +210,11 @@ public class MainActivity extends Activity {
             String p = password.getText().toString();
 
             if (n.isEmpty() || e.isEmpty() || m.isEmpty() || p.isEmpty()) {
-
                 Toast.makeText(
                         this,
                         "Please fill all fields",
                         Toast.LENGTH_SHORT
                 ).show();
-
                 return;
             }
 
@@ -253,66 +249,31 @@ public class MainActivity extends Activity {
         welcome.setTextColor(GRAY);
         welcome.setTextSize(17);
         welcome.setGravity(Gravity.CENTER);
-        welcome.setPadding(0, 15, 0, 30);
+        welcome.setPadding(0, 15, 0, 25);
 
-        TextView dashboard = new TextView(this);
-        dashboard.setText("🌍 Worker Dashboard");
-        dashboard.setTextColor(WHITE);
-        dashboard.setTextSize(22);
-        dashboard.setGravity(Gravity.CENTER);
-        dashboard.setPadding(0, 10, 0, 20);
-
-        Button jobs = new Button(this);
-        jobs.setText("🔎 Available Jobs");
-        jobs.setTextSize(18);
-        jobs.setTextColor(WHITE);
-        jobs.setBackgroundColor(BLUE);
-
-        Button myJobs = new Button(this);
-        myJobs.setText("📋 My Jobs");
-        myJobs.setTextSize(18);
-        myJobs.setTextColor(WHITE);
-        myJobs.setBackgroundColor(CARD);
-
-        Button earnings = new Button(this);
-        earnings.setText("💰 Earnings");
-        earnings.setTextSize(18);
-        earnings.setTextColor(WHITE);
-        earnings.setBackgroundColor(CARD);
-
-        Button logout = new Button(this);
-        logout.setText("🚪 Logout");
-        logout.setTextSize(18);
-        logout.setTextColor(WHITE);
-        logout.setBackgroundColor(Color.rgb(150, 50, 50));
+        Button jobs = button("🔎 Available Jobs", BLUE);
+        Button myJobs = button("📋 My Jobs", CARD);
+        Button earnings = button("💰 Earnings", CARD);
+        Button profile = button("👤 Profile", CARD);
+        Button logout = button("🚪 Logout", RED);
 
         root.addView(title);
         root.addView(welcome);
-        root.addView(dashboard);
         root.addView(jobs);
         root.addView(myJobs);
         root.addView(earnings);
+        root.addView(profile);
         root.addView(logout);
 
         setContentView(root);
 
         jobs.setOnClickListener(v -> showJobs());
 
-        myJobs.setOnClickListener(v ->
-                Toast.makeText(
-                        this,
-                        "No active jobs yet",
-                        Toast.LENGTH_SHORT
-                ).show()
-        );
+        myJobs.setOnClickListener(v -> showMyJobs());
 
-        earnings.setOnClickListener(v ->
-                Toast.makeText(
-                        this,
-                        "Current Earnings: $0.00",
-                        Toast.LENGTH_SHORT
-                ).show()
-        );
+        earnings.setOnClickListener(v -> showEarnings());
+
+        profile.setOnClickListener(v -> showProfile(user));
 
         logout.setOnClickListener(v -> showHome());
     }
@@ -321,7 +282,6 @@ public class MainActivity extends Activity {
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setGravity(Gravity.TOP);
         root.setPadding(30, 50, 30, 30);
         root.setBackgroundColor(BG);
 
@@ -343,17 +303,8 @@ public class MainActivity extends Activity {
         job.setPadding(20, 30, 20, 30);
         job.setBackgroundColor(CARD);
 
-        Button accept = new Button(this);
-        accept.setText("✅ Accept Job");
-        accept.setTextSize(18);
-        accept.setTextColor(WHITE);
-        accept.setBackgroundColor(GREEN);
-
-        Button back = new Button(this);
-        back.setText("← Back");
-        back.setTextSize(17);
-        back.setTextColor(WHITE);
-        back.setBackgroundColor(Color.DKGRAY);
+        Button accept = button("✅ Accept Job", GREEN);
+        Button back = button("← Back", CARD);
 
         root.addView(title);
         root.addView(job);
@@ -371,5 +322,156 @@ public class MainActivity extends Activity {
         );
 
         back.setOnClickListener(v -> showHome());
+    }
+
+    private void showMyJobs() {
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(30, 50, 30, 30);
+        root.setBackgroundColor(BG);
+
+        TextView title = new TextView(this);
+        title.setText("📋 My Jobs");
+        title.setTextColor(WHITE);
+        title.setTextSize(28);
+        title.setGravity(Gravity.CENTER);
+
+        TextView info = new TextView(this);
+        info.setText(
+                "No active jobs\n\n" +
+                "Accepted jobs will appear here."
+        );
+        info.setTextColor(GRAY);
+        info.setTextSize(18);
+        info.setGravity(Gravity.CENTER);
+        info.setPadding(20, 40, 20, 40);
+
+        Button back = button("← Back", CARD);
+
+        root.addView(title);
+        root.addView(info);
+        root.addView(back);
+
+        setContentView(root);
+
+        back.setOnClickListener(v -> showHome());
+    }
+
+    private void showEarnings() {
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(30, 50, 30, 30);
+        root.setBackgroundColor(BG);
+
+        TextView title = new TextView(this);
+        title.setText("💰 Earnings");
+        title.setTextColor(WHITE);
+        title.setTextSize(28);
+        title.setGravity(Gravity.CENTER);
+
+        TextView amount = new TextView(this);
+        amount.setText("$0.00");
+        amount.setTextColor(GREEN);
+        amount.setTextSize(36);
+        amount.setGravity(Gravity.CENTER);
+        amount.setPadding(0, 30, 0, 10);
+
+        TextView available = new TextView(this);
+        available.setText("Available Earnings");
+        available.setTextColor(GRAY);
+        available.setTextSize(16);
+        available.setGravity(Gravity.CENTER);
+
+        Button withdraw = button("💸 Withdraw", GREEN);
+        Button history = button("📜 Withdrawal History", CARD);
+        Button back = button("← Back", CARD);
+
+        root.addView(title);
+        root.addView(amount);
+        root.addView(available);
+        root.addView(withdraw);
+        root.addView(history);
+        root.addView(back);
+
+        setContentView(root);
+
+        withdraw.setOnClickListener(v ->
+                Toast.makeText(
+                        this,
+                        "Minimum withdrawal: $5.00\nSecure payout system coming later",
+                        Toast.LENGTH_LONG
+                ).show()
+        );
+
+        history.setOnClickListener(v ->
+                Toast.makeText(
+                        this,
+                        "No withdrawal history",
+                        Toast.LENGTH_SHORT
+                ).show()
+        );
+
+        back.setOnClickListener(v -> showHome());
+    }
+
+    private void showProfile(String user) {
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(30, 50, 30, 30);
+        root.setBackgroundColor(BG);
+
+        TextView title = new TextView(this);
+        title.setText("👤 Profile");
+        title.setTextColor(WHITE);
+        title.setTextSize(28);
+        title.setGravity(Gravity.CENTER);
+
+        TextView profile = new TextView(this);
+        profile.setText(
+                "Name: " + user + "\n\n" +
+                "Role: Worker\n\n" +
+                "KYC Status: Not Completed\n\n" +
+                "Account Status: Demo"
+        );
+        profile.setTextColor(WHITE);
+        profile.setTextSize(18);
+        profile.setPadding(20, 30, 20, 30);
+        profile.setBackgroundColor(CARD);
+
+        Button kyc = button("🪪 Start KYC", BLUE);
+        Button back = button("← Back", CARD);
+
+        root.addView(title);
+        root.addView(profile);
+        root.addView(kyc);
+        root.addView(back);
+
+        setContentView(root);
+
+        kyc.setOnClickListener(v ->
+                Toast.makeText(
+                        this,
+                        "Secure KYC system will be connected later",
+                        Toast.LENGTH_SHORT
+                ).show()
+        );
+
+        back.setOnClickListener(v -> showHome());
+    }
+
+    private Button button(String text, int color) {
+
+        Button b = new Button(this);
+
+        b.setText(text);
+        b.setTextSize(18);
+        b.setTextColor(WHITE);
+        b.setAllCaps(false);
+        b.setBackgroundColor(color);
+
+        return b;
     }
 }
