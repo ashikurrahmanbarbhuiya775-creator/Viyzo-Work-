@@ -6,7 +6,6 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.text.InputType;
 import android.view.Gravity;
-import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -17,7 +16,6 @@ import android.widget.Toast;
 
 public class MainActivity extends Activity {
 
-    // Main colors
     private final int BG = Color.rgb(16, 16, 20);
     private final int CARD = Color.rgb(28, 28, 36);
     private final int WHITE = Color.WHITE;
@@ -25,18 +23,14 @@ public class MainActivity extends Activity {
     private final int GREEN = Color.rgb(40, 200, 120);
     private final int BLUE = Color.rgb(60, 130, 255);
 
-    private LinearLayout root;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        // Same working startup structure as the previous MainActivity
         showWelcome();
     }
 
     private void showWelcome() {
-        root = createRoot();
+        LinearLayout root = createRoot();
 
         addTitle(root, "🤖 Viyzo Worker", 28);
         addText(root, "AI Managed Global Work Platform", 17, GRAY);
@@ -55,16 +49,16 @@ public class MainActivity extends Activity {
 
         addSpace(root, 30);
 
-        addText(root,
+        addText(
+                root,
                 "Global work platform for workers.\nFind jobs, complete work and track earnings.",
                 15,
-                GRAY);
-
-        setContentView(root);
+                GRAY
+        );
     }
 
     private void showLogin() {
-        root = createRoot();
+        LinearLayout root = createRoot();
 
         addTitle(root, "🔐 Login", 28);
         addText(root, "Login to your Viyzo Worker account", 16, GRAY);
@@ -101,8 +95,6 @@ public class MainActivity extends Activity {
                 return;
             }
 
-            // Demo login for now.
-            // Real account authentication will be connected to backend later.
             showHome(user);
         });
 
@@ -111,21 +103,17 @@ public class MainActivity extends Activity {
         Button demo = button("⚡ Demo Login", GREEN);
         root.addView(demo);
 
-        demo.setOnClickListener(v ->
-                showHome("demo@viyzo.com")
-        );
+        demo.setOnClickListener(v -> showHome("demo@viyzo.com"));
 
         addSpace(root, 20);
 
         Button back = button("← Back", CARD);
         root.addView(back);
         back.setOnClickListener(v -> showWelcome());
-
-        setContentView(root);
     }
 
     private void showSignup() {
-        root = createRoot();
+        LinearLayout root = createRoot();
 
         addTitle(root, "📝 Create Account", 28);
         addText(root, "Create your Viyzo Worker profile", 16, GRAY);
@@ -189,12 +177,10 @@ public class MainActivity extends Activity {
         Button back = button("← Back", CARD);
         root.addView(back);
         back.setOnClickListener(v -> showWelcome());
-
-        setContentView(root);
     }
 
     private void showHome(String userName) {
-        root = createRoot();
+        LinearLayout root = createRoot();
 
         addTitle(root, "🤖 Viyzo Worker", 28);
         addText(root, "Welcome, " + userName, 17, GRAY);
@@ -203,7 +189,11 @@ public class MainActivity extends Activity {
 
         LinearLayout card = card();
 
-        TextView cardTitle = text("🌍 Global Work Dashboard", 20, WHITE);
+        TextView cardTitle = text(
+                "🌍 Global Work Dashboard",
+                20,
+                WHITE
+        );
         cardTitle.setTypeface(null, Typeface.BOLD);
         card.addView(cardTitle);
 
@@ -243,24 +233,34 @@ public class MainActivity extends Activity {
 
         addSpace(root, 20);
 
-        Button logout = button("🚪 Logout", Color.rgb(150, 50, 50));
+        Button logout = button(
+                "🚪 Logout",
+                Color.rgb(150, 50, 50)
+        );
         root.addView(logout);
         logout.setOnClickListener(v -> showWelcome());
-
-        setContentView(root);
     }
 
     private void showJobs() {
-        root = createRoot();
+        LinearLayout root = createRoot();
 
         addTitle(root, "🔎 Available Jobs", 27);
-        addText(root, "Jobs currently available for workers", 16, GRAY);
+        addText(
+                root,
+                "Jobs currently available for workers",
+                16,
+                GRAY
+        );
 
         addSpace(root, 20);
 
         LinearLayout job = card();
 
-        TextView title = text("📦 Product Listing", 21, WHITE);
+        TextView title = text(
+                "📦 Product Listing",
+                21,
+                WHITE
+        );
         title.setTypeface(null, Typeface.BOLD);
         job.addView(title);
 
@@ -309,16 +309,19 @@ public class MainActivity extends Activity {
 
         Button back = button("← Back to Home", CARD);
         root.addView(back);
-        back.setOnClickListener(v -> showHome("Worker"));
-
-        setContentView(root);
+        back.setOnClickListener(v -> showWelcome());
     }
 
     private void showMyJobs() {
-        root = createRoot();
+        LinearLayout root = createRoot();
 
         addTitle(root, "📋 My Jobs", 27);
-        addText(root, "Your accepted and completed jobs", 16, GRAY);
+        addText(
+                root,
+                "Your accepted and completed jobs",
+                16,
+                GRAY
+        );
 
         addSpace(root, 20);
 
@@ -348,16 +351,19 @@ public class MainActivity extends Activity {
 
         Button back = button("← Back to Home", CARD);
         root.addView(back);
-        back.setOnClickListener(v -> showHome("Worker"));
-
-        setContentView(root);
+        back.setOnClickListener(v -> showWelcome());
     }
 
     private void showEarnings() {
-        root = createRoot();
+        LinearLayout root = createRoot();
 
         addTitle(root, "💰 Earnings", 27);
-        addText(root, "Track your worker earnings", 16, GRAY);
+        addText(
+                root,
+                "Track your worker earnings",
+                16,
+                GRAY
+        );
 
         addSpace(root, 20);
 
@@ -393,13 +399,11 @@ public class MainActivity extends Activity {
 
         Button back = button("← Back to Home", CARD);
         root.addView(back);
-        back.setOnClickListener(v -> showHome("Worker"));
-
-        setContentView(root);
+        back.setOnClickListener(v -> showWelcome());
     }
 
     private void showProfile(String userName) {
-        root = createRoot();
+        LinearLayout root = createRoot();
 
         addTitle(root, "👤 Profile", 27);
         addText(root, "Worker account", 16, GRAY);
@@ -451,12 +455,8 @@ public class MainActivity extends Activity {
 
         Button back = button("← Back to Home", CARD);
         root.addView(back);
-        back.setOnClickListener(v -> showHome(userName));
-
-        setContentView(root);
+        back.setOnClickListener(v -> showWelcome());
     }
-
-    // ---------- UI helper methods ----------
 
     private LinearLayout createRoot() {
         LinearLayout layout = new LinearLayout(this);
@@ -469,9 +469,6 @@ public class MainActivity extends Activity {
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         scroll.addView(layout);
-
-        // Keep the same root object as the previous simple Activity.
-        root = layout;
 
         setContentView(scroll);
 
@@ -489,10 +486,16 @@ public class MainActivity extends Activity {
         return t;
     }
 
-    private void addTitle(LinearLayout layout, String value, int size) {
+    private void addTitle(
+            LinearLayout layout,
+            String value,
+            int size
+    ) {
         TextView title = text(value, size, WHITE);
+
         title.setTypeface(null, Typeface.BOLD);
         title.setGravity(Gravity.CENTER);
+
         layout.addView(title);
     }
 
@@ -503,6 +506,7 @@ public class MainActivity extends Activity {
             int color
     ) {
         TextView t = text(value, size, color);
+
         t.setGravity(Gravity.CENTER);
         layout.addView(t);
     }
@@ -521,7 +525,10 @@ public class MainActivity extends Activity {
         return e;
     }
 
-    private Button button(String value, int backgroundColor) {
+    private Button button(
+            String value,
+            int backgroundColor
+    ) {
         Button b = new Button(this);
 
         b.setText(value);
@@ -544,7 +551,10 @@ public class MainActivity extends Activity {
         return c;
     }
 
-    private void addSpace(LinearLayout layout, int height) {
+    private void addSpace(
+            LinearLayout layout,
+            int height
+    ) {
         Space space = new Space(this);
 
         layout.addView(
