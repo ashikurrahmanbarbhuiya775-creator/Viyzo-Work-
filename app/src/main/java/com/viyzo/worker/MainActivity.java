@@ -4,429 +4,914 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Spinner;
-import android.widget.ArrayAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainActivity extends Activity {
 
-    private final int BG = Color.rgb(16, 16, 20);
-    private final int CARD = Color.rgb(28, 28, 36);
+    // =========================
+    // VIYZO COLORS
+    // =========================
+
+    private final int BG = Color.rgb(10, 11, 18);
+    private final int CARD = Color.rgb(24, 25, 35);
+    private final int CARD2 = Color.rgb(31, 32, 45);
+
+    private final int PRIMARY = Color.rgb(108, 92, 231);
+    private final int PRIMARY_DARK = Color.rgb(78, 65, 180);
+
     private final int WHITE = Color.WHITE;
-    private final int GRAY = Color.rgb(180, 180, 190);
-    private final int GREEN = Color.rgb(60, 200, 120);
+    private final int GRAY = Color.rgb(175, 178, 192);
+    private final int GREEN = Color.rgb(55, 205, 125);
+    private final int RED = Color.rgb(235, 80, 95);
+    private final int GOLD = Color.rgb(245, 190, 70);
 
     private LinearLayout root;
+
+    // =========================
+    // ACTIVITY
+    // =========================
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        getWindow().setStatusBarColor(BG);
+        getWindow().setNavigationBarColor(BG);
+
         showHome();
     }
 
     // =========================
-    // COMMON UI
+    // MAIN SCREEN CREATOR
     // =========================
 
-    private ScrollView createScreen() {
+    private void setScreen(boolean bottomNavigation) {
+
+        FrameLayout frame = new FrameLayout(this);
+        frame.setBackgroundColor(BG);
+
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         scroll.setBackgroundColor(BG);
 
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(32, 40, 32, 40);
+        root.setPadding(22, 25, 22, bottomNavigation ? 95 : 30);
         root.setBackgroundColor(BG);
 
         scroll.addView(root);
-        return scroll;
+
+        frame.addView(
+                scroll,
+                new FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT
+                )
+        );
+
+        if (bottomNavigation) {
+            addBottomNavigation(frame);
+        }
+
+        setContentView(frame);
     }
 
-    private void setScreen() {
-        setContentView(createScreen());
+    // =========================
+    // LOGO
+    // =========================
+
+    private LinearLayout logoHeader() {
+
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setPadding(4, 5, 4, 20);
+
+        TextView logo = new TextView(this);
+        logo.setText("V");
+        logo.setTextColor(WHITE);
+        logo.setTextSize(27);
+        logo.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        logo.setGravity(Gravity.CENTER);
+
+        GradientDrawable logoBg = new GradientDrawable();
+        logoBg.setShape(GradientDrawable.OVAL);
+        logoBg.setColor(PRIMARY);
+
+        logo.setBackground(logoBg);
+
+        LinearLayout.LayoutParams logoParams =
+                new LinearLayout.LayoutParams(58, 58);
+
+        logoParams.setMargins(0, 0, 14, 0);
+
+        header.addView(logo, logoParams);
+
+        LinearLayout textBox = new LinearLayout(this);
+        textBox.setOrientation(LinearLayout.VERTICAL);
+
+        TextView name = new TextView(this);
+        name.setText("VIYZO");
+        name.setTextColor(WHITE);
+        name.setTextSize(23);
+        name.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+
+        TextView company = new TextView(this);
+        company.setText("Global Work Network");
+        company.setTextColor(GRAY);
+        company.setTextSize(13);
+
+        textBox.addView(name);
+        textBox.addView(company);
+
+        header.addView(
+                textBox,
+                new LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1
+                )
+        );
+
+        root.addView(header);
+
+        return header;
     }
+
+    // =========================
+    // TITLE
+    // =========================
 
     private TextView title(String text) {
+
         TextView t = new TextView(this);
+
         t.setText(text);
         t.setTextColor(WHITE);
-        t.setTextSize(27);
+        t.setTextSize(26);
         t.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        t.setGravity(Gravity.CENTER);
-        t.setPadding(0, 0, 0, 18);
-        root.addView(t,
+        t.setGravity(Gravity.LEFT);
+        t.setPadding(0, 5, 0, 10);
+
+        root.addView(
+                t,
                 new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT));
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+        );
+
         return t;
     }
+
+    // =========================
+    // SUBTITLE
+    // =========================
 
     private TextView subtitle(String text) {
+
         TextView t = new TextView(this);
+
         t.setText(text);
         t.setTextColor(GRAY);
-        t.setTextSize(15);
-        t.setGravity(Gravity.CENTER);
-        t.setPadding(0, 0, 0, 24);
+        t.setTextSize(14);
+        t.setLineSpacing(3, 1.0f);
+        t.setPadding(0, 0, 0, 15);
 
-        root.addView(t,
+        root.addView(
+                t,
                 new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT));
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+        );
 
         return t;
     }
 
+    // =========================
+    // SECTION TITLE
+    // =========================
+
     private TextView section(String text) {
+
         TextView t = new TextView(this);
+
         t.setText(text);
         t.setTextColor(WHITE);
         t.setTextSize(18);
         t.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        t.setPadding(0, 20, 0, 10);
 
-        root.addView(t,
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT));
+        t.setPadding(3, 18, 0, 10);
+
+        root.addView(t);
 
         return t;
     }
 
-    private Button button(String text) {
+    // =========================
+    // PROFESSIONAL BUTTON
+    // =========================
+
+    private Button appButton(String text) {
+
         Button b = new Button(this);
+
         b.setText(text);
-        b.setTextSize(15);
         b.setTextColor(WHITE);
+        b.setTextSize(15);
         b.setAllCaps(false);
-        b.setGravity(Gravity.CENTER);
+        b.setGravity(Gravity.CENTER_VERTICAL);
+        b.setPadding(20, 5, 20, 5);
+
+        GradientDrawable bg = new GradientDrawable();
+
+        bg.setColor(CARD2);
+        bg.setCornerRadius(22);
+
+        bg.setStroke(1, Color.rgb(55, 56, 72));
+
+        b.setBackground(bg);
+
+        b.setElevation(4);
 
         LinearLayout.LayoutParams p =
                 new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT);
+                        58
+                );
 
-        p.setMargins(0, 8, 0, 8);
-        b.setLayoutParams(p);
+        p.setMargins(0, 7, 0, 7);
 
-        root.addView(b);
+        root.addView(b, p);
+
         return b;
     }
 
-    private EditText input(String hint) {
-        EditText e = new EditText(this);
-        e.setHint(hint);
-        e.setHintTextColor(GRAY);
-        e.setTextColor(WHITE);
-        e.setTextSize(15);
-        e.setSingleLine(true);
-        e.setPadding(20, 15, 20, 15);
+    // =========================
+    // PRIMARY BUTTON
+    // =========================
+
+    private Button primaryButton(String text) {
+
+        Button b = new Button(this);
+
+        b.setText(text);
+        b.setTextColor(WHITE);
+        b.setTextSize(15);
+        b.setAllCaps(false);
+        b.setGravity(Gravity.CENTER);
+
+        GradientDrawable bg = new GradientDrawable(
+                GradientDrawable.Orientation.LEFT_RIGHT,
+                new int[]{PRIMARY, PRIMARY_DARK}
+        );
+
+        bg.setCornerRadius(22);
+
+        b.setBackground(bg);
+        b.setElevation(6);
 
         LinearLayout.LayoutParams p =
                 new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT);
+                        58
+                );
+
+        p.setMargins(0, 8, 0, 8);
+
+        root.addView(b, p);
+
+        return b;
+    }
+
+    // =========================
+    // INPUT
+    // =========================
+
+    private EditText input(String hint) {
+
+        EditText e = new EditText(this);
+
+        e.setHint(hint);
+        e.setHintTextColor(Color.rgb(125, 128, 145));
+        e.setTextColor(WHITE);
+        e.setTextSize(15);
+        e.setSingleLine(true);
+        e.setPadding(18, 0, 18, 0);
+
+        GradientDrawable bg = new GradientDrawable();
+
+        bg.setColor(CARD);
+        bg.setCornerRadius(18);
+        bg.setStroke(1, Color.rgb(55, 56, 72));
+
+        e.setBackground(bg);
+
+        LinearLayout.LayoutParams p =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        55
+                );
 
         p.setMargins(0, 6, 0, 6);
-        e.setLayoutParams(p);
 
-        root.addView(e);
+        root.addView(e, p);
+
         return e;
     }
 
-    private void addSpace(int height) {
-        TextView space = new TextView(this);
-        root.addView(space,
+    // =========================
+    // INFO CARD
+    // =========================
+
+    private void infoCard(String heading, String text) {
+
+        LinearLayout card = new LinearLayout(this);
+
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(20, 17, 20, 17);
+
+        GradientDrawable bg = new GradientDrawable();
+
+        bg.setColor(CARD);
+        bg.setCornerRadius(20);
+        bg.setStroke(1, Color.rgb(50, 51, 67));
+
+        card.setBackground(bg);
+        card.setElevation(3);
+
+        TextView h = new TextView(this);
+
+        h.setText(heading);
+        h.setTextColor(WHITE);
+        h.setTextSize(16);
+        h.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+
+        TextView d = new TextView(this);
+
+        d.setText(text);
+        d.setTextColor(GRAY);
+        d.setTextSize(14);
+        d.setPadding(0, 7, 0, 0);
+
+        card.addView(h);
+        card.addView(d);
+
+        LinearLayout.LayoutParams p =
                 new LinearLayout.LayoutParams(
-                        1, height));
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                );
+
+        p.setMargins(0, 7, 0, 7);
+
+        root.addView(card, p);
     }
+
+    // =========================
+    // BOTTOM NAVIGATION
+    // =========================
+
+    private void addBottomNavigation(FrameLayout frame) {
+
+        LinearLayout nav = new LinearLayout(this);
+
+        nav.setOrientation(LinearLayout.HORIZONTAL);
+        nav.setGravity(Gravity.CENTER);
+        nav.setPadding(8, 6, 8, 6);
+
+        GradientDrawable bg = new GradientDrawable();
+
+        bg.setColor(Color.rgb(20, 21, 30));
+        bg.setCornerRadius(25);
+
+        bg.setStroke(1, Color.rgb(55, 56, 72));
+
+        nav.setBackground(bg);
+
+        FrameLayout.LayoutParams navParams =
+                new FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        72,
+                        Gravity.BOTTOM
+                );
+
+        navParams.setMargins(10, 0, 10, 10);
+
+        frame.addView(nav, navParams);
+
+        Button home = navButton("⌂\nHome");
+        Button jobs = navButton("▣\nJobs");
+        Button money = navButton("$\nEarnings");
+        Button profile = navButton("●\nProfile");
+
+        nav.addView(home);
+        nav.addView(jobs);
+        nav.addView(money);
+        nav.addView(profile);
+
+        home.setOnClickListener(v -> showDashboard());
+        jobs.setOnClickListener(v -> showJobs());
+        money.setOnClickListener(v -> showEarnings());
+        profile.setOnClickListener(v -> showProfile());
+    }
+
+    private Button navButton(String text) {
+
+        Button b = new Button(this);
+
+        b.setText(text);
+        b.setTextColor(GRAY);
+        b.setTextSize(11);
+        b.setAllCaps(false);
+        b.setGravity(Gravity.CENTER);
+
+        b.setBackgroundColor(Color.TRANSPARENT);
+
+        b.setLayoutParams(
+                new LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        1
+                )
+        );
+
+        return b;
+    }
+
+    // =========================
+    // TOAST
+    // =========================
 
     private void message(String text) {
-        Toast.makeText(this, text, Toast.LENGTH_SHORT).show();
+
+        Toast.makeText(
+                this,
+                text,
+                Toast.LENGTH_SHORT
+        ).show();
     }
 
-    // =========================
+    // =========================================================
     // HOME
-    // =========================
+    // =========================================================
 
     private void showHome() {
-        setScreen();
 
-        title("🤖 Viyzo Worker");
-        subtitle("AI Managed Global Work Platform");
+        setScreen(false);
 
-        Button login = button("🔐 Login");
-        login.setOnClickListener(v -> showLogin());
+        logoHeader();
 
-        Button create = button("📝 Create Account");
-        create.setOnClickListener(v -> showCreateAccount());
+        title("Work smarter with Viyzo");
 
-        Button jobs = button("🔎 Available Jobs");
-        jobs.setOnClickListener(v -> showJobs());
+        subtitle(
+                "AI-managed global work platform for workers " +
+                "and companies."
+        );
 
-        Button about = button("ℹ️ About Viyzo");
-        about.setOnClickListener(v -> showAbout());
+        infoCard(
+                "🤖 AI Master Manager",
+                "Viyzo intelligently distributes jobs " +
+                "to suitable workers."
+        );
+
+        primaryButton("🔐 Login").setOnClickListener(
+                v -> showLogin()
+        );
+
+        primaryButton("📝 Create Worker Account").setOnClickListener(
+                v -> showCreateAccount()
+        );
+
+        appButton("🔎 Explore Available Jobs").setOnClickListener(
+                v -> showJobs()
+        );
+
+        appButton("ℹ️ About Viyzo").setOnClickListener(
+                v -> showAbout()
+        );
+
+        subtitle(
+                "Secure account • Global work • AI job management"
+        );
     }
 
-    // =========================
+    // =========================================================
     // LOGIN
-    // =========================
+    // =========================================================
 
     private void showLogin() {
-        setScreen();
 
-        title("🔐 Worker Login");
-        subtitle("Login to your Viyzo Worker account");
+        setScreen(false);
+
+        logoHeader();
+
+        title("Welcome back");
+
+        subtitle("Login to your Viyzo Worker account.");
 
         input("Phone or Email");
 
         EditText password = input("Viyzo Password");
+
         password.setInputType(
                 InputType.TYPE_CLASS_TEXT |
-                InputType.TYPE_TEXT_VARIATION_PASSWORD);
+                InputType.TYPE_TEXT_VARIATION_PASSWORD
+        );
 
-        Button login = button("Login");
+        primaryButton("🔐 Login").setOnClickListener(
+                v -> {
+                    message("Login successful");
+                    showDashboard();
+                }
+        );
 
-        login.setOnClickListener(v -> {
-            message("Login demo successful");
-            showDashboard();
-        });
+        appButton("Forgot Password?").setOnClickListener(
+                v -> message("Password recovery will be connected later")
+        );
 
-        Button back = button("← Back");
-        back.setOnClickListener(v -> showHome());
+        appButton("← Back").setOnClickListener(
+                v -> showHome()
+        );
     }
 
-    // =========================
+    // =========================================================
     // CREATE ACCOUNT
-    // =========================
+    // =========================================================
 
     private void showCreateAccount() {
-        setScreen();
 
-        title("📝 Create Worker Account");
-        subtitle("Create your Viyzo Worker account");
+        setScreen(false);
+
+        logoHeader();
+
+        title("Create your account");
+
+        subtitle(
+                "Start as a Viyzo Worker. You can complete " +
+                "stronger verification later when required."
+        );
 
         input("Full Name");
         input("Date of Birth");
         input("Country");
-
-        EditText phone = input("Mobile Number");
-        phone.setInputType(InputType.TYPE_CLASS_PHONE);
-
+        input("Mobile Number");
         input("Email");
 
         EditText password = input("Create Viyzo Password");
+
         password.setInputType(
                 InputType.TYPE_CLASS_TEXT |
-                InputType.TYPE_TEXT_VARIATION_PASSWORD);
+                InputType.TYPE_TEXT_VARIATION_PASSWORD
+        );
 
         CheckBox consent = new CheckBox(this);
+
         consent.setText(
-                "I agree to Viyzo's verification and privacy notice.");
+                "I agree to Viyzo's verification and privacy notice."
+        );
+
         consent.setTextColor(WHITE);
-        consent.setTextSize(14);
+        consent.setTextSize(13);
+
         root.addView(consent);
 
-        Button create = button("Create Account");
+        primaryButton("✅ Create Account").setOnClickListener(
+                v -> {
 
-        create.setOnClickListener(v -> {
-            if (!consent.isChecked()) {
-                message("Please accept the consent");
-                return;
-            }
+                    if (!consent.isChecked()) {
+                        message("Please accept the consent");
+                        return;
+                    }
 
-            message("Account created");
-            showDashboard();
-        });
+                    message("Account created");
 
-        Button back = button("← Back");
-        back.setOnClickListener(v -> showHome());
+                    showDashboard();
+                }
+        );
+
+        appButton("← Back").setOnClickListener(
+                v -> showHome()
+        );
     }
 
-    // =========================
+    // =========================================================
     // DASHBOARD
-    // =========================
+    // =========================================================
 
     private void showDashboard() {
-        setScreen();
 
-        title("🏠 Worker Dashboard");
-        subtitle("Welcome to Viyzo Worker");
+        setScreen(true);
 
-        Button jobs = button("🔎 Available Jobs");
-        jobs.setOnClickListener(v -> showJobs());
+        logoHeader();
 
-        Button myJobs = button("📋 My Jobs");
-        myJobs.setOnClickListener(v -> showMyJobs());
+        title("Good day, Worker 👋");
 
-        Button earnings = button("💰 Earnings & Withdrawal");
-        earnings.setOnClickListener(v -> showEarnings());
+        subtitle(
+                "Your Viyzo work dashboard"
+        );
 
-        Button profile = button("👤 Profile & Verification");
-        profile.setOnClickListener(v -> showProfile());
+        infoCard(
+                "🟡 Worker Status",
+                "Basic Worker • Complete verification for more access"
+        );
 
-        Button notifications = button("🔔 Notifications");
-        notifications.setOnClickListener(v -> showNotifications());
+        section("Quick Actions");
 
-        Button language = button("🌐 Language");
-        language.setOnClickListener(v -> showLanguage());
+        appButton("🔎 Available Jobs").setOnClickListener(
+                v -> showJobs()
+        );
 
-        Button settings = button("⚙️ Settings");
-        settings.setOnClickListener(v -> showSettings());
+        appButton("📋 My Jobs").setOnClickListener(
+                v -> showMyJobs()
+        );
 
-        Button help = button("❓ Help & Support");
-        help.setOnClickListener(v -> showHelp());
+        appButton("💰 Earnings & Withdrawal").setOnClickListener(
+                v -> showEarnings()
+        );
 
-        Button logout = button("🚪 Logout");
-        logout.setOnClickListener(v -> showHome());
+        appButton("👤 Profile & Verification").setOnClickListener(
+                v -> showProfile()
+        );
+
+        section("Viyzo Services");
+
+        appButton("🔔 Notifications").setOnClickListener(
+                v -> showNotifications()
+        );
+
+        appButton("🌐 Language").setOnClickListener(
+                v -> showLanguage()
+        );
+
+        appButton("⚙️ Settings").setOnClickListener(
+                v -> showSettings()
+        );
+
+        appButton("❓ Help & Support").setOnClickListener(
+                v -> showHelp()
+        );
+
+        appButton("🚪 Logout").setOnClickListener(
+                v -> showHome()
+        );
     }
 
-    // =========================
+    // =========================================================
     // JOBS
-    // =========================
+    // =========================================================
 
     private void showJobs() {
-        setScreen();
 
-        title("🔎 Available Jobs");
-        subtitle("Jobs selected by Viyzo AI Manager");
+        setScreen(true);
 
-        section("Product Listing");
-        subtitle("1000 products • Remote • Global");
+        title("Available Jobs");
 
-        Button details = button("View Job");
-        details.setOnClickListener(v -> showJobDetails());
+        subtitle(
+                "AI Master Manager has selected these jobs."
+        );
 
-        section("Data Entry");
-        subtitle("500 records • Remote");
+        infoCard(
+                "📦 Product Listing",
+                "1,000 products • Remote • Global\n" +
+                "Company Budget: $500\n" +
+                "Worker Pool: $400"
+        );
 
-        Button data = button("View Job");
-        data.setOnClickListener(v ->
-                message("Data Entry job details coming next"));
+        primaryButton("View Product Listing Job")
+                .setOnClickListener(
+                        v -> showJobDetails()
+                );
 
-        Button back = button("← Dashboard");
-        back.setOnClickListener(v -> showDashboard());
+        infoCard(
+                "⌨️ Data Entry",
+                "500 records • Remote\n" +
+                "Flexible workload"
+        );
+
+        appButton("View Data Entry Job")
+                .setOnClickListener(
+                        v -> message("Data Entry details coming next")
+                );
+
+        infoCard(
+                "📝 Content Review",
+                "Remote • AI-assisted workflow\n" +
+                "Quality-based payment"
+        );
+
+        appButton("View Content Review")
+                .setOnClickListener(
+                        v -> message("Content Review details coming next")
+                );
     }
+
+    // =========================================================
+    // JOB DETAILS
+    // =========================================================
 
     private void showJobDetails() {
-        setScreen();
 
-        title("📦 Product Listing Job");
+        setScreen(true);
 
-        section("Company Budget");
-        subtitle("$500.00");
+        title("Product Listing Job");
 
-        section("Worker Pool");
-        subtitle("$400.00");
+        infoCard(
+                "💵 Company Budget",
+                "$500.00"
+        );
 
-        section("Viyzo Fee");
-        subtitle("$100.00");
+        infoCard(
+                "👷 Worker Pool",
+                "$400.00"
+        );
 
-        section("AI Recommended Workers");
-        subtitle("8 Workers");
+        infoCard(
+                "🏢 Viyzo Fee",
+                "$100.00"
+        );
 
-        section("Workload");
-        subtitle("125 products per worker");
+        infoCard(
+                "🤖 AI Recommended Workers",
+                "8 Workers"
+        );
 
-        Button apply = button("✅ Apply for Job");
-        apply.setOnClickListener(v ->
-                message("Job application submitted"));
+        infoCard(
+                "📦 Workload",
+                "125 products per worker"
+        );
 
-        Button back = button("← Back to Jobs");
-        back.setOnClickListener(v -> showJobs());
+        infoCard(
+                "⏱️ Deadline",
+                "3 Days"
+        );
+
+        primaryButton("✅ Apply for Job")
+                .setOnClickListener(
+                        v -> message("Job application submitted")
+                );
+
+        appButton("← Back to Jobs")
+                .setOnClickListener(
+                        v -> showJobs()
+                );
     }
 
-    // =========================
+    // =========================================================
     // MY JOBS
-    // =========================
+    // =========================================================
 
     private void showMyJobs() {
-        setScreen();
 
-        title("📋 My Jobs");
+        setScreen(true);
 
-        section("Current Job");
-        subtitle("Product Listing • In Progress");
+        title("My Jobs");
 
-        Button open = button("Open Job");
-        open.setOnClickListener(v ->
-                message("Job workspace coming next"));
+        infoCard(
+                "📦 Product Listing",
+                "Status: In Progress\n" +
+                "Progress: 0%\n" +
+                "125 products assigned"
+        );
 
-        Button back = button("← Dashboard");
-        back.setOnClickListener(v -> showDashboard());
+        primaryButton("Open Work")
+                .setOnClickListener(
+                        v -> message("Work workspace coming next")
+                );
+
+        infoCard(
+                "Completed Jobs",
+                "No completed jobs yet."
+        );
     }
 
-    // =========================
+    // =========================================================
     // EARNINGS
-    // =========================
+    // =========================================================
 
     private void showEarnings() {
-        setScreen();
 
-        title("💰 Earnings");
+        setScreen(true);
 
-        section("Available Balance");
-        subtitle("$0.00");
+        title("Earnings");
 
-        section("Total Earned");
-        subtitle("$0.00");
+        infoCard(
+                "💰 Available Balance",
+                "$0.00"
+        );
 
-        section("Pending");
-        subtitle("$0.00");
+        infoCard(
+                "📈 Total Earned",
+                "$0.00"
+        );
 
-        Button withdraw = button("💸 Withdraw");
-        withdraw.setOnClickListener(v ->
-                message("Withdrawal system will be connected later"));
+        infoCard(
+                "⏳ Pending",
+                "$0.00"
+        );
 
-        Button back = button("← Dashboard");
-        back.setOnClickListener(v -> showDashboard());
+        primaryButton("💸 Withdraw")
+                .setOnClickListener(
+                        v -> message(
+                                "Payment verification will be connected later"
+                        )
+                );
+
+        appButton("Payment Methods")
+                .setOnClickListener(
+                        v -> message(
+                                "Payment methods will be connected later"
+                        )
+                );
+
+        appButton("Transaction History")
+                .setOnClickListener(
+                        v -> message(
+                                "Transaction history coming next"
+                        )
+                );
     }
 
-    // =========================
+    // =========================================================
     // PROFILE
-    // =========================
+    // =========================================================
 
     private void showProfile() {
-        setScreen();
 
-        title("👤 Worker Profile");
-        subtitle("Manage your Viyzo Worker account");
+        setScreen(true);
 
-        section("Verification Status");
-        subtitle(
-                "🟡 Basic Worker\n\n" +
-                "Complete Worker Verification to unlock more jobs.");
+        title("My Profile");
 
-        Button verification = button("🪪 Worker Verification");
-        verification.setOnClickListener(v -> showWorkerVerification());
+        infoCard(
+                "👤 Worker Account",
+                "Basic Worker"
+        );
 
-        Button back = button("← Dashboard");
-        back.setOnClickListener(v -> showDashboard());
+        infoCard(
+                "🪪 Verification",
+                "🟡 Basic Verification\n" +
+                "Document verification not completed"
+        );
+
+        primaryButton("🪪 Worker Verification")
+                .setOnClickListener(
+                        v -> showWorkerVerification()
+                );
+
+        appButton("Edit Profile")
+                .setOnClickListener(
+                        v -> message("Profile editing coming next")
+                );
+
+        appButton("Account Security")
+                .setOnClickListener(
+                        v -> message("Security settings coming next")
+                );
     }
 
-    // =========================
-    // NEW WORKER VERIFICATION
-    // =========================
+    // =========================================================
+    // WORKER VERIFICATION
+    // =========================================================
 
     private void showWorkerVerification() {
-        setScreen();
 
-        title("🪪 Worker Verification");
+        setScreen(false);
+
+        logoHeader();
+
+        title("Worker Verification");
 
         subtitle(
-                "Viyzo uses different verification options depending " +
-                "on your country and the type of work/payment.");
+                "Choose the verification path available for you."
+        );
 
-        section("Step 1 — Country");
+        infoCard(
+                "🟢 Basic Worker",
+                "Phone + Email + Name + DOB + " +
+                "Live Selfie + Consent"
+        );
+
+        infoCard(
+                "🔵 Identity Verified",
+                "Additional identity verification " +
+                "may be required for certain jobs."
+        );
+
+        section("1. Country");
 
         Spinner countrySpinner = new Spinner(this);
 
@@ -445,272 +930,401 @@ public class MainActivity extends Activity {
                 new ArrayAdapter<>(
                         this,
                         android.R.layout.simple_spinner_item,
-                        countries);
+                        countries
+                );
 
         adapter.setDropDownViewResource(
-                android.R.layout.simple_spinner_dropdown_item);
+                android.R.layout.simple_spinner_dropdown_item
+        );
 
         countrySpinner.setAdapter(adapter);
 
-        LinearLayout.LayoutParams spinnerParams =
+        root.addView(
+                countrySpinner,
                 new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT);
+                        55
+                )
+        );
 
-        spinnerParams.setMargins(0, 8, 0, 15);
-
-        root.addView(countrySpinner, spinnerParams);
-
-        section("Step 2 — Basic Verification");
+        section("2. Basic Verification");
 
         input("Full Name");
         input("Date of Birth");
 
-        Button phone = button("📱 Verify Phone with OTP");
-        phone.setOnClickListener(v ->
-                message("OTP verification will be connected with backend"));
+        appButton("📱 Verify Phone with OTP")
+                .setOnClickListener(
+                        v -> message(
+                                "OTP service will be connected later"
+                        )
+                );
 
-        Button email = button("✉️ Verify Email");
-        email.setOnClickListener(v ->
-                message("Email verification will be connected with backend"));
+        appButton("✉️ Verify Email")
+                .setOnClickListener(
+                        v -> message(
+                                "Email verification will be connected later"
+                        )
+                );
 
-        Button selfie = button("🤳 Start Live Selfie Verification");
-        selfie.setOnClickListener(v ->
-                message("Live selfie verification will be connected with verification provider"));
+        appButton("🤳 Live Selfie Verification")
+                .setOnClickListener(
+                        v -> message(
+                                "Live selfie provider will be connected later"
+                        )
+                );
 
-        section("Step 3 — Identity Document");
+        section("3. Identity Document");
 
         subtitle(
-                "If you have an accepted identity document, " +
-                "choose the document shown for your country.\n\n" +
-                "If you do not have a document, you can continue with Basic Worker Verification.");
+                "If you have an accepted document, choose document verification. " +
+                "If you do not have one, continue as Basic Worker."
+        );
 
-        Button document = button("🪪 I Have an Identity Document");
-        document.setOnClickListener(v -> showDocumentOptions());
+        primaryButton("🪪 I Have an Identity Document")
+                .setOnClickListener(
+                        v -> showDocumentOptions()
+                );
 
-        Button noDocument = button("🙋 I Don't Have a Document");
-        noDocument.setOnClickListener(v -> showNoDocument());
+        appButton("🙋 I Don't Have a Document")
+                .setOnClickListener(
+                        v -> showNoDocument()
+                );
 
-        section("Consent");
+        section("4. Consent");
 
         CheckBox consent = new CheckBox(this);
+
         consent.setText(
                 "I consent to Viyzo processing the information " +
-                "needed for worker verification.");
+                "needed for worker verification."
+        );
+
         consent.setTextColor(WHITE);
-        consent.setTextSize(14);
+        consent.setTextSize(13);
 
         root.addView(consent);
 
-        Button submit = button("✅ Submit Worker Verification");
+        primaryButton("✅ Submit Verification")
+                .setOnClickListener(
+                        v -> {
 
-        submit.setOnClickListener(v -> {
-            if (!consent.isChecked()) {
-                message("Please accept the verification consent");
-                return;
-            }
+                            if (!consent.isChecked()) {
+                                message(
+                                        "Please accept verification consent"
+                                );
+                                return;
+                            }
 
-            message("Worker Verification submitted");
-            showProfile();
-        });
+                            message(
+                                    "Worker Verification submitted"
+                            );
 
-        Button back = button("← Back to Profile");
-        back.setOnClickListener(v -> showProfile());
+                            showProfile();
+                        }
+                );
+
+        appButton("← Back to Profile")
+                .setOnClickListener(
+                        v -> showProfile()
+                );
     }
 
-    // =========================
+    // =========================================================
     // DOCUMENT OPTIONS
-    // =========================
+    // =========================================================
 
     private void showDocumentOptions() {
-        setScreen();
 
-        title("🪪 Identity Document");
+        setScreen(false);
 
-        subtitle(
-                "Viyzo will show the available verification " +
-                "documents according to your selected country.");
+        logoHeader();
 
-        section("Document Options");
-
-        Button primary = button("📄 Primary Identity Document");
-        primary.setOnClickListener(v ->
-                message("Document upload will be connected to verification provider"));
-
-        Button alternative1 = button("📄 Alternative Document 1");
-        alternative1.setOnClickListener(v ->
-                message("Alternative document selected"));
-
-        Button alternative2 = button("📄 Alternative Document 2");
-        alternative2.setOnClickListener(v ->
-                message("Alternative document selected"));
-
-        section("Important");
+        title("Identity Document");
 
         subtitle(
-                "The final accepted document list will be controlled " +
-                "by Viyzo's country-specific verification rules and " +
-                "authorized verification provider.");
+                "The final accepted documents will be controlled " +
+                "by Viyzo's country-specific verification rules."
+        );
 
-        Button back = button("← Back to Verification");
-        back.setOnClickListener(v -> showWorkerVerification());
+        infoCard(
+                "📄 Primary Document",
+                "Country-specific identity document"
+        );
+
+        primaryButton("Upload Primary Document")
+                .setOnClickListener(
+                        v -> message(
+                                "Document upload provider will be connected later"
+                        )
+                );
+
+        infoCard(
+                "📄 Alternative Document",
+                "Another accepted identity document"
+        );
+
+        appButton("Upload Alternative Document")
+                .setOnClickListener(
+                        v -> message(
+                                "Alternative document upload coming later"
+                        )
+                );
+
+        appButton("← Back")
+                .setOnClickListener(
+                        v -> showWorkerVerification()
+                );
     }
 
-    // =========================
-    // NO DOCUMENT PATH
-    // =========================
+    // =========================================================
+    // NO DOCUMENT
+    // =========================================================
 
     private void showNoDocument() {
-        setScreen();
 
-        title("🙋 Basic Worker Verification");
+        setScreen(false);
 
-        subtitle(
-                "You can continue without a government identity document " +
-                "for the basic account level.");
+        logoHeader();
 
-        section("What You Can Complete");
+        title("Basic Worker Verification");
 
         subtitle(
-                "✓ Name\n" +
-                "✓ Date of Birth\n" +
-                "✓ Phone verification\n" +
-                "✓ Email verification\n" +
-                "✓ Live selfie verification\n" +
-                "✓ Verification consent");
+                "You can continue without a government identity " +
+                "document at the basic account level."
+        );
 
-        section("Your Worker Status");
+        infoCard(
+                "✓ Basic Verification",
+                "Name\n" +
+                "Date of Birth\n" +
+                "Phone verification\n" +
+                "Email verification\n" +
+                "Live selfie verification\n" +
+                "Consent"
+        );
 
-        subtitle(
-                "🟡 Basic Worker\n\n" +
-                "You may use the app and access jobs that Viyzo " +
-                "allows for Basic Workers.");
+        infoCard(
+                "🟡 Worker Status",
+                "Basic Worker"
+        );
 
-        section("Higher Verification");
+        infoCard(
+                "🔐 Higher Verification",
+                "Some higher-value, higher-risk jobs or " +
+                "withdrawals may require stronger verification."
+        );
 
-        subtitle(
-                "Some higher-risk, higher-value jobs or withdrawals " +
-                "may require stronger identity or payment verification.");
+        primaryButton("✅ Continue as Basic Worker")
+                .setOnClickListener(
+                        v -> {
 
-        Button continueButton =
-                button("✅ Continue as Basic Worker");
+                            message(
+                                    "Basic Worker verification selected"
+                            );
 
-        continueButton.setOnClickListener(v -> {
-            message("Basic Worker verification selected");
-            showProfile();
-        });
+                            showProfile();
+                        }
+                );
 
-        Button back = button("← Back to Verification");
-        back.setOnClickListener(v -> showWorkerVerification());
+        appButton("← Back")
+                .setOnClickListener(
+                        v -> showWorkerVerification()
+                );
     }
 
-    // =========================
+    // =========================================================
     // NOTIFICATIONS
-    // =========================
+    // =========================================================
 
     private void showNotifications() {
-        setScreen();
 
-        title("🔔 Notifications");
+        setScreen(true);
 
-        section("Job Notification");
-        subtitle("New Product Listing job available.");
+        title("Notifications");
 
-        section("Verification");
-        subtitle("Complete Worker Verification for more access.");
+        infoCard(
+                "🔎 New Job",
+                "A new Product Listing job is available."
+        );
 
-        Button back = button("← Dashboard");
-        back.setOnClickListener(v -> showDashboard());
+        infoCard(
+                "🪪 Verification",
+                "Complete Worker Verification for more access."
+        );
+
+        infoCard(
+                "💰 Earnings",
+                "Your earnings dashboard is ready."
+        );
     }
 
-    // =========================
+    // =========================================================
     // LANGUAGE
-    // =========================
+    // =========================================================
 
     private void showLanguage() {
-        setScreen();
 
-        title("🌐 Language");
+        setScreen(true);
 
-        Button english = button("English");
-        english.setOnClickListener(v ->
-                message("English selected"));
+        title("Language");
 
-        Button hindi = button("हिन्दी");
-        hindi.setOnClickListener(v ->
-                message("Hindi selected"));
+        primaryButton("English")
+                .setOnClickListener(
+                        v -> message("English selected")
+                );
 
-        Button bengali = button("বাংলা");
-        bengali.setOnClickListener(v ->
-                message("Bengali selected"));
+        appButton("हिन्दी")
+                .setOnClickListener(
+                        v -> message("Hindi selected")
+                );
 
-        Button back = button("← Dashboard");
-        back.setOnClickListener(v -> showDashboard());
+        appButton("বাংলা")
+                .setOnClickListener(
+                        v -> message("Bengali selected")
+                );
+
+        appButton("اردو")
+                .setOnClickListener(
+                        v -> message("Urdu selected")
+                );
     }
 
-    // =========================
+    // =========================================================
     // SETTINGS
-    // =========================
+    // =========================================================
 
     private void showSettings() {
-        setScreen();
 
-        title("⚙️ Settings");
+        setScreen(true);
 
-        Button notifications = button("🔔 Notification Settings");
-        notifications.setOnClickListener(v ->
-                message("Notification settings coming next"));
+        title("Settings");
 
-        Button security = button("🔐 Account Security");
-        security.setOnClickListener(v ->
-                message("Security settings coming next"));
+        appButton("🔔 Notification Settings")
+                .setOnClickListener(
+                        v -> message(
+                                "Notification settings coming next"
+                        )
+                );
 
-        Button privacy = button("🛡️ Privacy");
-        privacy.setOnClickListener(v ->
-                message("Privacy settings coming next"));
+        appButton("🔐 Account Security")
+                .setOnClickListener(
+                        v -> message(
+                                "Security settings coming next"
+                        )
+                );
 
-        Button back = button("← Dashboard");
-        back.setOnClickListener(v -> showDashboard());
+        appButton("🛡️ Privacy")
+                .setOnClickListener(
+                        v -> message(
+                                "Privacy settings coming next"
+                        )
+                );
+
+        appButton("🌐 Language")
+                .setOnClickListener(
+                        v -> showLanguage()
+                );
+
+        appButton("💳 Payment Settings")
+                .setOnClickListener(
+                        v -> message(
+                                "Payment settings coming next"
+                        )
+                );
+
+        appButton("🚪 Logout")
+                .setOnClickListener(
+                        v -> showHome()
+                );
     }
 
-    // =========================
+    // =========================================================
     // HELP
-    // =========================
+    // =========================================================
 
     private void showHelp() {
-        setScreen();
 
-        title("❓ Help & Support");
+        setScreen(true);
 
-        section("Need Help?");
-        subtitle(
-                "Contact Viyzo Support for account, job, " +
-                "verification and payment questions.");
+        title("Help & Support");
 
-        Button support = button("💬 Contact Support");
-        support.setOnClickListener(v ->
-                message("Support system coming next"));
+        infoCard(
+                "💬 Viyzo Support",
+                "Get help with your account, jobs, " +
+                "verification and payments."
+        );
 
-        Button back = button("← Dashboard");
-        back.setOnClickListener(v -> showDashboard());
+        primaryButton("💬 Contact Support")
+                .setOnClickListener(
+                        v -> message(
+                                "Support system coming next"
+                        )
+                );
+
+        appButton("📚 Help Center")
+                .setOnClickListener(
+                        v -> message(
+                                "Help Center coming next"
+                        )
+                );
+
+        appButton("🚨 Report a Problem")
+                .setOnClickListener(
+                        v -> message(
+                                "Problem reporting coming next"
+                        )
+                );
     }
 
-    // =========================
+    // =========================================================
     // ABOUT
-    // =========================
+    // =========================================================
 
     private void showAbout() {
-        setScreen();
 
-        title("ℹ️ About Viyzo");
+        setScreen(false);
+
+        logoHeader();
+
+        title("About Viyzo");
+
+        infoCard(
+                "VIYZO",
+                "Global Work Network"
+        );
 
         subtitle(
-                "Viyzo Worker\n\n" +
-                "AI Managed Global Work Platform\n\n" +
-                "Viyzo connects companies with workers " +
-                "for digital work and manages job distribution.");
+                "Viyzo is designed as an AI-managed work platform " +
+                "connecting companies with workers globally."
+        );
 
-        Button back = button("← Home");
-        back.setOnClickListener(v -> showHome());
+        infoCard(
+                "🤖 AI Master Manager",
+                "Job distribution, worker recommendations, " +
+                "workload management and workflow assistance."
+        );
+
+        infoCard(
+                "👷 Worker Network",
+                "Workers can discover suitable digital jobs " +
+                "and manage their work."
+        );
+
+        infoCard(
+                "🏢 Company Network",
+                "Companies can submit jobs and budgets " +
+                "for managed worker execution."
+        );
+
+        infoCard(
+                "💰 Platform Model",
+                "Example: company budget → worker pool + " +
+                "Viyzo platform fee."
+        );
+
+        appButton("← Back")
+                .setOnClickListener(
+                        v -> showHome()
+                );
     }
 }
