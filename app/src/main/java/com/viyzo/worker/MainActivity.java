@@ -5,9 +5,9 @@ import android.os.Bundle;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
-import android.graphics.drawable.StateListDrawable;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -15,2072 +15,1295 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Spinner;
-import android.widget.ArrayAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainActivity extends Activity {
 
-    // =========================
-    // VIYZO DESIGN SYSTEM
-    // =========================
+    // ============================================================
+    // VIYZO WORKER — MODERN APP UI + GLOBAL COMPANY JOB SYSTEM
+    // UI-only foundation: real accounts, OTP, KYC, payments and
+    // global job syncing will connect to a secure backend later.
+    // ============================================================
 
     private final int BG = Color.rgb(7, 12, 22);
-    private final int BG2 = Color.rgb(10, 17, 31);
-    private final int CARD = Color.rgb(17, 28, 48);
-    private final int CARD2 = Color.rgb(21, 35, 59);
-
+    private final int CARD = Color.rgb(15, 27, 47);
+    private final int CARD2 = Color.rgb(20, 35, 59);
+    private final int BORDER = Color.rgb(39, 65, 103);
     private final int PRIMARY = Color.rgb(78, 70, 255);
-    private final int PRIMARY2 = Color.rgb(105, 55, 235);
-
+    private final int PRIMARY2 = Color.rgb(113, 54, 235);
     private final int WHITE = Color.WHITE;
     private final int TEXT = Color.rgb(235, 238, 250);
     private final int GRAY = Color.rgb(155, 165, 185);
-
-    private final int GREEN = Color.rgb(38, 210, 125);
+    private final int GREEN = Color.rgb(40, 210, 125);
     private final int RED = Color.rgb(240, 75, 100);
     private final int GOLD = Color.rgb(245, 185, 60);
-    private final int BLUE = Color.rgb(50, 150, 255);
+    private final int BLUE = Color.rgb(65, 150, 255);
 
     private LinearLayout root;
-    private FrameLayout screenFrame;
-
-    // =========================
-    // ACTIVITY
-    // =========================
+    private FrameLayout frame;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         getWindow().setStatusBarColor(BG);
         getWindow().setNavigationBarColor(BG);
-
         showHome();
     }
 
-    // =========================
-    // BASIC HELPERS
-    // =========================
-
-    private int dp(float value) {
-        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
+    private int dp(float v) {
+        return (int) (v * getResources().getDisplayMetrics().density + 0.5f);
     }
 
-    private TextView text(String value, float size, int color) {
+    private TextView tv(String s, float size, int color) {
         TextView t = new TextView(this);
-        t.setText(value);
+        t.setText(s);
         t.setTextSize(size);
         t.setTextColor(color);
         t.setGravity(Gravity.CENTER_VERTICAL);
         return t;
     }
 
-    private TextView title(String value) {
-        TextView t = text(value, 24, WHITE);
+    private TextView heading(String s) {
+        TextView t = tv(s, 24, WHITE);
         t.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        t.setPadding(0, dp(4), 0, dp(10));
+        t.setPadding(0, dp(3), 0, dp(8));
         return t;
     }
 
-    private TextView subtitle(String value) {
-        TextView t = text(value, 14, GRAY);
-        t.setPadding(0, 0, 0, dp(12));
+    private TextView small(String s) {
+        TextView t = tv(s, 13, GRAY);
+        t.setPadding(0, 0, 0, dp(8));
         return t;
     }
 
-    private GradientDrawable bg(int color, float radius) {
+    private GradientDrawable solid(int color, float radius) {
         GradientDrawable g = new GradientDrawable();
         g.setColor(color);
         g.setCornerRadius(dp(radius));
         return g;
     }
 
-    private GradientDrawable strokeBg(
-            int fill,
-            int stroke,
-            int strokeWidth,
-            float radius
-    ) {
+    private GradientDrawable outlined(int fill, int stroke, float radius) {
         GradientDrawable g = new GradientDrawable();
         g.setColor(fill);
         g.setCornerRadius(dp(radius));
-        g.setStroke(dp(strokeWidth), stroke);
+        g.setStroke(dp(1), stroke);
         return g;
     }
 
-    private GradientDrawable gradient() {
+    private GradientDrawable primaryBg() {
         GradientDrawable g = new GradientDrawable(
                 GradientDrawable.Orientation.LEFT_RIGHT,
                 new int[]{PRIMARY, PRIMARY2}
         );
-        g.setCornerRadius(dp(22));
+        g.setCornerRadius(dp(20));
         return g;
     }
 
-    private LinearLayout vertical() {
+    private LinearLayout column() {
         LinearLayout l = new LinearLayout(this);
         l.setOrientation(LinearLayout.VERTICAL);
         return l;
     }
 
-    private LinearLayout horizontal() {
+    private LinearLayout row() {
         LinearLayout l = new LinearLayout(this);
         l.setOrientation(LinearLayout.HORIZONTAL);
         l.setGravity(Gravity.CENTER_VERTICAL);
         return l;
     }
 
-    private void margin(View v, int l, int t, int r, int b) {
+    private void setMargins(View v, int l, int t, int r, int b) {
         LinearLayout.LayoutParams p =
                 new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT
                 );
-
         p.setMargins(dp(l), dp(t), dp(r), dp(b));
         v.setLayoutParams(p);
     }
 
-    // =========================
-    // MAIN SCREEN CONTAINER
-    // =========================
-
-    private void base(boolean bottomNav) {
-
-        root = vertical();
+    private void startScreen(boolean bottomNav) {
+        root = column();
         root.setBackgroundColor(BG);
 
+        frame = new FrameLayout(this);
+
         if (bottomNav) {
-
-            screenFrame = new FrameLayout(this);
-
-            LinearLayout.LayoutParams frameParams =
+            LinearLayout.LayoutParams fp =
                     new LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.MATCH_PARENT,
                             0
                     );
-
-            frameParams.weight = 1;
-
-            root.addView(screenFrame, frameParams);
-
-            root.addView(bottomNavigation());
+            fp.weight = 1;
+            root.addView(frame, fp);
+            root.addView(bottomNav());
         } else {
-            screenFrame = new FrameLayout(this);
-
-            LinearLayout.LayoutParams frameParams =
-                    new LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT,
-                            LinearLayout.LayoutParams.MATCH_PARENT
-                    );
-
-            root.addView(screenFrame, frameParams);
+            root.addView(frame, new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.MATCH_PARENT
+            ));
         }
 
         setContentView(root);
     }
 
-    private ScrollView scrollContent() {
-
+    private LinearLayout content() {
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         scroll.setBackgroundColor(BG);
 
-        LinearLayout content = vertical();
-        content.setPadding(
-                dp(18),
-                dp(18),
-                dp(18),
-                dp(35)
-        );
+        LinearLayout c = column();
+        c.setPadding(dp(18), dp(16), dp(18), dp(35));
+        scroll.addView(c);
 
-        scroll.addView(content);
+        frame.addView(scroll, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+        ));
 
-        screenFrame.addView(
-                scroll,
-                new FrameLayout.LayoutParams(
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                        FrameLayout.LayoutParams.MATCH_PARENT
-                )
-        );
-
-        return scroll;
+        return c;
     }
 
-    private LinearLayout contentOf(ScrollView scroll) {
-        return (LinearLayout) scroll.getChildAt(0);
-    }
-
-    // =========================
-    // VIYZO LOGO
-    // =========================
-
-    private TextView logoIcon(int size) {
-
-        TextView logo = text("V", size, WHITE);
-        logo.setGravity(Gravity.CENTER);
-        logo.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-
+    private TextView logo(int size) {
+        TextView l = tv("V", size, WHITE);
+        l.setGravity(Gravity.CENTER);
+        l.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         GradientDrawable g = new GradientDrawable(
                 GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{Color.rgb(120, 75, 255), Color.rgb(50, 75, 255)}
+                new int[]{Color.rgb(125, 75, 255), Color.rgb(55, 75, 255)}
         );
-
         g.setShape(GradientDrawable.OVAL);
-
-        logo.setBackground(g);
-
-        return logo;
+        l.setBackground(g);
+        return l;
     }
 
     private LinearLayout brandHeader() {
+        LinearLayout h = row();
 
-        LinearLayout row = horizontal();
+        h.addView(logo(27), new LinearLayout.LayoutParams(dp(54), dp(54)));
 
-        TextView logo = logoIcon(28);
-
-        LinearLayout.LayoutParams lp =
-                new LinearLayout.LayoutParams(dp(55), dp(55));
-
-        row.addView(logo, lp);
-
-        LinearLayout names = vertical();
-
-        TextView name = text("VIYZO", 21, WHITE);
-        name.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-
-        TextView small = text(
-                "Global Work Network",
-                11,
-                GRAY
-        );
-
-        names.addView(name);
-        names.addView(small);
+        LinearLayout names = column();
+        TextView n = tv("VIYZO", 20, WHITE);
+        n.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        names.addView(n);
+        names.addView(tv("Global Work Network", 10, GRAY));
 
         LinearLayout.LayoutParams np =
-                new LinearLayout.LayoutParams(
-                        0,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                );
+                new LinearLayout.LayoutParams(0, dp(54), 1);
+        np.setMargins(dp(11), 0, 0, 0);
+        h.addView(names, np);
 
-        np.weight = 1;
-        np.setMargins(dp(12), 0, 0, 0);
-
-        row.addView(names, np);
-
-        TextView bell = text("🔔", 22, WHITE);
+        TextView bell = tv("🔔", 21, WHITE);
         bell.setGravity(Gravity.CENTER);
-
+        bell.setBackground(outlined(CARD, BORDER, 18));
         bell.setOnClickListener(v -> showNotifications());
+        h.addView(bell, new LinearLayout.LayoutParams(dp(52), dp(52)));
 
-        row.addView(
-                bell,
-                new LinearLayout.LayoutParams(dp(50), dp(55))
-        );
-
-        return row;
+        return h;
     }
 
-    // =========================
-    // STRONG BUTTON
-    // =========================
-
-    private Button primaryButton(String label) {
-
+    private Button primary(String label) {
         Button b = new Button(this);
-
         b.setText(label);
         b.setTextColor(WHITE);
-        b.setTextSize(15);
+        b.setTextSize(14);
         b.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         b.setAllCaps(false);
         b.setGravity(Gravity.CENTER);
-
-        b.setBackground(gradient());
-
+        b.setBackground(primaryBg());
         b.setElevation(dp(7));
 
         LinearLayout.LayoutParams p =
                 new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        dp(58)
-                );
-
-        p.setMargins(0, dp(8), 0, dp(8));
-
+                        LinearLayout.LayoutParams.MATCH_PARENT, dp(56));
+        p.setMargins(0, dp(6), 0, dp(6));
         b.setLayoutParams(p);
-
         return b;
     }
 
-    private Button darkButton(String label) {
-
+    private Button secondary(String label) {
         Button b = new Button(this);
-
         b.setText(label);
         b.setTextColor(TEXT);
-        b.setTextSize(14);
+        b.setTextSize(13);
         b.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         b.setAllCaps(false);
-
-        b.setBackground(
-                strokeBg(
-                        CARD,
-                        Color.rgb(42, 66, 100),
-                        1,
-                        18
-                )
-        );
-
-        b.setElevation(dp(4));
+        b.setGravity(Gravity.CENTER);
+        b.setBackground(outlined(CARD, BORDER, 18));
+        b.setElevation(dp(3));
 
         LinearLayout.LayoutParams p =
                 new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        dp(55)
-                );
-
-        p.setMargins(0, dp(6), 0, dp(6));
-
+                        LinearLayout.LayoutParams.MATCH_PARENT, dp(53));
+        p.setMargins(0, dp(5), 0, dp(5));
         b.setLayoutParams(p);
-
         return b;
     }
 
-    // =========================
-    // BIG ACTION CARD
-    // =========================
-
-    private LinearLayout actionCard(
-            String icon,
-            String heading,
-            String description,
-            View.OnClickListener listener
-    ) {
-
-        LinearLayout card = vertical();
-
-        card.setPadding(
-                dp(16),
-                dp(16),
-                dp(16),
-                dp(16)
-        );
-
-        card.setBackground(
-                strokeBg(
-                        CARD,
-                        Color.rgb(31, 55, 90),
-                        1,
-                        20
-                )
-        );
-
-        card.setElevation(dp(5));
-
-        TextView iconText = text(icon, 28, WHITE);
-        iconText.setGravity(Gravity.CENTER);
-
-        LinearLayout.LayoutParams iconLp =
-                new LinearLayout.LayoutParams(dp(52), dp(52));
-
-        iconLp.setMargins(0, 0, 0, dp(10));
-
-        card.addView(iconText, iconLp);
-
-        TextView h = text(heading, 17, WHITE);
-        h.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        card.addView(h);
-
-        TextView d = text(description, 12, GRAY);
-        d.setPadding(0, dp(5), 0, 0);
-        card.addView(d);
-
-        card.setOnClickListener(listener);
-
-        return card;
+    private LinearLayout card() {
+        LinearLayout c = column();
+        c.setPadding(dp(15), dp(15), dp(15), dp(15));
+        c.setBackground(outlined(CARD, BORDER, 20));
+        c.setElevation(dp(4));
+        return c;
     }
 
-    // =========================
-    // INFORMATION CARD
-    // =========================
+    private LinearLayout statCard(String icon, String title, String value) {
+        LinearLayout c = card();
 
-    private LinearLayout infoCard(
-            String icon,
-            String heading,
-            String value
-    ) {
-
-        LinearLayout card = horizontal();
-
-        card.setPadding(
-                dp(15),
-                dp(13),
-                dp(15),
-                dp(13)
-        );
-
-        card.setBackground(
-                strokeBg(
-                        CARD,
-                        Color.rgb(28, 51, 83),
-                        1,
-                        18
-                )
-        );
-
-        TextView ic = text(icon, 24, WHITE);
+        TextView ic = tv(icon, 24, WHITE);
         ic.setGravity(Gravity.CENTER);
+        c.addView(ic, new LinearLayout.LayoutParams(dp(45), dp(40)));
 
-        card.addView(
-                ic,
-                new LinearLayout.LayoutParams(
-                        dp(45),
-                        dp(45)
-                )
-        );
+        TextView t = tv(title, 11, GRAY);
+        t.setPadding(0, dp(5), 0, 0);
+        c.addView(t);
 
-        LinearLayout texts = vertical();
-
-        TextView h = text(heading, 12, GRAY);
-
-        TextView v = text(value, 17, WHITE);
+        TextView v = tv(value, 17, WHITE);
         v.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        c.addView(v);
 
-        texts.addView(h);
-        texts.addView(v);
+        return c;
+    }
+
+    private LinearLayout menuCard(String icon, String title, String desc,
+                                  View.OnClickListener listener) {
+        LinearLayout c = card();
+
+        TextView ic = tv(icon, 25, WHITE);
+        ic.setGravity(Gravity.CENTER);
+        ic.setBackground(outlined(CARD2, BORDER, 17));
+        c.addView(ic, new LinearLayout.LayoutParams(dp(50), dp(50)));
+
+        TextView t = tv(title, 15, WHITE);
+        t.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        t.setPadding(0, dp(9), 0, 0);
+        c.addView(t);
+
+        TextView d = tv(desc, 11, GRAY);
+        d.setPadding(0, dp(4), 0, 0);
+        c.addView(d);
+
+        c.setOnClickListener(listener);
+        return c;
+    }
+
+    private LinearLayout wideInfo(String icon, String title, String value) {
+        LinearLayout c = row();
+        c.setPadding(dp(14), dp(12), dp(14), dp(12));
+        c.setBackground(outlined(CARD, BORDER, 18));
+        c.setElevation(dp(3));
+
+        TextView ic = tv(icon, 23, WHITE);
+        ic.setGravity(Gravity.CENTER);
+        c.addView(ic, new LinearLayout.LayoutParams(dp(45), dp(45)));
+
+        LinearLayout tx = column();
+        tx.addView(tv(title, 11, GRAY));
+        TextView v = tv(value, 15, WHITE);
+        v.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        tx.addView(v);
 
         LinearLayout.LayoutParams tp =
-                new LinearLayout.LayoutParams(
-                        0,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                );
+                new LinearLayout.LayoutParams(0, dp(45), 1);
+        tp.setMargins(dp(10), 0, 0, 0);
+        c.addView(tx, tp);
 
-        tp.weight = 1;
-        tp.setMargins(dp(12), 0, 0, 0);
-
-        card.addView(texts, tp);
-
-        return card;
+        return c;
     }
 
-    // =========================
-    // BOTTOM NAVIGATION
-    // =========================
-
-    private LinearLayout bottomNavigation() {
-
-        LinearLayout nav = horizontal();
-
+    private LinearLayout bottomNav() {
+        LinearLayout nav = row();
+        nav.setPadding(dp(8), dp(7), dp(8), dp(7));
         nav.setGravity(Gravity.CENTER);
-
-        nav.setPadding(
-                dp(10),
-                dp(10),
-                dp(10),
-                dp(10)
-        );
-
-        nav.setBackground(
-                strokeBg(
-                        Color.rgb(13, 24, 42),
-                        Color.rgb(39, 63, 98),
-                        1,
-                        25
-                )
-        );
-
-        nav.setElevation(dp(15));
+        nav.setBackground(outlined(Color.rgb(11, 22, 39), BORDER, 25));
+        nav.setElevation(dp(14));
 
         String[] icons = {"⌂", "💼", "💳", "●"};
-        String[] labels = {"Home", "Jobs", "Earnings", "Profile"};
+        String[] names = {"Home", "Jobs", "Earnings", "Profile"};
 
         for (int i = 0; i < 4; i++) {
-
             final int index = i;
 
-            LinearLayout item = vertical();
+            LinearLayout item = column();
             item.setGravity(Gravity.CENTER);
 
-            TextView icon = text(
-                    icons[i],
-                    22,
-                    i == 0 ? WHITE : GRAY
-            );
+            TextView ic = tv(icons[i], 21, i == 0 ? WHITE : GRAY);
+            ic.setGravity(Gravity.CENTER);
 
-            icon.setGravity(Gravity.CENTER);
+            TextView nm = tv(names[i], 9, i == 0 ? WHITE : GRAY);
+            nm.setGravity(Gravity.CENTER);
 
-            TextView label = text(
-                    labels[i],
-                    10,
-                    i == 0 ? WHITE : GRAY
-            );
+            item.addView(ic, new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, dp(32)));
+            item.addView(nm);
 
-            label.setGravity(Gravity.CENTER);
+            if (i == 0) {
+                item.setBackground(solid(PRIMARY, 17));
+            }
 
-            item.addView(icon);
-            item.addView(label);
-
-            LinearLayout.LayoutParams p =
-                    new LinearLayout.LayoutParams(
-                            0,
-                            dp(62)
-                    );
-
-            p.weight = 1;
-
-            nav.addView(item, p);
+            LinearLayout.LayoutParams ip =
+                    new LinearLayout.LayoutParams(0, dp(62), 1);
+            ip.setMargins(dp(3), 0, dp(3), 0);
+            nav.addView(item, ip);
 
             item.setOnClickListener(v -> {
-
                 if (index == 0) showDashboard();
-                if (index == 1) showJobs();
-                if (index == 2) showEarnings();
-                if (index == 3) showProfile();
-
+                else if (index == 1) showJobs();
+                else if (index == 2) showEarnings();
+                else showProfile();
             });
         }
 
         LinearLayout.LayoutParams np =
                 new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        dp(82)
-                );
-
-        np.setMargins(
-                dp(10),
-                dp(4),
-                dp(10),
-                dp(10)
-        );
-
+                        LinearLayout.LayoutParams.MATCH_PARENT, dp(78));
+        np.setMargins(dp(9), dp(4), dp(9), dp(10));
         nav.setLayoutParams(np);
 
         return nav;
     }
 
-    // =========================
-    // HOME / SPLASH
-    // =========================
+    // ============================================================
+    // HOME
+    // ============================================================
 
     private void showHome() {
+        startScreen(false);
+        LinearLayout c = content();
 
-        base(false);
-
-        ScrollView scroll = scrollContent();
-        LinearLayout c = contentOf(scroll);
-
-        LinearLayout center = vertical();
+        LinearLayout center = column();
         center.setGravity(Gravity.CENTER_HORIZONTAL);
 
-        TextView logo = logoIcon(60);
+        center.addView(logo(58), new LinearLayout.LayoutParams(dp(115), dp(115)));
 
-        center.addView(
-                logo,
-                new LinearLayout.LayoutParams(
-                        dp(115),
-                        dp(115)
-                )
-        );
-
-        TextView name = text("VIYZO", 40, WHITE);
-        name.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        TextView name = tv("VIYZO", 39, WHITE);
         name.setGravity(Gravity.CENTER);
-
-        margin(name, 0, 18, 0, 4);
-
+        name.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         center.addView(name);
 
-        TextView network =
-                text("Global Work Network", 15, GRAY);
+        TextView sub = tv("Global Work Network", 14, GRAY);
+        sub.setGravity(Gravity.CENTER);
+        center.addView(sub);
 
-        network.setGravity(Gravity.CENTER);
-        center.addView(network);
-
-        TextView slogan =
-                text(
-                        "\nWork Smarter\nEarn Better\nTogether",
-                        20,
-                        TEXT
-                );
-
+        TextView slogan = tv("\nWork Smarter\nEarn Better\nTogether", 19, TEXT);
         slogan.setGravity(Gravity.CENTER);
-        slogan.setPadding(0, dp(35), 0, dp(35));
-
+        slogan.setPadding(0, dp(30), 0, dp(24));
         center.addView(slogan);
 
-        TextView globe =
-                text("🌐", 80, WHITE);
-
+        TextView globe = tv("🌐", 74, WHITE);
         globe.setGravity(Gravity.CENTER);
+        center.addView(globe, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(115)));
 
-        center.addView(
-                globe,
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        dp(130)
-                )
-        );
-
-        Button start =
-                primaryButton("Get Started   →");
-
+        Button start = primary("Get Started   →");
         start.setOnClickListener(v -> showLogin());
-
         center.addView(start);
 
-        Button create =
-                darkButton("Create New Account");
+        Button company = secondary("🏢  I'm a Company / Post Work");
+        company.setOnClickListener(v -> showCompanyPortal());
+        center.addView(company);
 
+        Button create = secondary("Create New Worker Account");
         create.setOnClickListener(v -> showCreateAccount());
-
         center.addView(create);
 
         c.addView(center);
     }
 
-    // =========================
-    // LOGIN
-    // =========================
+    // ============================================================
+    // LOGIN / ACCOUNT
+    // ============================================================
 
     private EditText input(String hint) {
-
         EditText e = new EditText(this);
-
         e.setHint(hint);
-        e.setHintTextColor(Color.rgb(115, 130, 155));
+        e.setHintTextColor(Color.rgb(110, 125, 150));
         e.setTextColor(WHITE);
         e.setTextSize(14);
         e.setSingleLine(true);
-        e.setPadding(
-                dp(16),
-                0,
-                dp(16),
-                0
-        );
-
-        e.setBackground(
-                strokeBg(
-                        CARD,
-                        Color.rgb(40, 65, 100),
-                        1,
-                        18
-                )
-        );
+        e.setPadding(dp(15), 0, dp(15), 0);
+        e.setBackground(outlined(CARD, BORDER, 17));
 
         LinearLayout.LayoutParams p =
                 new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        dp(56)
-                );
-
-        p.setMargins(0, dp(7), 0, dp(7));
-
+                        LinearLayout.LayoutParams.MATCH_PARENT, dp(54));
+        p.setMargins(0, dp(6), 0, dp(6));
         e.setLayoutParams(p);
-
         return e;
     }
 
     private void showLogin() {
+        startScreen(false);
+        LinearLayout c = content();
 
-        base(false);
+        c.addView(brandHeader());
+        c.addView(heading("Welcome Back"));
+        c.addView(small("Login to your Viyzo Worker account."));
 
-        ScrollView scroll = scrollContent();
-        LinearLayout c = contentOf(scroll);
+        c.addView(input("Email or Phone"));
 
-        LinearLayout header = brandHeader();
-        c.addView(header);
-
-        c.addView(title("Welcome Back"));
-        c.addView(subtitle("Login to your Viyzo Worker account"));
-
-        EditText email = input("Email or Phone");
-
-        EditText password = input("Viyzo Password");
-        password.setInputType(
+        EditText pass = input("Viyzo Password");
+        pass.setInputType(
                 android.text.InputType.TYPE_CLASS_TEXT |
                 android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
         );
+        c.addView(pass);
 
-        c.addView(email);
-        c.addView(password);
-
-        Button login = primaryButton("🔐  Login");
-
+        Button login = primary("🔐  Login");
         login.setOnClickListener(v -> {
-
-            Toast.makeText(
-                    this,
-                    "Login system will connect to server.",
-                    Toast.LENGTH_SHORT
-            ).show();
-
+            Toast.makeText(this,
+                    "Login will connect to secure backend.",
+                    Toast.LENGTH_SHORT).show();
             showDashboard();
         });
-
         c.addView(login);
 
-        Button create = darkButton("Create New Account");
+        Button company = secondary("🏢  Company Login");
+        company.setOnClickListener(v -> showCompanyPortal());
+        c.addView(company);
 
+        Button create = secondary("Create New Worker Account");
         create.setOnClickListener(v -> showCreateAccount());
-
         c.addView(create);
     }
 
-    // =========================
-    // CREATE ACCOUNT
-    // =========================
-
     private void showCreateAccount() {
-
-        base(false);
-
-        ScrollView scroll = scrollContent();
-        LinearLayout c = contentOf(scroll);
+        startScreen(false);
+        LinearLayout c = content();
 
         c.addView(brandHeader());
-
-        c.addView(title("Create Account"));
-        c.addView(
-                subtitle(
-                        "Join Viyzo and start working globally"
-                )
-        );
+        c.addView(heading("Create Worker Account"));
+        c.addView(small("Start with basic access. Stronger verification can unlock more work."));
 
         c.addView(input("Full Name"));
         c.addView(input("Email"));
         c.addView(input("Phone Number"));
 
-        EditText password = input("Create Viyzo Password");
-
-        password.setInputType(
+        EditText pass = input("Create Viyzo Password");
+        pass.setInputType(
                 android.text.InputType.TYPE_CLASS_TEXT |
                 android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
         );
-
-        c.addView(password);
+        c.addView(pass);
 
         CheckBox terms = new CheckBox(this);
-        terms.setText(
-                "I agree to Viyzo Terms and Privacy Policy"
-        );
+        terms.setText("I agree to Viyzo Terms and Privacy Policy.");
         terms.setTextColor(TEXT);
-        terms.setTextSize(13);
-
+        terms.setTextSize(12);
         c.addView(terms);
 
-        Button create =
-                primaryButton("🚀  Create Account");
-
+        Button create = primary("🚀  Create Account");
         create.setOnClickListener(v -> {
-
             if (!terms.isChecked()) {
-
-                Toast.makeText(
-                        this,
-                        "Please accept Terms and Privacy Policy.",
-                        Toast.LENGTH_SHORT
-                ).show();
-
+                Toast.makeText(this,
+                        "Please accept the Terms and Privacy Policy.",
+                        Toast.LENGTH_SHORT).show();
                 return;
             }
-
             showWorkerVerification();
         });
-
         c.addView(create);
 
-        Button login =
-                darkButton("Already have an account? Login");
-
-        login.setOnClickListener(v -> showLogin());
-
-        c.addView(login);
+        Button back = secondary("← Back to Login");
+        back.setOnClickListener(v -> showLogin());
+        c.addView(back);
     }
 
-    // =========================
-    // DASHBOARD
-    // =========================
+    // ============================================================
+    // WORKER DASHBOARD — MIXED APP-STYLE GRID
+    // ============================================================
 
     private void showDashboard() {
-
-        base(true);
-
-        ScrollView scroll = scrollContent();
-        LinearLayout c = contentOf(scroll);
+        startScreen(true);
+        LinearLayout c = content();
 
         c.addView(brandHeader());
 
-        LinearLayout welcome =
-                infoCard(
-                        "👤",
-                        "Good day, Ashikur Rahman",
-                        "Basic Worker"
-                );
+        LinearLayout welcome = card();
+        LinearLayout wr = row();
 
+        TextView avatar = tv("👤", 31, WHITE);
+        avatar.setGravity(Gravity.CENTER);
+        avatar.setBackground(outlined(CARD2, BORDER, 35));
+        wr.addView(avatar, new LinearLayout.LayoutParams(dp(58), dp(58)));
+
+        LinearLayout wn = column();
+        TextView w1 = tv("Good day, Ashikur Rahman 👋", 15, WHITE);
+        w1.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        wn.addView(w1);
+        wn.addView(tv("Worker ID: VZ388742", 11, GRAY));
+        TextView verified = tv("● Basic Worker", 11, GREEN);
+        wn.addView(verified);
+
+        LinearLayout.LayoutParams wnp =
+                new LinearLayout.LayoutParams(0, dp(58), 1);
+        wnp.setMargins(dp(11), 0, 0, 0);
+        wr.addView(wn, wnp);
+        welcome.addView(wr);
         c.addView(welcome);
-        margin(welcome, 0, 15, 0, 15);
+        setMargins(welcome, 0, 4, 0, 13);
 
-        LinearLayout manager =
-                actionCard(
-                        "🤖",
-                        "AI Master Manager",
-                        "Finds the best jobs based on your profile.",
-                        v -> showJobs()
-                );
-
+        LinearLayout manager = card();
+        TextView mt = tv("🤖  AI Master Manager       ›", 17, WHITE);
+        mt.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        manager.addView(mt);
+        manager.addView(tv(
+                "Finds suitable jobs from global company work.",
+                11, GRAY));
+        manager.setBackground(primaryBg());
+        manager.setOnClickListener(v -> showJobs());
         c.addView(manager);
-        margin(manager, 0, 0, 0, 12);
+        setMargins(manager, 0, 0, 0, 13);
 
-        TextView quick = text(
-                "Quick Access",
-                19,
-                WHITE
-        );
+        // Uneven / separate app-style grid instead of one long list.
+        LinearLayout r1 = row();
 
-        quick.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        LinearLayout jobs = menuCard(
+                "🔎", "Available Jobs", "Explore global work",
+                v -> showJobs());
 
-        c.addView(quick);
+        LinearLayout myJobs = menuCard(
+                "📋", "My Jobs", "Track active work",
+                v -> showMyJobs());
 
-        LinearLayout row1 = horizontal();
+        r1.addView(jobs, new LinearLayout.LayoutParams(0, dp(145), 1));
+        LinearLayout.LayoutParams p12 =
+                new LinearLayout.LayoutParams(0, dp(145), 1);
+        p12.setMargins(dp(8), dp(15), 0, 0);
+        r1.addView(myJobs, p12);
+        c.addView(r1);
 
-        LinearLayout jobs =
-                actionCard(
-                        "🔎",
-                        "Available Jobs",
-                        "Explore new work",
-                        v -> showJobs()
-                );
+        LinearLayout r2 = row();
 
-        LinearLayout myJobs =
-                actionCard(
-                        "📋",
-                        "My Jobs",
-                        "Track your work",
-                        v -> showMyJobs()
-                );
+        LinearLayout earnings = menuCard(
+                "💰", "Earnings", "Balance & payout",
+                v -> showEarnings());
 
-        row1.addView(
-                jobs,
-                new LinearLayout.LayoutParams(
-                        0,
-                        dp(145),
-                        1
-                )
-        );
+        LinearLayout verify = menuCard(
+                "🛡", "Verification", "Worker verification",
+                v -> showWorkerVerification());
 
-        LinearLayout.LayoutParams myP =
-                new LinearLayout.LayoutParams(
-                        0,
-                        dp(145),
-                        1
-                );
+        r2.addView(earnings, new LinearLayout.LayoutParams(0, dp(145), 1));
+        LinearLayout.LayoutParams p22 =
+                new LinearLayout.LayoutParams(0, dp(145), 1);
+        p22.setMargins(dp(8), dp(0), 0, 0);
+        r2.addView(verify, p22);
+        c.addView(r2);
 
-        myP.setMargins(dp(8), 0, 0, 0);
+        TextView q = tv("Quick Access", 18, WHITE);
+        q.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        q.setPadding(0, dp(17), 0, dp(6));
+        c.addView(q);
 
-        row1.addView(myJobs, myP);
+        LinearLayout r3 = row();
 
-        c.addView(row1);
+        LinearLayout notif = menuCard(
+                "🔔", "Alerts", "New updates",
+                v -> showNotifications());
 
-        LinearLayout row2 = horizontal();
+        LinearLayout language = menuCard(
+                "🌐", "Language", "Change language",
+                v -> showLanguage());
 
-        LinearLayout earning =
-                actionCard(
-                        "💰",
-                        "Earnings",
-                        "View balance",
-                        v -> showEarnings()
-                );
+        r3.addView(notif, new LinearLayout.LayoutParams(0, dp(125), 1));
+        LinearLayout.LayoutParams p32 =
+                new LinearLayout.LayoutParams(0, dp(125), 1);
+        p32.setMargins(dp(8), dp(8), 0, 0);
+        r3.addView(language, p32);
+        c.addView(r3);
 
-        LinearLayout verification =
-                actionCard(
-                        "🛡",
-                        "Verification",
-                        "Complete Worker KYC",
-                        v -> showWorkerVerification()
-                );
-
-        row2.addView(
-                earning,
-                new LinearLayout.LayoutParams(
-                        0,
-                        dp(145),
-                        1
-                )
-        );
-
-        LinearLayout.LayoutParams verP =
-                new LinearLayout.LayoutParams(
-                        0,
-                        dp(145),
-                        1
-                );
-
-        verP.setMargins(dp(8), 0, 0, 0);
-
-        row2.addView(verification, verP);
-
-        c.addView(row2);
-
-        TextView access =
-                text(
-                        "More Options",
-                        19,
-                        WHITE
-                );
-
-        access.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        margin(access, 0, 18, 0, 8);
-
-        c.addView(access);
-
-        Button notifications =
-                darkButton("🔔  Notifications");
-
-        notifications.setOnClickListener(
-                v -> showNotifications()
-        );
-
-        c.addView(notifications);
-
-        Button language =
-                darkButton("🌐  Language");
-
-        language.setOnClickListener(
-                v -> showLanguage()
-        );
-
-        c.addView(language);
-
-        Button settings =
-                darkButton("⚙  Settings");
-
-        settings.setOnClickListener(
-                v -> showSettings()
-        );
-
+        LinearLayout settings = card();
+        settings.setOrientation(LinearLayout.HORIZONTAL);
+        TextView si = tv("⚙", 24, WHITE);
+        settings.addView(si, new LinearLayout.LayoutParams(dp(42), dp(45)));
+        TextView st = tv("Settings & Account", 15, WHITE);
+        st.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        settings.addView(st);
+        TextView arrow = tv("›", 28, GRAY);
+        arrow.setGravity(Gravity.CENTER);
+        settings.addView(arrow, new LinearLayout.LayoutParams(dp(40), dp(45)));
+        settings.setOnClickListener(v -> showSettings());
         c.addView(settings);
+        setMargins(settings, 0, 10, 0, 0);
     }
 
-    // =========================
+    // ============================================================
     // JOBS
-    // =========================
+    // ============================================================
 
     private void showJobs() {
+        startScreen(true);
+        LinearLayout c = content();
 
-        base(true);
+        LinearLayout top = row();
+        TextView back = tv("‹", 32, WHITE);
+        back.setGravity(Gravity.CENTER);
+        back.setOnClickListener(v -> showDashboard());
+        top.addView(back, new LinearLayout.LayoutParams(dp(42), dp(50)));
 
-        ScrollView scroll = scrollContent();
-        LinearLayout c = contentOf(scroll);
+        LinearLayout titles = column();
+        TextView h = tv("Available Jobs", 21, WHITE);
+        h.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        titles.addView(h);
+        titles.addView(tv("Global jobs matched by AI Master Manager", 10, GRAY));
 
-        c.addView(title("Available Jobs"));
-        c.addView(
-                subtitle(
-                        "AI Master Manager selected jobs for you"
-                )
-        );
+        top.addView(titles, new LinearLayout.LayoutParams(0, dp(50), 1));
+        c.addView(top);
 
-        EditText search = input("🔎  Search jobs...");
-        c.addView(search);
+        c.addView(input("🔎  Search jobs, skills or categories"));
+
+        LinearLayout filter = row();
+
+        Button all = secondary("All");
+        Button remote = secondary("Remote");
+        Button country = secondary("Country");
+
+        filter.addView(all, new LinearLayout.LayoutParams(0, dp(48), 1));
+        LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(0, dp(48), 1);
+        rp.setMargins(dp(5), 0, 0, 0);
+        filter.addView(remote, rp);
+        LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(0, dp(48), 1);
+        cp.setMargins(dp(5), 0, 0, 0);
+        filter.addView(country, cp);
+        c.addView(filter);
 
         c.addView(jobCard(
-                "🤖",
-                "Product Listing",
-                "1000 products • Remote",
-                "$500 Budget",
-                "8 Workers",
-                "3 Days"
-        ));
+                "🤖", "Product Listing",
+                "1000 products • Remote • Global",
+                "$500", "8 Workers", "3 Days"));
 
         c.addView(jobCard(
-                "📊",
-                "Data Entry",
-                "500 records • Flexible",
-                "$250 Budget",
-                "5 Workers",
-                "2 Days"
-        ));
+                "📊", "Data Entry",
+                "500 records • Flexible • Global",
+                "$250", "5 Workers", "2 Days"));
 
         c.addView(jobCard(
-                "📝",
-                "Content Review",
-                "500 items • Remote",
-                "$300 Budget",
-                "6 Workers",
-                "3 Days"
-        ));
+                "📝", "Content Review",
+                "500 items • Remote • Global",
+                "$300", "6 Workers", "3 Days"));
+
+        Button company = secondary("🏢  Are you a company? Post work");
+        company.setOnClickListener(v -> showCompanyPortal());
+        c.addView(company);
     }
 
-    private LinearLayout jobCard(
-            String icon,
-            String name,
-            String type,
-            String budget,
-            String workers,
-            String deadline
-    ) {
+    private LinearLayout jobCard(String icon, String name, String type,
+                                 String budget, String workers, String deadline) {
+        LinearLayout c = card();
 
-        LinearLayout card = vertical();
-
-        card.setPadding(
-                dp(16),
-                dp(16),
-                dp(16),
-                dp(16)
-        );
-
-        card.setBackground(
-                strokeBg(
-                        CARD,
-                        Color.rgb(37, 62, 100),
-                        1,
-                        20
-                )
-        );
-
-        card.setElevation(dp(6));
-
-        LinearLayout top = horizontal();
-
-        TextView ic = text(icon, 25, WHITE);
+        LinearLayout top = row();
+        TextView ic = tv(icon, 24, WHITE);
         ic.setGravity(Gravity.CENTER);
+        ic.setBackground(outlined(CARD2, BORDER, 16));
+        top.addView(ic, new LinearLayout.LayoutParams(dp(48), dp(48)));
 
-        top.addView(
-                ic,
-                new LinearLayout.LayoutParams(
-                        dp(48),
-                        dp(48)
-                )
-        );
-
-        LinearLayout names = vertical();
-
-        TextView n = text(name, 17, WHITE);
+        LinearLayout names = column();
+        TextView n = tv(name, 16, WHITE);
         n.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-
-        TextView tp = text(type, 12, GRAY);
-
         names.addView(n);
-        names.addView(tp);
+        names.addView(tv(type, 10, GRAY));
 
-        LinearLayout.LayoutParams np =
-                new LinearLayout.LayoutParams(
-                        0,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                );
+        top.addView(names, new LinearLayout.LayoutParams(0, dp(48), 1));
 
-        np.weight = 1;
-        np.setMargins(dp(10), 0, 0, 0);
+        TextView gl = tv("Global", 10, GREEN);
+        gl.setGravity(Gravity.CENTER);
+        top.addView(gl, new LinearLayout.LayoutParams(dp(52), dp(30)));
 
-        top.addView(names, np);
+        c.addView(top);
 
-        TextView global = text("Global", 11, GREEN);
-        global.setGravity(Gravity.CENTER);
+        TextView info = tv(
+                "Company Budget   " + budget +
+                "\nWorker Pool       " + (budget.equals("$500") ? "$400" : "$200") +
+                "\nWorkers              " + workers +
+                "\nDeadline              " + deadline,
+                12, TEXT);
+        info.setPadding(0, dp(12), 0, dp(7));
+        c.addView(info);
 
-        top.addView(global);
-
-        card.addView(top);
-
-        TextView info = text(
-                budget +
-                        "\nWorker Pool: " +
-                        workers +
-                        "\nDeadline: " +
-                        deadline,
-                13,
-                TEXT
-        );
-
-        info.setPadding(0, dp(14), 0, dp(8));
-
-        card.addView(info);
-
-        Button details =
-                primaryButton("View Details  →");
-
-        details.setOnClickListener(
-                v -> showJobDetails(name, budget)
-        );
-
-        card.addView(details);
-
-        margin(card, 0, 0, 0, 14);
-
-        return card;
-    }
-
-    // =========================
-    // JOB DETAILS
-    // =========================
-
-    private void showJobDetails(
-            String jobName,
-            String budget
-    ) {
-
-        base(false);
-
-        ScrollView scroll = scrollContent();
-        LinearLayout c = contentOf(scroll);
-
-        c.addView(title("Job Details"));
-        c.addView(
-                subtitle(
-                        "AI Master Manager recommendation"
-                )
-        );
-
-        LinearLayout card =
-                infoCard(
-                        "🤖",
-                        jobName,
-                        "Global • Remote"
-                );
-
-        c.addView(card);
-
-        LinearLayout details = vertical();
-
-        details.setPadding(
-                dp(16),
-                dp(16),
-                dp(16),
-                dp(16)
-        );
-
-        details.setBackground(
-                strokeBg(
-                        CARD,
-                        Color.rgb(37, 62, 100),
-                        1,
-                        20
-                )
-        );
-
-        TextView d = text(
-                "Company Budget       " + budget +
-                        "\n\nWorker Pool            $400.00" +
-                        "\n\nViyzo Fee                 $100.00" +
-                        "\n\nRecommended Workers   8" +
-                        "\n\nWorkload per Worker   125 products" +
-                        "\n\nDeadline                   3 Days",
-                14,
-                TEXT
-        );
-
-        details.addView(d);
-
-        margin(details, 0, 15, 0, 15);
-
+        Button details = primary("View Details  →");
+        details.setOnClickListener(v -> showJobDetails(name, budget));
         c.addView(details);
 
-        TextView req =
-                text(
-                        "Requirements",
-                        18,
-                        WHITE
-                );
+        setMargins(c, 0, 9, 0, 4);
+        return c;
+    }
 
+    private void showJobDetails(String name, String budget) {
+        startScreen(false);
+        LinearLayout c = content();
+
+        c.addView(heading("Job Details"));
+        c.addView(small("Global work opportunity"));
+
+        c.addView(wideInfo("🤖", name, "Remote • Global"));
+
+        LinearLayout d = card();
+        d.addView(tv(
+                "Company Budget       " + budget +
+                "\n\nWorker Pool            $400.00" +
+                "\n\nViyzo Fee                 $100.00" +
+                "\n\nRecommended Workers   8" +
+                "\n\nWorkload per Worker   125 products" +
+                "\n\nDeadline                   3 Days",
+                13, TEXT));
+        c.addView(d);
+        setMargins(d, 0, 12, 0, 12);
+
+        TextView req = tv("Requirements", 18, WHITE);
         req.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-
         c.addView(req);
 
-        c.addView(infoCard(
-                "✓",
-                "Internet",
-                "Good internet connection"
-        ));
+        c.addView(wideInfo("✓", "Internet", "Good connection"));
+        c.addView(wideInfo("✓", "Skills", "Basic mobile/computer skills"));
+        c.addView(wideInfo("✓", "Quality", "Accuracy and quality"));
 
-        c.addView(infoCard(
-                "✓",
-                "Skills",
-                "Basic mobile/computer skills"
-        ));
-
-        c.addView(infoCard(
-                "✓",
-                "Quality",
-                "Accuracy and quality work"
-        ));
-
-        Button apply =
-                primaryButton("🚀  Apply Now");
-
-        apply.setOnClickListener(v ->
-                Toast.makeText(
-                        this,
-                        "Job application submitted.",
-                        Toast.LENGTH_SHORT
-                ).show()
-        );
-
+        Button apply = primary("🚀  Apply Now");
+        apply.setOnClickListener(v -> Toast.makeText(
+                this, "Application saved. Backend connection comes next.",
+                Toast.LENGTH_SHORT).show());
         c.addView(apply);
     }
 
-    // =========================
-    // MY JOBS
-    // =========================
+    // ============================================================
+    // MY JOBS / EARNINGS / PROFILE
+    // ============================================================
 
     private void showMyJobs() {
+        startScreen(true);
+        LinearLayout c = content();
 
-        base(true);
+        c.addView(heading("My Jobs"));
+        c.addView(small("Work currently assigned to your account."));
 
-        ScrollView scroll = scrollContent();
-        LinearLayout c = contentOf(scroll);
+        LinearLayout active = card();
+        active.addView(wideInfo("💼", "Product Listing", "In Progress • 12%"));
 
-        c.addView(title("My Jobs"));
+        active.addView(tv("125 / 1000 products", 13, TEXT));
+        active.addView(tv("Deadline: 3 Days", 11, GRAY));
 
-        c.addView(
-                infoCard(
-                        "💼",
-                        "Product Listing",
-                        "In Progress • 12%"
-                )
-        );
+        Button open = primary("Open Work");
+        open.setOnClickListener(v -> Toast.makeText(
+                this, "Work execution screen will connect to job backend.",
+                Toast.LENGTH_SHORT).show());
+        active.addView(open);
 
-        LinearLayout progress =
-                vertical();
-
-        progress.setPadding(
-                dp(15),
-                dp(15),
-                dp(15),
-                dp(15)
-        );
-
-        progress.setBackground(bg(CARD2, 18));
-
-        progress.addView(
-                text(
-                        "125 / 1000 products completed",
-                        14,
-                        TEXT
-                )
-        );
-
-        progress.addView(
-                text(
-                        "Deadline: 3 Days",
-                        12,
-                        GRAY
-                )
-        );
-
-        c.addView(progress);
-
-        Button open =
-                primaryButton("Open Work");
-
-        open.setOnClickListener(v ->
-                Toast.makeText(
-                        this,
-                        "Work screen coming next.",
-                        Toast.LENGTH_SHORT
-                ).show()
-        );
-
-        c.addView(open);
+        c.addView(active);
     }
 
-    // =========================
-    // EARNINGS
-    // =========================
-
     private void showEarnings() {
+        startScreen(true);
+        LinearLayout c = content();
 
-        base(true);
+        c.addView(heading("Earnings"));
 
-        ScrollView scroll = scrollContent();
-        LinearLayout c = contentOf(scroll);
-
-        c.addView(title("Earnings"));
-
-        LinearLayout balance = vertical();
-
-        balance.setPadding(
-                dp(20),
-                dp(22),
-                dp(20),
-                dp(22)
-        );
-
-        balance.setBackground(gradient());
+        LinearLayout balance = column();
+        balance.setPadding(dp(20), dp(20), dp(20), dp(20));
+        balance.setBackground(primaryBg());
         balance.setElevation(dp(8));
 
-        TextView b1 =
-                text(
-                        "Available Balance",
-                        13,
-                        WHITE
-                );
+        balance.addView(tv("Available Balance", 12, WHITE));
+        TextView money = tv("$0.00", 32, WHITE);
+        money.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        balance.addView(money);
 
-        TextView b2 =
-                text(
-                        "$0.00",
-                        32,
-                        WHITE
-                );
-
-        b2.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-        );
-
-        balance.addView(b1);
-        balance.addView(b2);
-
-        Button withdraw =
-                primaryButton("Withdraw");
-
-        withdraw.setBackground(
-                bg(WHITE, 20)
-        );
-
+        Button withdraw = primary("Withdraw");
+        withdraw.setBackground(solid(WHITE, 20));
         withdraw.setTextColor(PRIMARY);
-
-        withdraw.setOnClickListener(v ->
-                Toast.makeText(
-                        this,
-                        "Withdrawal system will connect to payment provider.",
-                        Toast.LENGTH_SHORT
-                ).show()
-        );
-
+        withdraw.setOnClickListener(v -> Toast.makeText(
+                this, "Withdrawal will connect to a country/payment provider.",
+                Toast.LENGTH_SHORT).show());
         balance.addView(withdraw);
 
         c.addView(balance);
+        setMargins(balance, 0, 0, 0, 12);
 
-        c.addView(
-                infoCard(
-                        "💵",
-                        "Total Earned",
-                        "$0.00"
-                )
-        );
+        LinearLayout r = row();
+        LinearLayout total = statCard("💵", "Total Earned", "$0.00");
+        LinearLayout pending = statCard("⏳", "Pending", "$0.00");
 
-        c.addView(
-                infoCard(
-                        "⏳",
-                        "Pending",
-                        "$0.00"
-                )
-        );
+        r.addView(total, new LinearLayout.LayoutParams(0, dp(125), 1));
+        LinearLayout.LayoutParams pp =
+                new LinearLayout.LayoutParams(0, dp(125), 1);
+        pp.setMargins(dp(8), 0, 0, 0);
+        r.addView(pending, pp);
+        c.addView(r);
 
-        c.addView(
-                infoCard(
-                        "📈",
-                        "Recent Transactions",
-                        "No transactions yet"
-                )
-        );
-
-        Button methods =
-                darkButton("💳  Payment Methods");
-
-        c.addView(methods);
-
-        Button history =
-                darkButton("📋  Transaction History");
-
-        c.addView(history);
+        c.addView(wideInfo("📈", "Transactions", "No transactions yet"));
+        c.addView(secondary("💳  Payment Methods"));
+        c.addView(secondary("📋  Transaction History"));
     }
 
-    // =========================
-    // PROFILE
-    // =========================
-
     private void showProfile() {
+        startScreen(true);
+        LinearLayout c = content();
 
-        base(true);
+        c.addView(heading("My Profile"));
 
-        ScrollView scroll = scrollContent();
-        LinearLayout c = contentOf(scroll);
+        LinearLayout profile = card();
+        LinearLayout pr = row();
 
-        c.addView(title("My Profile"));
+        TextView av = tv("👤", 34, WHITE);
+        av.setGravity(Gravity.CENTER);
+        av.setBackground(outlined(CARD2, BORDER, 35));
+        pr.addView(av, new LinearLayout.LayoutParams(dp(68), dp(68)));
 
-        LinearLayout profile = horizontal();
+        LinearLayout pd = column();
+        TextView name = tv("Ashikur Rahman", 17, WHITE);
+        name.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        pd.addView(name);
+        pd.addView(tv("Worker ID: VZ388742", 11, GRAY));
+        pd.addView(tv("● Basic Worker", 11, GREEN));
 
-        profile.setPadding(
-                dp(15),
-                dp(15),
-                dp(15),
-                dp(15)
-        );
-
-        profile.setBackground(
-                strokeBg(
-                        CARD,
-                        Color.rgb(37, 62, 100),
-                        1,
-                        20
-                )
-        );
-
-        TextView avatar = text("👤", 35, WHITE);
-        avatar.setGravity(Gravity.CENTER);
-
-        profile.addView(
-                avatar,
-                new LinearLayout.LayoutParams(
-                        dp(70),
-                        dp(70)
-                )
-        );
-
-        LinearLayout details = vertical();
-
-        TextView name =
-                text(
-                        "Ashikur Rahman",
-                        18,
-                        WHITE
-                );
-
-        name.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-        );
-
-        details.addView(name);
-
-        details.addView(
-                text(
-                        "VZ388742",
-                        12,
-                        GRAY
-                )
-        );
-
-        TextView status =
-                text(
-                        "● Basic Worker",
-                        12,
-                        GREEN
-                );
-
-        details.addView(status);
-
-        LinearLayout.LayoutParams dp1 =
-                new LinearLayout.LayoutParams(
-                        0,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                );
-
-        dp1.weight = 1;
-        dp1.setMargins(dp(12), 0, 0, 0);
-
-        profile.addView(details, dp1);
-
+        pr.addView(pd, new LinearLayout.LayoutParams(0, dp(68), 1));
+        profile.addView(pr);
         c.addView(profile);
 
-        c.addView(
-                infoCard(
-                        "🛡",
-                        "Verification Status",
-                        "Basic Verification • Not completed"
-                )
-        );
+        c.addView(wideInfo("🛡", "Verification Status",
+                "Basic Verification • Not completed"));
 
-        Button verify =
-                darkButton("🛡  Worker Verification");
-
-        verify.setOnClickListener(
-                v -> showWorkerVerification()
-        );
-
+        Button verify = secondary("🛡  Worker Verification");
+        verify.setOnClickListener(v -> showWorkerVerification());
         c.addView(verify);
 
-        Button settings =
-                darkButton("⚙  Account Settings");
-
-        settings.setOnClickListener(
-                v -> showSettings()
-        );
-
+        Button settings = secondary("⚙  Account Settings");
+        settings.setOnClickListener(v -> showSettings());
         c.addView(settings);
 
-        Button help =
-                darkButton("❓  Help & Support");
-
-        help.setOnClickListener(
-                v -> showHelp()
-        );
-
+        Button help = secondary("❓  Help & Support");
+        help.setOnClickListener(v -> showHelp());
         c.addView(help);
 
-        Button about =
-                darkButton("ⓘ  About Viyzo");
-
-        about.setOnClickListener(
-                v -> showAbout()
-        );
-
+        Button about = secondary("ⓘ  About Viyzo");
+        about.setOnClickListener(v -> showAbout());
         c.addView(about);
 
-        Button logout =
-                primaryButton("Logout");
-
-        logout.setBackground(bg(RED, 20));
-
-        logout.setOnClickListener(
-                v -> showHome()
-        );
-
+        Button logout = primary("Logout");
+        logout.setBackground(solid(RED, 20));
+        logout.setOnClickListener(v -> showHome());
         c.addView(logout);
     }
 
-    // =========================
+    // ============================================================
     // WORKER VERIFICATION
-    // =========================
+    // ============================================================
 
     private void showWorkerVerification() {
+        startScreen(false);
+        LinearLayout c = content();
 
-        base(false);
+        c.addView(heading("Worker Verification"));
+        c.addView(small("Complete verification to unlock more work and higher-value jobs."));
 
-        ScrollView scroll = scrollContent();
-        LinearLayout c = contentOf(scroll);
+        c.addView(wideInfo("1", "Country", "Select your country"));
+        c.addView(wideInfo("2", "Basic Verification",
+                "Name, DOB, phone, email and selfie"));
+        c.addView(wideInfo("3", "Identity Document",
+                "Country/provider requirements may vary"));
+        c.addView(wideInfo("4", "Consent",
+                "Verification and privacy consent"));
 
-        c.addView(title("Worker Verification"));
-
-        c.addView(
-                subtitle(
-                        "Complete verification to unlock more jobs and higher-value work."
-                )
-        );
-
-        c.addView(
-                infoCard(
-                        "1",
-                        "Country",
-                        "Select your country"
-                )
-        );
-
-        c.addView(
-                infoCard(
-                        "2",
-                        "Basic Verification",
-                        "Name, DOB, Phone, Email, Selfie"
-                )
-        );
-
-        c.addView(
-                infoCard(
-                        "3",
-                        "Identity Document",
-                        "Optional if available"
-                )
-        );
-
-        c.addView(
-                infoCard(
-                        "4",
-                        "Consent",
-                        "Agree to terms and privacy policy"
-                )
-        );
-
-        Button start =
-                primaryButton("Start Verification");
-
-        start.setOnClickListener(
-                v -> showBasicVerification()
-        );
-
+        Button start = primary("Start Verification");
+        start.setOnClickListener(v -> showBasicVerification());
         c.addView(start);
 
-        Button noDocument =
-                darkButton("I Don't Have a Document");
-
-        noDocument.setOnClickListener(
-                v -> showNoDocument()
-        );
-
-        c.addView(noDocument);
+        Button noDoc = secondary("I Don't Have a Document");
+        noDoc.setOnClickListener(v -> showNoDocument());
+        c.addView(noDoc);
     }
 
-    // =========================
-    // BASIC VERIFICATION
-    // =========================
-
     private void showBasicVerification() {
+        startScreen(false);
+        LinearLayout c = content();
 
-        base(false);
-
-        ScrollView scroll = scrollContent();
-        LinearLayout c = contentOf(scroll);
-
-        c.addView(title("Basic Verification"));
-
-        c.addView(
-                subtitle(
-                        "Enter your real information for Worker Verification."
-                )
-        );
+        c.addView(heading("Basic Verification"));
+        c.addView(small("Only provide information needed for verification."));
 
         c.addView(input("Full Name"));
         c.addView(input("Date of Birth"));
         c.addView(input("Phone Number"));
         c.addView(input("Email Address"));
 
-        Button otp =
-                darkButton("📱 Send Phone OTP");
-
-        otp.setOnClickListener(
-                v -> Toast.makeText(
-                        this,
-                        "OTP system will connect to backend.",
-                        Toast.LENGTH_SHORT
-                ).show()
-        );
-
+        Button otp = secondary("📱  Send Phone OTP");
+        otp.setOnClickListener(v -> Toast.makeText(
+                this, "OTP will connect to secure backend.",
+                Toast.LENGTH_SHORT).show());
         c.addView(otp);
 
-        Button selfie =
-                darkButton("📷 Take Live Selfie");
-
-        selfie.setOnClickListener(
-                v -> Toast.makeText(
-                        this,
-                        "Selfie verification will connect to verification service.",
-                        Toast.LENGTH_SHORT
-                ).show()
-        );
-
+        Button selfie = secondary("📷  Take Live Selfie");
+        selfie.setOnClickListener(v -> Toast.makeText(
+                this, "Selfie verification will connect to verification service.",
+                Toast.LENGTH_SHORT).show());
         c.addView(selfie);
 
         CheckBox consent = new CheckBox(this);
-
-        consent.setText(
-                "I confirm that the information is mine and I agree to Viyzo's verification and privacy terms."
-        );
-
+        consent.setText("I confirm this information is mine and agree to verification/privacy terms.");
         consent.setTextColor(TEXT);
-        consent.setTextSize(13);
-
+        consent.setTextSize(12);
         c.addView(consent);
 
-        Button continueBtn =
-                primaryButton("Continue Verification");
-
-        continueBtn.setOnClickListener(v -> {
-
+        Button next = primary("Continue Verification");
+        next.setOnClickListener(v -> {
             if (!consent.isChecked()) {
-
-                Toast.makeText(
-                        this,
-                        "Please accept the verification consent.",
-                        Toast.LENGTH_SHORT
-                ).show();
-
+                Toast.makeText(this,
+                        "Please accept verification consent.",
+                        Toast.LENGTH_SHORT).show();
                 return;
             }
-
             showDocumentOptions();
         });
-
-        c.addView(continueBtn);
+        c.addView(next);
     }
 
-    // =========================
-    // DOCUMENT OPTIONS
-    // =========================
-
     private void showDocumentOptions() {
+        startScreen(false);
+        LinearLayout c = content();
 
-        base(false);
-
-        ScrollView scroll = scrollContent();
-        LinearLayout c = contentOf(scroll);
-
-        c.addView(title("Identity Document"));
-
-        c.addView(
-                subtitle(
-                        "Document requirements can vary by country and verification provider."
-                )
-        );
+        c.addView(heading("Identity Document"));
+        c.addView(small("Accepted documents depend on country and verification provider."));
 
         Spinner country = new Spinner(this);
-
         String[] countries = {
-                "Select Country",
-                "India",
-                "United States",
-                "United Kingdom",
-                "Bangladesh",
-                "UAE",
-                "Other"
+                "Select Country", "India", "United States",
+                "United Kingdom", "Bangladesh", "UAE", "Other"
         };
-
-        ArrayAdapter<String> adapter =
-                new ArrayAdapter<String>(
-                        this,
-                        android.R.layout.simple_spinner_dropdown_item,
-                        countries
-                );
-
-        country.setAdapter(adapter);
-
+        country.setAdapter(new ArrayAdapter<String>(
+                this,
+                android.R.layout.simple_spinner_dropdown_item,
+                countries));
         c.addView(country);
 
-        c.addView(
-                infoCard(
-                        "🪪",
-                        "Government ID",
-                        "Upload an accepted document when required."
-                )
-        );
+        c.addView(wideInfo("🪪", "Government ID",
+                "Use an accepted document when required."));
 
-        Button upload =
-                primaryButton("📷 Upload / Capture Document");
-
-        upload.setOnClickListener(
-                v -> Toast.makeText(
-                        this,
-                        "Document upload will connect to secure verification backend.",
-                        Toast.LENGTH_SHORT
-                ).show()
-        );
-
+        Button upload = primary("📷  Upload / Capture Document");
+        upload.setOnClickListener(v -> Toast.makeText(
+                this, "Secure document upload will connect to backend.",
+                Toast.LENGTH_SHORT).show());
         c.addView(upload);
 
-        Button skip =
-                darkButton("Continue Without Document");
-
-        skip.setOnClickListener(
-                v -> showNoDocument()
-        );
-
+        Button skip = secondary("Continue Without Document");
+        skip.setOnClickListener(v -> showNoDocument());
         c.addView(skip);
     }
 
-    // =========================
-    // NO DOCUMENT
-    // =========================
-
     private void showNoDocument() {
+        startScreen(false);
+        LinearLayout c = content();
 
-        base(false);
+        c.addView(heading("Basic Worker Account"));
+        c.addView(small("You can start with basic access where permitted."));
 
-        ScrollView scroll = scrollContent();
-        LinearLayout c = contentOf(scroll);
+        c.addView(wideInfo("✓", "Account Created",
+                "Basic account access"));
+        c.addView(wideInfo("🛡", "Basic Verification",
+                "Some jobs can remain available"));
+        c.addView(wideInfo("🔒", "Higher Verification",
+                "Some high-value jobs or payouts may require stronger verification"));
 
-        c.addView(title("Basic Worker Account"));
-
-        c.addView(
-                infoCard(
-                        "✓",
-                        "Account Created",
-                        "Your account can continue with basic access."
-                )
-        );
-
-        c.addView(
-                infoCard(
-                        "🛡",
-                        "Basic Verification",
-                        "Some jobs may remain available."
-                )
-        );
-
-        c.addView(
-                infoCard(
-                        "🔒",
-                        "Higher Verification",
-                        "Some high-value jobs or payouts may require stronger verification."
-                )
-        );
-
-        Button done =
-                primaryButton("Continue to Dashboard");
-
-        done.setOnClickListener(
-                v -> showDashboard()
-        );
-
+        Button done = primary("Continue to Dashboard");
+        done.setOnClickListener(v -> showDashboard());
         c.addView(done);
     }
 
-    // =========================
-    // NOTIFICATIONS
-    // =========================
+    // ============================================================
+    // COMPANY PORTAL — GLOBAL JOB POSTING FOUNDATION
+    // ============================================================
 
-    private void showNotifications() {
+    private void showCompanyPortal() {
+        startScreen(false);
+        LinearLayout c = content();
 
-        base(false);
+        c.addView(brandHeader());
+        c.addView(heading("Company Work Portal"));
+        c.addView(small(
+                "Small or large companies can create work for workers anywhere in the world."
+        ));
 
-        ScrollView scroll = scrollContent();
-        LinearLayout c = contentOf(scroll);
+        LinearLayout hero = card();
+        hero.setBackground(primaryBg());
+        hero.addView(tv("🌍  Global Company Jobs", 19, WHITE));
+        hero.addView(tv(
+                "Post remote work, choose a country/currency, set workload and budget, and let the AI Manager recommend workers.",
+                12, WHITE));
+        c.addView(hero);
+        setMargins(hero, 0, 0, 0, 13);
 
-        c.addView(title("Notifications"));
+        Button post = primary("＋  Post New Work");
+        post.setOnClickListener(v -> showPostWork());
+        c.addView(post);
 
-        c.addView(
-                infoCard(
-                        "🤖",
-                        "AI Master Manager",
-                        "A new Product Listing job is available."
-                )
-        );
+        Button companyLogin = secondary("🏢  Company Login / Dashboard");
+        companyLogin.setOnClickListener(v -> showCompanyDashboard());
+        c.addView(companyLogin);
 
-        c.addView(
-                infoCard(
-                        "💰",
-                        "Earnings",
-                        "Complete jobs to start earning."
-                )
-        );
-
-        c.addView(
-                infoCard(
-                        "🛡",
-                        "Verification",
-                        "Complete Worker Verification for more access."
-                )
-        );
-
-        Button back =
-                darkButton("← Back");
-
-        back.setOnClickListener(
-                v -> showDashboard()
-        );
-
+        Button back = secondary("← Back to Worker App");
+        back.setOnClickListener(v -> showHome());
         c.addView(back);
     }
 
-    // =========================
-    // LANGUAGE
-    // =========================
+    private void showCompanyDashboard() {
+        startScreen(false);
+        LinearLayout c = content();
+
+        c.addView(heading("Company Dashboard"));
+        c.addView(small("Manage global work and view job status."));
+
+        LinearLayout r1 = row();
+        r1.addView(statCard("📋", "Open Jobs", "0"),
+                new LinearLayout.LayoutParams(0, dp(120), 1));
+
+        LinearLayout.LayoutParams p =
+                new LinearLayout.LayoutParams(0, dp(120), 1);
+        p.setMargins(dp(8), 0, 0, 0);
+        r1.addView(statCard("👥", "Workers", "0"), p);
+        c.addView(r1);
+
+        c.addView(wideInfo("💵", "Company Spending", "$0.00"));
+        c.addView(wideInfo("🌍", "Global Reach", "Countries can be configured"));
+
+        Button post = primary("＋  Post New Work");
+        post.setOnClickListener(v -> showPostWork());
+        c.addView(post);
+
+        Button back = secondary("← Back");
+        back.setOnClickListener(v -> showCompanyPortal());
+        c.addView(back);
+    }
+
+    private void showPostWork() {
+        startScreen(false);
+        LinearLayout c = content();
+
+        c.addView(heading("Post New Work"));
+        c.addView(small("This form is designed for global companies of any size."));
+
+        c.addView(input("Company Name"));
+        c.addView(input("Job Title / Work Name"));
+        c.addView(input("Job Description"));
+
+        Spinner category = new Spinner(this);
+        String[] categories = {
+                "Select Category",
+                "Product Listing",
+                "Data Entry",
+                "Content Review",
+                "Translation",
+                "Research",
+                "Image / Media Work",
+                "Customer Support",
+                "Other"
+        };
+        category.setAdapter(new ArrayAdapter<String>(
+                this,
+                android.R.layout.simple_spinner_dropdown_item,
+                categories));
+        c.addView(category);
+
+        Spinner companySize = new Spinner(this);
+        String[] sizes = {
+                "Company Size",
+                "Small Business",
+                "Startup",
+                "Medium Business",
+                "Enterprise",
+                "Agency / Other"
+        };
+        companySize.setAdapter(new ArrayAdapter<String>(
+                this,
+                android.R.layout.simple_spinner_dropdown_item,
+                sizes));
+        c.addView(companySize);
+
+        Spinner country = new Spinner(this);
+        String[] countries = {
+                "Worker Location",
+                "Worldwide",
+                "India",
+                "United States",
+                "United Kingdom",
+                "Europe",
+                "Middle East",
+                "Asia",
+                "Africa",
+                "Other / Multiple Countries"
+        };
+        country.setAdapter(new ArrayAdapter<String>(
+                this,
+                android.R.layout.simple_spinner_dropdown_item,
+                countries));
+        c.addView(country);
+
+        Spinner currency = new Spinner(this);
+        String[] currencies = {
+                "Currency",
+                "USD", "EUR", "GBP", "INR", "AED", "BDT", "Other"
+        };
+        currency.setAdapter(new ArrayAdapter<String>(
+                this,
+                android.R.layout.simple_spinner_dropdown_item,
+                currencies));
+        c.addView(currency);
+
+        c.addView(input("Company Budget"));
+        c.addView(input("Number of Workers Needed"));
+        c.addView(input("Workload / Quantity"));
+        c.addView(input("Deadline"));
+
+        CheckBox remote = new CheckBox(this);
+        remote.setText("Remote / Online Work");
+        remote.setChecked(true);
+        remote.setTextColor(TEXT);
+        c.addView(remote);
+
+        CheckBox agree = new CheckBox(this);
+        agree.setText("I confirm that this work and payment information is accurate.");
+        agree.setTextColor(TEXT);
+        c.addView(agree);
+
+        Button post = primary("🌍  Submit Work to Viyzo");
+        post.setOnClickListener(v -> {
+            if (!agree.isChecked()) {
+                Toast.makeText(this,
+                        "Please confirm the work information.",
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            Toast.makeText(this,
+                    "Work saved locally. Secure global job backend will receive it when connected.",
+                    Toast.LENGTH_LONG).show();
+
+            showCompanyDashboard();
+        });
+        c.addView(post);
+
+        Button back = secondary("← Back");
+        back.setOnClickListener(v -> showCompanyPortal());
+        c.addView(back);
+    }
+
+    // ============================================================
+    // SETTINGS / NOTIFICATIONS / LANGUAGE / HELP / ABOUT
+    // ============================================================
+
+    private void showNotifications() {
+        startScreen(false);
+        LinearLayout c = content();
+
+        c.addView(heading("Notifications"));
+
+        c.addView(wideInfo("🤖", "AI Master Manager",
+                "A new Product Listing job is available."));
+        c.addView(wideInfo("💰", "Earnings",
+                "Complete jobs to start earning."));
+        c.addView(wideInfo("🛡", "Verification",
+                "Complete Worker Verification for more access."));
+
+        Button back = secondary("← Back");
+        back.setOnClickListener(v -> showDashboard());
+        c.addView(back);
+    }
 
     private void showLanguage() {
+        startScreen(false);
+        LinearLayout c = content();
 
-        base(false);
-
-        ScrollView scroll = scrollContent();
-        LinearLayout c = contentOf(scroll);
-
-        c.addView(title("Language"));
+        c.addView(heading("Language"));
 
         String[] languages = {
-                "🇬🇧  English",
-                "🇮🇳  हिन्दी",
-                "🇧🇩  বাংলা",
-                "🇵🇰  اردو",
-                "🇸🇦  العربية",
-                "🇹🇷  Türkçe"
+                "🇬🇧  English", "🇮🇳  हिन्दी", "🇧🇩  বাংলা",
+                "🇵🇰  اردو", "🇸🇦  العربية", "🇹🇷  Türkçe"
         };
 
         for (String lang : languages) {
-
-            Button b = darkButton(lang);
-
-            b.setOnClickListener(
-                    v -> Toast.makeText(
-                            this,
-                            "Language selected: " + lang,
-                            Toast.LENGTH_SHORT
-                    ).show()
-            );
-
+            Button b = secondary(lang);
+            b.setOnClickListener(v -> Toast.makeText(
+                    this, "Selected: " + lang, Toast.LENGTH_SHORT).show());
             c.addView(b);
         }
     }
 
-    // =========================
-    // SETTINGS
-    // =========================
-
     private void showSettings() {
+        startScreen(false);
+        LinearLayout c = content();
 
-        base(false);
+        c.addView(heading("Settings"));
 
-        ScrollView scroll = scrollContent();
-        LinearLayout c = contentOf(scroll);
-
-        c.addView(title("Settings"));
-
-        Button notifications =
-                darkButton("🔔  Notification Settings");
-
+        Button notifications = secondary("🔔  Notification Settings");
         c.addView(notifications);
 
-        Button language =
-                darkButton("🌐  Language");
-
-        language.setOnClickListener(
-                v -> showLanguage()
-        );
-
+        Button language = secondary("🌐  Language");
+        language.setOnClickListener(v -> showLanguage());
         c.addView(language);
 
-        Button privacy =
-                darkButton("🔐  Privacy");
+        c.addView(secondary("🔐  Privacy"));
+        c.addView(secondary("💳  Payment Settings"));
 
-        c.addView(privacy);
-
-        Button payment =
-                darkButton("💳  Payment Settings");
-
-        c.addView(payment);
-
-        Button help =
-                darkButton("❓  Help & Support");
-
-        help.setOnClickListener(
-                v -> showHelp()
-        );
-
+        Button help = secondary("❓  Help & Support");
+        help.setOnClickListener(v -> showHelp());
         c.addView(help);
 
-        Button about =
-                darkButton("ⓘ  About Viyzo");
-
-        about.setOnClickListener(
-                v -> showAbout()
-        );
-
+        Button about = secondary("ⓘ  About Viyzo");
+        about.setOnClickListener(v -> showAbout());
         c.addView(about);
 
-        Button logout =
-                primaryButton("Logout");
-
-        logout.setBackground(bg(RED, 20));
-
-        logout.setOnClickListener(
-                v -> showHome()
-        );
-
+        Button logout = primary("Logout");
+        logout.setBackground(solid(RED, 20));
+        logout.setOnClickListener(v -> showHome());
         c.addView(logout);
     }
 
-    // =========================
-    // HELP
-    // =========================
-
     private void showHelp() {
+        startScreen(false);
+        LinearLayout c = content();
 
-        base(false);
+        c.addView(heading("Help & Support"));
+        c.addView(wideInfo("💬", "Worker Support",
+                "Help with jobs, accounts and verification."));
+        c.addView(wideInfo("🏢", "Company Support",
+                "Help with job posting and company accounts."));
+        c.addView(wideInfo("📚", "Help Center",
+                "Learn how Viyzo works globally."));
 
-        ScrollView scroll = scrollContent();
-        LinearLayout c = contentOf(scroll);
-
-        c.addView(title("Help & Support"));
-
-        c.addView(
-                infoCard(
-                        "💬",
-                        "Worker Support",
-                        "Get help with jobs, account and verification."
-                )
-        );
-
-        c.addView(
-                infoCard(
-                        "📚",
-                        "Help Center",
-                        "Learn how Viyzo works."
-                )
-        );
-
-        Button contact =
-                primaryButton("Contact Support");
-
-        contact.setOnClickListener(
-                v -> Toast.makeText(
-                        this,
-                        "Support system will connect to backend.",
-                        Toast.LENGTH_SHORT
-                ).show()
-        );
-
+        Button contact = primary("Contact Support");
+        contact.setOnClickListener(v -> Toast.makeText(
+                this, "Support will connect to backend.", Toast.LENGTH_SHORT).show());
         c.addView(contact);
     }
 
-    // =========================
-    // ABOUT
-    // =========================
-
     private void showAbout() {
+        startScreen(false);
+        LinearLayout c = content();
 
-        base(false);
-
-        ScrollView scroll = scrollContent();
-        LinearLayout c = contentOf(scroll);
-
-        LinearLayout center = vertical();
+        LinearLayout center = column();
         center.setGravity(Gravity.CENTER_HORIZONTAL);
+        center.addView(logo(35), new LinearLayout.LayoutParams(dp(90), dp(90)));
 
-        TextView logo = logoIcon(35);
-
-        center.addView(
-                logo,
-                new LinearLayout.LayoutParams(
-                        dp(90),
-                        dp(90)
-                )
-        );
-
-        TextView name =
-                text("VIYZO", 30, WHITE);
-
-        name.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-        );
-
+        TextView name = tv("VIYZO", 30, WHITE);
+        name.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         name.setGravity(Gravity.CENTER);
-
         center.addView(name);
 
-        TextView global =
-                text(
-                        "Global Work Network",
-                        13,
-                        GRAY
-                );
-
-        global.setGravity(Gravity.CENTER);
-
-        center.addView(global);
+        TextView network = tv("Global Work Network", 12, GRAY);
+        network.setGravity(Gravity.CENTER);
+        center.addView(network);
 
         c.addView(center);
 
-        c.addView(
-                infoCard(
-                        "🤖",
-                        "AI Master Manager",
-                        "Smart job distribution"
-                )
-        );
+        c.addView(wideInfo("🤖", "AI Master Manager",
+                "Smart job distribution"));
+        c.addView(wideInfo("🌍", "Global Companies",
+                "Small and large companies can post work"));
+        c.addView(wideInfo("👥", "Global Workers",
+                "Workers can discover suitable jobs"));
+        c.addView(wideInfo("🛡", "Verification",
+                "Verification levels can be applied to access and payouts"));
 
-        c.addView(
-                infoCard(
-                        "🌐",
-                        "Global Network",
-                        "Workers and companies"
-                )
-        );
-
-        c.addView(
-                infoCard(
-                        "🛡",
-                        "Secure & Transparent",
-                        "Designed for global work"
-                )
-        );
-
-        TextView version =
-                text(
-                        "Version 1.0.0",
-                        12,
-                        GRAY
-                );
-
-        version.setGravity(Gravity.CENTER);
-
-        c.addView(version);
+        TextView v = tv("Version 1.0.0", 11, GRAY);
+        v.setGravity(Gravity.CENTER);
+        c.addView(v);
     }
 }
