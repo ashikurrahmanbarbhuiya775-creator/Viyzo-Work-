@@ -8,9 +8,12 @@ import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.Spinner;
+import android.widget.ArrayAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -19,7 +22,10 @@ public class MainActivity extends Activity {
     private final int BG = Color.rgb(16, 16, 20);
     private final int CARD = Color.rgb(28, 28, 36);
     private final int WHITE = Color.WHITE;
-    private final int GRAY = Color.LTGRAY;
+    private final int GRAY = Color.rgb(180, 180, 190);
+    private final int GREEN = Color.rgb(60, 200, 120);
+
+    private LinearLayout root;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,30 +33,40 @@ public class MainActivity extends Activity {
         showHome();
     }
 
-    private LinearLayout baseLayout() {
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(28, 35, 28, 35);
-        layout.setBackgroundColor(BG);
-        return layout;
-    }
+    // =========================
+    // COMMON UI
+    // =========================
 
-    private ScrollView screenContainer(LinearLayout content) {
+    private ScrollView createScreen() {
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         scroll.setBackgroundColor(BG);
-        scroll.addView(content);
+
+        root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(32, 40, 32, 40);
+        root.setBackgroundColor(BG);
+
+        scroll.addView(root);
         return scroll;
+    }
+
+    private void setScreen() {
+        setContentView(createScreen());
     }
 
     private TextView title(String text) {
         TextView t = new TextView(this);
         t.setText(text);
         t.setTextColor(WHITE);
-        t.setTextSize(28);
+        t.setTextSize(27);
         t.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         t.setGravity(Gravity.CENTER);
-        t.setPadding(0, 15, 0, 20);
+        t.setPadding(0, 0, 0, 18);
+        root.addView(t,
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT));
         return t;
     }
 
@@ -58,667 +74,643 @@ public class MainActivity extends Activity {
         TextView t = new TextView(this);
         t.setText(text);
         t.setTextColor(GRAY);
-        t.setTextSize(16);
+        t.setTextSize(15);
         t.setGravity(Gravity.CENTER);
-        t.setPadding(0, 5, 0, 20);
+        t.setPadding(0, 0, 0, 24);
+
+        root.addView(t,
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT));
+
         return t;
     }
 
-    private Button button(String text, View.OnClickListener listener) {
+    private TextView section(String text) {
+        TextView t = new TextView(this);
+        t.setText(text);
+        t.setTextColor(WHITE);
+        t.setTextSize(18);
+        t.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        t.setPadding(0, 20, 0, 10);
+
+        root.addView(t,
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        return t;
+    }
+
+    private Button button(String text) {
         Button b = new Button(this);
         b.setText(text);
-        b.setTextSize(16);
+        b.setTextSize(15);
+        b.setTextColor(WHITE);
         b.setAllCaps(false);
-        b.setOnClickListener(listener);
+        b.setGravity(Gravity.CENTER);
 
         LinearLayout.LayoutParams p =
                 new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                );
+                        LinearLayout.LayoutParams.WRAP_CONTENT);
 
         p.setMargins(0, 8, 0, 8);
         b.setLayoutParams(p);
 
+        root.addView(b);
         return b;
     }
 
     private EditText input(String hint) {
         EditText e = new EditText(this);
         e.setHint(hint);
-        e.setHintTextColor(Color.GRAY);
+        e.setHintTextColor(GRAY);
         e.setTextColor(WHITE);
-        e.setTextSize(16);
+        e.setTextSize(15);
         e.setSingleLine(true);
-        e.setPadding(20, 12, 20, 12);
+        e.setPadding(20, 15, 20, 15);
 
         LinearLayout.LayoutParams p =
                 new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                );
+                        LinearLayout.LayoutParams.WRAP_CONTENT);
 
         p.setMargins(0, 6, 0, 6);
         e.setLayoutParams(p);
 
+        root.addView(e);
         return e;
     }
 
-    // ----------------------------------------------------
+    private void addSpace(int height) {
+        TextView space = new TextView(this);
+        root.addView(space,
+                new LinearLayout.LayoutParams(
+                        1, height));
+    }
+
+    private void message(String text) {
+        Toast.makeText(this, text, Toast.LENGTH_SHORT).show();
+    }
+
+    // =========================
     // HOME
-    // ----------------------------------------------------
+    // =========================
 
     private void showHome() {
+        setScreen();
 
-        LinearLayout layout = baseLayout();
+        title("🤖 Viyzo Worker");
+        subtitle("AI Managed Global Work Platform");
 
-        layout.addView(title("🤖 Viyzo Worker"));
-        layout.addView(subtitle("AI Managed Global Work Platform"));
+        Button login = button("🔐 Login");
+        login.setOnClickListener(v -> showLogin());
 
-        layout.addView(button("🔐 Login", v -> showLogin()));
+        Button create = button("📝 Create Account");
+        create.setOnClickListener(v -> showCreateAccount());
 
-        layout.addView(button("📝 Create Account", v -> showCreateAccount()));
+        Button jobs = button("🔎 Available Jobs");
+        jobs.setOnClickListener(v -> showJobs());
 
-        layout.addView(button("🔎 Available Jobs", v -> showJobs()));
-
-        layout.addView(button("💰 Earnings", v -> showEarnings()));
-
-        layout.addView(button("👤 Profile", v -> showProfile()));
-
-        layout.addView(button("🔔 Notifications", v -> showNotifications()));
-
-        layout.addView(button("⚙️ Settings", v -> showSettings()));
-
-        setContentView(screenContainer(layout));
+        Button about = button("ℹ️ About Viyzo");
+        about.setOnClickListener(v -> showAbout());
     }
 
-    // ----------------------------------------------------
+    // =========================
     // LOGIN
-    // ----------------------------------------------------
+    // =========================
 
     private void showLogin() {
+        setScreen();
 
-        LinearLayout layout = baseLayout();
+        title("🔐 Worker Login");
+        subtitle("Login to your Viyzo Worker account");
 
-        layout.addView(title("🔐 Worker Login"));
+        input("Phone or Email");
 
-        EditText email = input("Email or Phone");
-
-        EditText password = input("Password");
+        EditText password = input("Viyzo Password");
         password.setInputType(
                 InputType.TYPE_CLASS_TEXT |
-                InputType.TYPE_TEXT_VARIATION_PASSWORD
-        );
+                InputType.TYPE_TEXT_VARIATION_PASSWORD);
 
-        layout.addView(email);
-        layout.addView(password);
+        Button login = button("Login");
 
-        layout.addView(button("Login", v -> {
-
-            Toast.makeText(
-                    this,
-                    "Login system will connect to backend later",
-                    Toast.LENGTH_SHORT
-            ).show();
-
+        login.setOnClickListener(v -> {
+            message("Login demo successful");
             showDashboard();
-        }));
+        });
 
-        layout.addView(button("Create New Account", v -> showCreateAccount()));
-
-        layout.addView(button("← Back", v -> showHome()));
-
-        setContentView(screenContainer(layout));
+        Button back = button("← Back");
+        back.setOnClickListener(v -> showHome());
     }
 
-    // ----------------------------------------------------
+    // =========================
     // CREATE ACCOUNT
-    // ----------------------------------------------------
+    // =========================
 
     private void showCreateAccount() {
+        setScreen();
 
-        LinearLayout layout = baseLayout();
+        title("📝 Create Worker Account");
+        subtitle("Create your Viyzo Worker account");
 
-        layout.addView(title("📝 Create Worker Account"));
+        input("Full Name");
+        input("Date of Birth");
+        input("Country");
 
-        EditText name = input("Full Name");
-        EditText email = input("Email");
-        EditText phone = input("Phone Number");
+        EditText phone = input("Mobile Number");
+        phone.setInputType(InputType.TYPE_CLASS_PHONE);
 
-        EditText password = input("Create Password");
+        input("Email");
+
+        EditText password = input("Create Viyzo Password");
         password.setInputType(
                 InputType.TYPE_CLASS_TEXT |
-                InputType.TYPE_TEXT_VARIATION_PASSWORD
-        );
+                InputType.TYPE_TEXT_VARIATION_PASSWORD);
 
-        layout.addView(name);
-        layout.addView(email);
-        layout.addView(phone);
-        layout.addView(password);
+        CheckBox consent = new CheckBox(this);
+        consent.setText(
+                "I agree to Viyzo's verification and privacy notice.");
+        consent.setTextColor(WHITE);
+        consent.setTextSize(14);
+        root.addView(consent);
 
-        layout.addView(button("Create Account", v -> {
+        Button create = button("Create Account");
 
-            Toast.makeText(
-                    this,
-                    "Account created successfully (demo)",
-                    Toast.LENGTH_SHORT
-            ).show();
+        create.setOnClickListener(v -> {
+            if (!consent.isChecked()) {
+                message("Please accept the consent");
+                return;
+            }
 
+            message("Account created");
             showDashboard();
-        }));
+        });
 
-        layout.addView(button("← Back", v -> showHome()));
-
-        setContentView(screenContainer(layout));
+        Button back = button("← Back");
+        back.setOnClickListener(v -> showHome());
     }
 
-    // ----------------------------------------------------
+    // =========================
     // DASHBOARD
-    // ----------------------------------------------------
+    // =========================
 
     private void showDashboard() {
+        setScreen();
 
-        LinearLayout layout = baseLayout();
+        title("🏠 Worker Dashboard");
+        subtitle("Welcome to Viyzo Worker");
 
-        layout.addView(title("📊 Worker Dashboard"));
+        Button jobs = button("🔎 Available Jobs");
+        jobs.setOnClickListener(v -> showJobs());
 
-        layout.addView(subtitle(
-                "Welcome to your Viyzo Worker dashboard"
-        ));
+        Button myJobs = button("📋 My Jobs");
+        myJobs.setOnClickListener(v -> showMyJobs());
 
-        layout.addView(button("🔎 Available Jobs", v -> showJobs()));
+        Button earnings = button("💰 Earnings & Withdrawal");
+        earnings.setOnClickListener(v -> showEarnings());
 
-        layout.addView(button("📋 My Jobs", v -> showMyJobs()));
+        Button profile = button("👤 Profile & Verification");
+        profile.setOnClickListener(v -> showProfile());
 
-        layout.addView(button("💰 Earnings", v -> showEarnings()));
+        Button notifications = button("🔔 Notifications");
+        notifications.setOnClickListener(v -> showNotifications());
 
-        layout.addView(button("🔔 Notifications", v -> showNotifications()));
+        Button language = button("🌐 Language");
+        language.setOnClickListener(v -> showLanguage());
 
-        layout.addView(button("👤 Profile", v -> showProfile()));
+        Button settings = button("⚙️ Settings");
+        settings.setOnClickListener(v -> showSettings());
 
-        layout.addView(button("⚙️ Settings", v -> showSettings()));
+        Button help = button("❓ Help & Support");
+        help.setOnClickListener(v -> showHelp());
 
-        layout.addView(button("🚪 Logout", v -> showHome()));
-
-        setContentView(screenContainer(layout));
+        Button logout = button("🚪 Logout");
+        logout.setOnClickListener(v -> showHome());
     }
 
-    // ----------------------------------------------------
-    // AVAILABLE JOBS
-    // ----------------------------------------------------
+    // =========================
+    // JOBS
+    // =========================
 
     private void showJobs() {
+        setScreen();
 
-        LinearLayout layout = baseLayout();
+        title("🔎 Available Jobs");
+        subtitle("Jobs selected by Viyzo AI Manager");
 
-        layout.addView(title("🔎 Available Jobs"));
+        section("Product Listing");
+        subtitle("1000 products • Remote • Global");
 
-        layout.addView(subtitle(
-                "Jobs available for workers"
-        ));
+        Button details = button("View Job");
+        details.setOnClickListener(v -> showJobDetails());
 
-        layout.addView(button(
-                "📦 Product Listing - $50",
-                v -> showJobDetails("Product Listing", "$50")
-        ));
+        section("Data Entry");
+        subtitle("500 records • Remote");
 
-        layout.addView(button(
-                "📝 Data Entry - $30",
-                v -> showJobDetails("Data Entry", "$30")
-        ));
+        Button data = button("View Job");
+        data.setOnClickListener(v ->
+                message("Data Entry job details coming next"));
 
-        layout.addView(button(
-                "🌐 Translation - $40",
-                v -> showJobDetails("Translation", "$40")
-        ));
-
-        layout.addView(button(
-                "📱 App Testing - $25",
-                v -> showJobDetails("App Testing", "$25")
-        ));
-
-        layout.addView(button("← Back", v -> showDashboard()));
-
-        setContentView(screenContainer(layout));
+        Button back = button("← Dashboard");
+        back.setOnClickListener(v -> showDashboard());
     }
 
-    // ----------------------------------------------------
-    // JOB DETAILS
-    // ----------------------------------------------------
+    private void showJobDetails() {
+        setScreen();
 
-    private void showJobDetails(String jobName, String payment) {
+        title("📦 Product Listing Job");
 
-        LinearLayout layout = baseLayout();
+        section("Company Budget");
+        subtitle("$500.00");
 
-        layout.addView(title("📋 Job Details"));
+        section("Worker Pool");
+        subtitle("$400.00");
 
-        layout.addView(subtitle(jobName));
+        section("Viyzo Fee");
+        subtitle("$100.00");
 
-        TextView info = new TextView(this);
+        section("AI Recommended Workers");
+        subtitle("8 Workers");
 
-        info.setText(
-                "Job: " + jobName +
-                "\n\nWorker Payment: " + payment +
-                "\n\nStatus: Available" +
-                "\n\nAI Master Manager will assign the final workload."
-        );
+        section("Workload");
+        subtitle("125 products per worker");
 
-        info.setTextColor(WHITE);
-        info.setTextSize(17);
-        info.setPadding(10, 10, 10, 20);
+        Button apply = button("✅ Apply for Job");
+        apply.setOnClickListener(v ->
+                message("Job application submitted"));
 
-        layout.addView(info);
-
-        layout.addView(button("✅ Accept Job", v -> {
-
-            Toast.makeText(
-                    this,
-                    "Job accepted successfully (demo)",
-                    Toast.LENGTH_SHORT
-            ).show();
-
-            showMyJobs();
-        }));
-
-        layout.addView(button("← Back to Jobs", v -> showJobs()));
-
-        setContentView(screenContainer(layout));
+        Button back = button("← Back to Jobs");
+        back.setOnClickListener(v -> showJobs());
     }
 
-    // ----------------------------------------------------
+    // =========================
     // MY JOBS
-    // ----------------------------------------------------
+    // =========================
 
     private void showMyJobs() {
+        setScreen();
 
-        LinearLayout layout = baseLayout();
+        title("📋 My Jobs");
 
-        layout.addView(title("📋 My Jobs"));
+        section("Current Job");
+        subtitle("Product Listing • In Progress");
 
-        TextView info = new TextView(this);
+        Button open = button("Open Job");
+        open.setOnClickListener(v ->
+                message("Job workspace coming next"));
 
-        info.setText(
-                "Active Jobs\n\n" +
-                "📦 Product Listing\n" +
-                "Status: In Progress\n" +
-                "Payment: $50\n\n" +
-                "No other active jobs."
-        );
-
-        info.setTextColor(WHITE);
-        info.setTextSize(17);
-        info.setPadding(10, 15, 10, 20);
-
-        layout.addView(info);
-
-        layout.addView(button("🔎 Find More Jobs", v -> showJobs()));
-
-        layout.addView(button("← Back", v -> showDashboard()));
-
-        setContentView(screenContainer(layout));
+        Button back = button("← Dashboard");
+        back.setOnClickListener(v -> showDashboard());
     }
 
-    // ----------------------------------------------------
+    // =========================
     // EARNINGS
-    // ----------------------------------------------------
+    // =========================
 
     private void showEarnings() {
+        setScreen();
 
-        LinearLayout layout = baseLayout();
+        title("💰 Earnings");
 
-        layout.addView(title("💰 Earnings"));
+        section("Available Balance");
+        subtitle("$0.00");
 
-        TextView balance = new TextView(this);
+        section("Total Earned");
+        subtitle("$0.00");
 
-        balance.setText(
-                "Available Balance\n\n$50.00\n\n" +
-                "Total Earned: $50.00\n" +
-                "Pending: $0.00"
-        );
+        section("Pending");
+        subtitle("$0.00");
 
-        balance.setTextColor(WHITE);
-        balance.setTextSize(20);
-        balance.setGravity(Gravity.CENTER);
-        balance.setPadding(0, 10, 0, 25);
+        Button withdraw = button("💸 Withdraw");
+        withdraw.setOnClickListener(v ->
+                message("Withdrawal system will be connected later"));
 
-        layout.addView(balance);
-
-        layout.addView(button("💵 Withdraw", v -> {
-
-            Toast.makeText(
-                    this,
-                    "Withdrawal system will connect to backend/payment provider later",
-                    Toast.LENGTH_LONG
-            ).show();
-
-        }));
-
-        layout.addView(button("📜 Withdrawal History", v -> {
-
-            Toast.makeText(
-                    this,
-                    "No withdrawal history yet",
-                    Toast.LENGTH_SHORT
-            ).show();
-
-        }));
-
-        layout.addView(button("← Back", v -> showDashboard()));
-
-        setContentView(screenContainer(layout));
+        Button back = button("← Dashboard");
+        back.setOnClickListener(v -> showDashboard());
     }
 
-    // ----------------------------------------------------
+    // =========================
     // PROFILE
-    // ----------------------------------------------------
+    // =========================
 
     private void showProfile() {
+        setScreen();
 
-        LinearLayout layout = baseLayout();
+        title("👤 Worker Profile");
+        subtitle("Manage your Viyzo Worker account");
 
-        layout.addView(title("👤 My Profile"));
+        section("Verification Status");
+        subtitle(
+                "🟡 Basic Worker\n\n" +
+                "Complete Worker Verification to unlock more jobs.");
 
-        layout.addView(subtitle(
-                "Worker Account"
-        ));
+        Button verification = button("🪪 Worker Verification");
+        verification.setOnClickListener(v -> showWorkerVerification());
 
-        TextView profile = new TextView(this);
-
-        profile.setText(
-                "Name: Worker\n\n" +
-                "Email: worker@example.com\n\n" +
-                "Account Status: Active\n\n" +
-                "KYC Status: Not Submitted"
-        );
-
-        profile.setTextColor(WHITE);
-        profile.setTextSize(17);
-        profile.setPadding(10, 10, 10, 20);
-
-        layout.addView(profile);
-
-        layout.addView(button("🪪 Complete KYC", v -> showKyc()));
-
-        layout.addView(button("🌐 Language", v -> showLanguage()));
-
-        layout.addView(button("⚙️ Settings", v -> showSettings()));
-
-        layout.addView(button("← Back", v -> showDashboard()));
-
-        setContentView(screenContainer(layout));
+        Button back = button("← Dashboard");
+        back.setOnClickListener(v -> showDashboard());
     }
 
-    // ----------------------------------------------------
-    // KYC
-    // ----------------------------------------------------
+    // =========================
+    // NEW WORKER VERIFICATION
+    // =========================
 
-    private void showKyc() {
+    private void showWorkerVerification() {
+        setScreen();
 
-        LinearLayout layout = baseLayout();
+        title("🪪 Worker Verification");
 
-        layout.addView(title("🪪 Worker KYC"));
+        subtitle(
+                "Viyzo uses different verification options depending " +
+                "on your country and the type of work/payment.");
 
-        layout.addView(subtitle(
-                "Complete your identity verification"
-        ));
+        section("Step 1 — Country");
 
-        EditText name = input("Full Name");
+        Spinner countrySpinner = new Spinner(this);
 
-        EditText dob = input("Date of Birth");
+        String[] countries = {
+                "Select Country",
+                "India",
+                "Bangladesh",
+                "Pakistan",
+                "United States",
+                "United Kingdom",
+                "United Arab Emirates",
+                "Other Country"
+        };
 
-        EditText country = input("Country");
+        ArrayAdapter<String> adapter =
+                new ArrayAdapter<>(
+                        this,
+                        android.R.layout.simple_spinner_item,
+                        countries);
 
-        EditText idType = input(
-                "ID Type (Passport / Aadhaar / National ID)"
-        );
+        adapter.setDropDownViewResource(
+                android.R.layout.simple_spinner_dropdown_item);
 
-        EditText idNumber = input("ID Number");
+        countrySpinner.setAdapter(adapter);
 
-        layout.addView(name);
-        layout.addView(dob);
-        layout.addView(country);
-        layout.addView(idType);
-        layout.addView(idNumber);
+        LinearLayout.LayoutParams spinnerParams =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT);
 
-        layout.addView(button("📤 Submit KYC", v -> {
+        spinnerParams.setMargins(0, 8, 0, 15);
 
-            Toast.makeText(
-                    this,
-                    "KYC submitted (demo). Real verification will be connected later.",
-                    Toast.LENGTH_LONG
-            ).show();
+        root.addView(countrySpinner, spinnerParams);
 
-        }));
+        section("Step 2 — Basic Verification");
 
-        layout.addView(button("← Back to Profile", v -> showProfile()));
+        input("Full Name");
+        input("Date of Birth");
 
-        setContentView(screenContainer(layout));
+        Button phone = button("📱 Verify Phone with OTP");
+        phone.setOnClickListener(v ->
+                message("OTP verification will be connected with backend"));
+
+        Button email = button("✉️ Verify Email");
+        email.setOnClickListener(v ->
+                message("Email verification will be connected with backend"));
+
+        Button selfie = button("🤳 Start Live Selfie Verification");
+        selfie.setOnClickListener(v ->
+                message("Live selfie verification will be connected with verification provider"));
+
+        section("Step 3 — Identity Document");
+
+        subtitle(
+                "If you have an accepted identity document, " +
+                "choose the document shown for your country.\n\n" +
+                "If you do not have a document, you can continue with Basic Worker Verification.");
+
+        Button document = button("🪪 I Have an Identity Document");
+        document.setOnClickListener(v -> showDocumentOptions());
+
+        Button noDocument = button("🙋 I Don't Have a Document");
+        noDocument.setOnClickListener(v -> showNoDocument());
+
+        section("Consent");
+
+        CheckBox consent = new CheckBox(this);
+        consent.setText(
+                "I consent to Viyzo processing the information " +
+                "needed for worker verification.");
+        consent.setTextColor(WHITE);
+        consent.setTextSize(14);
+
+        root.addView(consent);
+
+        Button submit = button("✅ Submit Worker Verification");
+
+        submit.setOnClickListener(v -> {
+            if (!consent.isChecked()) {
+                message("Please accept the verification consent");
+                return;
+            }
+
+            message("Worker Verification submitted");
+            showProfile();
+        });
+
+        Button back = button("← Back to Profile");
+        back.setOnClickListener(v -> showProfile());
     }
 
-    // ----------------------------------------------------
+    // =========================
+    // DOCUMENT OPTIONS
+    // =========================
+
+    private void showDocumentOptions() {
+        setScreen();
+
+        title("🪪 Identity Document");
+
+        subtitle(
+                "Viyzo will show the available verification " +
+                "documents according to your selected country.");
+
+        section("Document Options");
+
+        Button primary = button("📄 Primary Identity Document");
+        primary.setOnClickListener(v ->
+                message("Document upload will be connected to verification provider"));
+
+        Button alternative1 = button("📄 Alternative Document 1");
+        alternative1.setOnClickListener(v ->
+                message("Alternative document selected"));
+
+        Button alternative2 = button("📄 Alternative Document 2");
+        alternative2.setOnClickListener(v ->
+                message("Alternative document selected"));
+
+        section("Important");
+
+        subtitle(
+                "The final accepted document list will be controlled " +
+                "by Viyzo's country-specific verification rules and " +
+                "authorized verification provider.");
+
+        Button back = button("← Back to Verification");
+        back.setOnClickListener(v -> showWorkerVerification());
+    }
+
+    // =========================
+    // NO DOCUMENT PATH
+    // =========================
+
+    private void showNoDocument() {
+        setScreen();
+
+        title("🙋 Basic Worker Verification");
+
+        subtitle(
+                "You can continue without a government identity document " +
+                "for the basic account level.");
+
+        section("What You Can Complete");
+
+        subtitle(
+                "✓ Name\n" +
+                "✓ Date of Birth\n" +
+                "✓ Phone verification\n" +
+                "✓ Email verification\n" +
+                "✓ Live selfie verification\n" +
+                "✓ Verification consent");
+
+        section("Your Worker Status");
+
+        subtitle(
+                "🟡 Basic Worker\n\n" +
+                "You may use the app and access jobs that Viyzo " +
+                "allows for Basic Workers.");
+
+        section("Higher Verification");
+
+        subtitle(
+                "Some higher-risk, higher-value jobs or withdrawals " +
+                "may require stronger identity or payment verification.");
+
+        Button continueButton =
+                button("✅ Continue as Basic Worker");
+
+        continueButton.setOnClickListener(v -> {
+            message("Basic Worker verification selected");
+            showProfile();
+        });
+
+        Button back = button("← Back to Verification");
+        back.setOnClickListener(v -> showWorkerVerification());
+    }
+
+    // =========================
     // NOTIFICATIONS
-    // ----------------------------------------------------
+    // =========================
 
     private void showNotifications() {
+        setScreen();
 
-        LinearLayout layout = baseLayout();
+        title("🔔 Notifications");
 
-        layout.addView(title("🔔 Notifications"));
+        section("Job Notification");
+        subtitle("New Product Listing job available.");
 
-        TextView n1 = new TextView(this);
+        section("Verification");
+        subtitle("Complete Worker Verification for more access.");
 
-        n1.setText(
-                "📦 New Job Available\n" +
-                "A Product Listing job is available.\n\n" +
-                "💰 Payment Update\n" +
-                "Your current worker balance is $50.00.\n\n" +
-                "🤖 AI Manager\n" +
-                "New jobs will be matched automatically."
-        );
-
-        n1.setTextColor(WHITE);
-        n1.setTextSize(16);
-        n1.setPadding(10, 10, 10, 25);
-
-        layout.addView(n1);
-
-        layout.addView(button(
-                "✓ Mark All as Read",
-                v -> Toast.makeText(
-                        this,
-                        "Notifications marked as read",
-                        Toast.LENGTH_SHORT
-                ).show()
-        ));
-
-        layout.addView(button(
-                "← Back",
-                v -> showDashboard()
-        ));
-
-        setContentView(screenContainer(layout));
+        Button back = button("← Dashboard");
+        back.setOnClickListener(v -> showDashboard());
     }
 
-    // ----------------------------------------------------
+    // =========================
     // LANGUAGE
-    // ----------------------------------------------------
+    // =========================
 
     private void showLanguage() {
+        setScreen();
 
-        LinearLayout layout = baseLayout();
+        title("🌐 Language");
 
-        layout.addView(title("🌐 Language"));
+        Button english = button("English");
+        english.setOnClickListener(v ->
+                message("English selected"));
 
-        layout.addView(subtitle(
-                "Choose your preferred language"
-        ));
+        Button hindi = button("हिन्दी");
+        hindi.setOnClickListener(v ->
+                message("Hindi selected"));
 
-        layout.addView(button(
-                "🇬🇧 English",
-                v -> languageSelected("English")
-        ));
+        Button bengali = button("বাংলা");
+        bengali.setOnClickListener(v ->
+                message("Bengali selected"));
 
-        layout.addView(button(
-                "🇮🇳 Hindi",
-                v -> languageSelected("Hindi")
-        ));
-
-        layout.addView(button(
-                "🇮🇳 Bengali",
-                v -> languageSelected("Bengali")
-        ));
-
-        layout.addView(button(
-                "🇮🇳 Assamese",
-                v -> languageSelected("Assamese")
-        ));
-
-        layout.addView(button(
-                "← Back",
-                v -> showProfile()
-        ));
-
-        setContentView(screenContainer(layout));
+        Button back = button("← Dashboard");
+        back.setOnClickListener(v -> showDashboard());
     }
 
-    private void languageSelected(String language) {
-
-        Toast.makeText(
-                this,
-                language + " selected (demo)",
-                Toast.LENGTH_SHORT
-        ).show();
-    }
-
-    // ----------------------------------------------------
+    // =========================
     // SETTINGS
-    // ----------------------------------------------------
+    // =========================
 
     private void showSettings() {
+        setScreen();
 
-        LinearLayout layout = baseLayout();
+        title("⚙️ Settings");
 
-        layout.addView(title("⚙️ Settings"));
+        Button notifications = button("🔔 Notification Settings");
+        notifications.setOnClickListener(v ->
+                message("Notification settings coming next"));
 
-        layout.addView(button(
-                "🔔 Notification Settings",
-                v -> Toast.makeText(
-                        this,
-                        "Notification settings coming next",
-                        Toast.LENGTH_SHORT
-                ).show()
-        ));
+        Button security = button("🔐 Account Security");
+        security.setOnClickListener(v ->
+                message("Security settings coming next"));
 
-        layout.addView(button(
-                "🌐 Language",
-                v -> showLanguage()
-        ));
+        Button privacy = button("🛡️ Privacy");
+        privacy.setOnClickListener(v ->
+                message("Privacy settings coming next"));
 
-        layout.addView(button(
-                "🆘 Help & Support",
-                v -> showHelp()
-        ));
-
-        layout.addView(button(
-                "ℹ️ About Viyzo",
-                v -> showAbout()
-        ));
-
-        layout.addView(button(
-                "🚪 Logout",
-                v -> showHome()
-        ));
-
-        layout.addView(button(
-                "← Back",
-                v -> showDashboard()
-        ));
-
-        setContentView(screenContainer(layout));
+        Button back = button("← Dashboard");
+        back.setOnClickListener(v -> showDashboard());
     }
 
-    // ----------------------------------------------------
-    // HELP & SUPPORT
-    // ----------------------------------------------------
+    // =========================
+    // HELP
+    // =========================
 
     private void showHelp() {
+        setScreen();
 
-        LinearLayout layout = baseLayout();
+        title("❓ Help & Support");
 
-        layout.addView(title("🆘 Help & Support"));
+        section("Need Help?");
+        subtitle(
+                "Contact Viyzo Support for account, job, " +
+                "verification and payment questions.");
 
-        TextView help = new TextView(this);
+        Button support = button("💬 Contact Support");
+        support.setOnClickListener(v ->
+                message("Support system coming next"));
 
-        help.setText(
-                "How can we help?\n\n" +
-                "1. How do I accept a job?\n" +
-                "Open Available Jobs and select a job.\n\n" +
-                "2. How do I receive payment?\n" +
-                "Complete your work and follow the payout process.\n\n" +
-                "3. How does KYC work?\n" +
-                "Open Profile → Complete KYC.\n\n" +
-                "4. Need more help?\n" +
-                "The real support system will be connected with the backend later."
-        );
-
-        help.setTextColor(WHITE);
-        help.setTextSize(16);
-        help.setPadding(10, 10, 10, 25);
-
-        layout.addView(help);
-
-        layout.addView(button(
-                "💬 Contact Support",
-                v -> Toast.makeText(
-                        this,
-                        "Support system coming later",
-                        Toast.LENGTH_SHORT
-                ).show()
-        ));
-
-        layout.addView(button(
-                "← Back",
-                v -> showSettings()
-        ));
-
-        setContentView(screenContainer(layout));
+        Button back = button("← Dashboard");
+        back.setOnClickListener(v -> showDashboard());
     }
 
-    // ----------------------------------------------------
+    // =========================
     // ABOUT
-    // ----------------------------------------------------
+    // =========================
 
     private void showAbout() {
+        setScreen();
 
-        LinearLayout layout = baseLayout();
+        title("ℹ️ About Viyzo");
 
-        layout.addView(title("ℹ️ About Viyzo"));
-
-        TextView about = new TextView(this);
-
-        about.setText(
-                "🤖 Viyzo Worker\n\n" +
-                "Version: 1.0\n\n" +
+        subtitle(
+                "Viyzo Worker\n\n" +
                 "AI Managed Global Work Platform\n\n" +
-                "Viyzo is designed to connect companies " +
-                "with workers and manage digital work through " +
-                "an AI-powered job management system.\n\n" +
-                "Current version is a prototype. " +
-                "Backend, real KYC, payment processing, " +
-                "and production security will be connected later."
-        );
+                "Viyzo connects companies with workers " +
+                "for digital work and manages job distribution.");
 
-        about.setTextColor(WHITE);
-        about.setTextSize(16);
-        about.setPadding(10, 10, 10, 25);
-
-        layout.addView(about);
-
-        layout.addView(button(
-                "← Back",
-                v -> showSettings()
-        ));
-
-        setContentView(screenContainer(layout));
+        Button back = button("← Home");
+        back.setOnClickListener(v -> showHome());
     }
 }
