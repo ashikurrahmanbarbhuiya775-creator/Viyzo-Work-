@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -18,14 +19,37 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.Locale;
+
+/**
+ * VIYZO WORKER
+ * Single-file Android UI foundation.
+ *
+ * IMPORTANT:
+ * - This APK currently contains local/demo UI and calculation logic.
+ * - Real accounts, OTP, selfie/document verification, company payments,
+ *   job synchronization, payouts, AI services and secure backend APIs
+ *   must be connected on the server side before production launch.
+ * - Demo jobs are clearly labeled as examples.
+ */
 public class MainActivity extends Activity {
 
     // ============================================================
-    // VIYZO WORKER — MODERN APP UI + GLOBAL COMPANY JOB SYSTEM
-    // UI-only foundation: real accounts, OTP, KYC, payments and
-    // global job syncing will connect to a secure backend later.
+    // VIYZO BUSINESS CONFIGURATION
     // ============================================================
+    // Configurable platform model: 50% worker pool / 50% Viyzo platform.
+    private static final double WORKER_SHARE_PERCENT = 50.0;
+    private static final double VIYZO_SHARE_PERCENT = 50.0;
 
+    // Earning opportunity target, NOT a guaranteed income promise.
+    private static final double DAILY_EARNING_TARGET_INR = 1000.0;
+    private static final double TARGET_HOURS_PER_DAY = 10.0;
+    private static final double TARGET_INR_PER_HOUR =
+            DAILY_EARNING_TARGET_INR / TARGET_HOURS_PER_DAY;
+
+    // ============================================================
+    // THEME
+    // ============================================================
     private final int BG = Color.rgb(7, 12, 22);
     private final int CARD = Color.rgb(15, 27, 47);
     private final int CARD2 = Color.rgb(20, 35, 59);
@@ -39,9 +63,67 @@ public class MainActivity extends Activity {
     private final int RED = Color.rgb(240, 75, 100);
     private final int GOLD = Color.rgb(245, 185, 60);
     private final int BLUE = Color.rgb(65, 150, 255);
+    private final int ORANGE = Color.rgb(255, 145, 55);
 
     private LinearLayout root;
     private FrameLayout frame;
+
+    // ============================================================
+    // DEMO JOB MODEL
+    // ============================================================
+    private static class JobData {
+        String icon;
+        String title;
+        String category;
+        String company;
+        String budget;
+        String quantity;
+        String workers;
+        String deadline;
+        String urgency;
+        String workType;
+        String skill;
+        String language;
+
+        JobData(String icon, String title, String category, String company,
+                String budget, String quantity, String workers,
+                String deadline, String urgency, String workType,
+                String skill, String language) {
+            this.icon = icon;
+            this.title = title;
+            this.category = category;
+            this.company = company;
+            this.budget = budget;
+            this.quantity = quantity;
+            this.workers = workers;
+            this.deadline = deadline;
+            this.urgency = urgency;
+            this.workType = workType;
+            this.skill = skill;
+            this.language = language;
+        }
+    }
+
+    private final JobData[] DEMO_JOBS = new JobData[]{
+            new JobData("🤖", "Product Listing", "E-commerce",
+                    "Demo Global Company", "$500", "1000 products", "8",
+                    "3 Days", "Normal", "Bulk", "Basic mobile/computer", "English"),
+            new JobData("⚡", "Urgent Data Cleanup", "Data",
+                    "Demo Business", "$300", "600 records", "6",
+                    "24 Hours", "Urgent", "Quick Task", "Data entry", "English"),
+            new JobData("📦", "Bulk Catalog Review", "E-commerce",
+                    "$1000", "5000 items", "10",
+                    "5 Days", "High", "Bulk", "Catalog review", "English/Hindi"),
+            new JobData("🔁", "Recurring Content Check", "Content",
+                    "Demo Agency", "$750", "1500 items/month", "5",
+                    "Recurring", "Recurring", "Recurring", "Content review", "English"),
+            new JobData("🌍", "Translation Task", "Language",
+                    "Demo Global Client", "$400", "200 pages", "4",
+                    "4 Days", "Normal", "Project", "Translation", "Multiple"),
+            new JobData("📊", "Research & Data Entry", "Research",
+                    "Demo Startup", "$650", "1200 records", "7",
+                    "4 Days", "Normal", "Project", "Research/Data", "English")
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +133,9 @@ public class MainActivity extends Activity {
         showHome();
     }
 
+    // ============================================================
+    // BASIC UI HELPERS
+    // ============================================================
     private int dp(float v) {
         return (int) (v * getResources().getDisplayMetrics().density + 0.5f);
     }
@@ -118,8 +203,7 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams p =
                 new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                );
+                        LinearLayout.LayoutParams.WRAP_CONTENT);
         p.setMargins(dp(l), dp(t), dp(r), dp(b));
         v.setLayoutParams(p);
     }
@@ -133,17 +217,14 @@ public class MainActivity extends Activity {
         if (bottomNav) {
             LinearLayout.LayoutParams fp =
                     new LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT,
-                            0
-                    );
+                            LinearLayout.LayoutParams.MATCH_PARENT, 0);
             fp.weight = 1;
             root.addView(frame, fp);
             root.addView(bottomNav());
         } else {
             root.addView(frame, new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.MATCH_PARENT
-            ));
+                    LinearLayout.LayoutParams.MATCH_PARENT));
         }
 
         setContentView(root);
@@ -160,8 +241,7 @@ public class MainActivity extends Activity {
 
         frame.addView(scroll, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-        ));
+                FrameLayout.LayoutParams.MATCH_PARENT));
 
         return c;
     }
@@ -170,10 +250,10 @@ public class MainActivity extends Activity {
         TextView l = tv("V", size, WHITE);
         l.setGravity(Gravity.CENTER);
         l.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+
         GradientDrawable g = new GradientDrawable(
                 GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{Color.rgb(125, 75, 255), Color.rgb(55, 75, 255)}
-        );
+                new int[]{Color.rgb(125, 75, 255), Color.rgb(55, 75, 255)});
         g.setShape(GradientDrawable.OVAL);
         l.setBackground(g);
         return l;
@@ -181,7 +261,6 @@ public class MainActivity extends Activity {
 
     private LinearLayout brandHeader() {
         LinearLayout h = row();
-
         h.addView(logo(27), new LinearLayout.LayoutParams(dp(54), dp(54)));
 
         LinearLayout names = column();
@@ -257,9 +336,7 @@ public class MainActivity extends Activity {
         ic.setGravity(Gravity.CENTER);
         c.addView(ic, new LinearLayout.LayoutParams(dp(45), dp(40)));
 
-        TextView t = tv(title, 11, GRAY);
-        t.setPadding(0, dp(5), 0, 0);
-        c.addView(t);
+        c.addView(tv(title, 11, GRAY));
 
         TextView v = tv(value, 17, WHITE);
         v.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
@@ -302,6 +379,7 @@ public class MainActivity extends Activity {
 
         LinearLayout tx = column();
         tx.addView(tv(title, 11, GRAY));
+
         TextView v = tv(value, 15, WHITE);
         v.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         tx.addView(v);
@@ -314,6 +392,42 @@ public class MainActivity extends Activity {
         return c;
     }
 
+    private EditText input(String hint) {
+        EditText e = new EditText(this);
+        e.setHint(hint);
+        e.setHintTextColor(Color.rgb(110, 125, 150));
+        e.setTextColor(WHITE);
+        e.setTextSize(14);
+        e.setSingleLine(true);
+        e.setPadding(dp(15), 0, dp(15), 0);
+        e.setBackground(outlined(CARD, BORDER, 17));
+
+        LinearLayout.LayoutParams p =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, dp(54));
+        p.setMargins(0, dp(6), 0, dp(6));
+        e.setLayoutParams(p);
+        return e;
+    }
+
+    private Spinner spinner(String[] values) {
+        Spinner s = new Spinner(this);
+        s.setAdapter(new ArrayAdapter<String>(
+                this,
+                android.R.layout.simple_spinner_dropdown_item,
+                values));
+
+        LinearLayout.LayoutParams p =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, dp(52));
+        p.setMargins(0, dp(5), 0, dp(5));
+        s.setLayoutParams(p);
+        return s;
+    }
+
+    // ============================================================
+    // BOTTOM NAVIGATION
+    // ============================================================
     private LinearLayout bottomNav() {
         LinearLayout nav = row();
         nav.setPadding(dp(8), dp(7), dp(8), dp(7));
@@ -340,9 +454,7 @@ public class MainActivity extends Activity {
                     LinearLayout.LayoutParams.MATCH_PARENT, dp(32)));
             item.addView(nm);
 
-            if (i == 0) {
-                item.setBackground(solid(PRIMARY, 17));
-            }
+            if (i == 0) item.setBackground(solid(PRIMARY, 17));
 
             LinearLayout.LayoutParams ip =
                     new LinearLayout.LayoutParams(0, dp(62), 1);
@@ -369,7 +481,6 @@ public class MainActivity extends Activity {
     // ============================================================
     // HOME
     // ============================================================
-
     private void showHome() {
         startScreen(false);
         LinearLayout c = content();
@@ -416,25 +527,6 @@ public class MainActivity extends Activity {
     // ============================================================
     // LOGIN / ACCOUNT
     // ============================================================
-
-    private EditText input(String hint) {
-        EditText e = new EditText(this);
-        e.setHint(hint);
-        e.setHintTextColor(Color.rgb(110, 125, 150));
-        e.setTextColor(WHITE);
-        e.setTextSize(14);
-        e.setSingleLine(true);
-        e.setPadding(dp(15), 0, dp(15), 0);
-        e.setBackground(outlined(CARD, BORDER, 17));
-
-        LinearLayout.LayoutParams p =
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, dp(54));
-        p.setMargins(0, dp(6), 0, dp(6));
-        e.setLayoutParams(p);
-        return e;
-    }
-
     private void showLogin() {
         startScreen(false);
         LinearLayout c = content();
@@ -446,16 +538,14 @@ public class MainActivity extends Activity {
         c.addView(input("Email or Phone"));
 
         EditText pass = input("Viyzo Password");
-        pass.setInputType(
-                android.text.InputType.TYPE_CLASS_TEXT |
-                android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
-        );
+        pass.setInputType(InputType.TYPE_CLASS_TEXT |
+                InputType.TYPE_TEXT_VARIATION_PASSWORD);
         c.addView(pass);
 
         Button login = primary("🔐  Login");
         login.setOnClickListener(v -> {
             Toast.makeText(this,
-                    "Login will connect to secure backend.",
+                    "Demo login: secure backend connection is required for real accounts.",
                     Toast.LENGTH_SHORT).show();
             showDashboard();
         });
@@ -476,17 +566,17 @@ public class MainActivity extends Activity {
 
         c.addView(brandHeader());
         c.addView(heading("Create Worker Account"));
-        c.addView(small("Start with basic access. Stronger verification can unlock more work."));
+        c.addView(small(
+                "Start with basic access. Stronger verification can unlock more work."
+        ));
 
         c.addView(input("Full Name"));
         c.addView(input("Email"));
         c.addView(input("Phone Number"));
 
         EditText pass = input("Create Viyzo Password");
-        pass.setInputType(
-                android.text.InputType.TYPE_CLASS_TEXT |
-                android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
-        );
+        pass.setInputType(InputType.TYPE_CLASS_TEXT |
+                InputType.TYPE_TEXT_VARIATION_PASSWORD);
         c.addView(pass);
 
         CheckBox terms = new CheckBox(this);
@@ -513,9 +603,8 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // WORKER DASHBOARD — MIXED APP-STYLE GRID
+    // WORKER DASHBOARD
     // ============================================================
-
     private void showDashboard() {
         startScreen(true);
         LinearLayout c = content();
@@ -535,38 +624,57 @@ public class MainActivity extends Activity {
         w1.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         wn.addView(w1);
         wn.addView(tv("Worker ID: VZ388742", 11, GRAY));
-        TextView verified = tv("● Basic Worker", 11, GREEN);
-        wn.addView(verified);
+        wn.addView(tv("● Basic Worker", 11, GREEN));
 
         LinearLayout.LayoutParams wnp =
                 new LinearLayout.LayoutParams(0, dp(58), 1);
         wnp.setMargins(dp(11), 0, 0, 0);
         wr.addView(wn, wnp);
+
         welcome.addView(wr);
         c.addView(welcome);
         setMargins(welcome, 0, 4, 0, 13);
 
+        // Earning opportunity target.
+        LinearLayout target = card();
+        target.setBackground(primaryBg());
+        target.addView(tv("🎯  Daily Earning Opportunity", 16, WHITE));
+        TextView targetValue = tv("₹" +
+                formatNumber(DAILY_EARNING_TARGET_INR) +
+                " target opportunity", 25, WHITE);
+        targetValue.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        target.addView(targetValue);
+        target.addView(tv(
+                "Planning guide: up to " +
+                        formatNumber(TARGET_HOURS_PER_DAY) +
+                        " hours • ~₹" +
+                        formatNumber(TARGET_INR_PER_HOUR) +
+                        "/hour target",
+                11, WHITE));
+        target.addView(tv(
+                "Not guaranteed income — actual earnings depend on real work supply, rate, quality and availability.",
+                10, WHITE));
+        c.addView(target);
+        setMargins(target, 0, 0, 0, 13);
+
         LinearLayout manager = card();
+        manager.setBackground(primaryBg());
         TextView mt = tv("🤖  AI Master Manager       ›", 17, WHITE);
         mt.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         manager.addView(mt);
         manager.addView(tv(
-                "Finds suitable jobs from global company work.",
-                11, GRAY));
-        manager.setBackground(primaryBg());
-        manager.setOnClickListener(v -> showJobs());
+                "Matches skills, language, workload, deadline, verification and availability.",
+                11, WHITE));
+        manager.setOnClickListener(v -> showAIMasterManager());
         c.addView(manager);
         setMargins(manager, 0, 0, 0, 13);
 
-        // Uneven / separate app-style grid instead of one long list.
         LinearLayout r1 = row();
-
         LinearLayout jobs = menuCard(
                 "🔎", "Available Jobs", "Explore global work",
                 v -> showJobs());
-
         LinearLayout myJobs = menuCard(
-                "📋", "My Jobs", "Track active work",
+                "📋", "My Work", "Active assignments",
                 v -> showMyJobs());
 
         r1.addView(jobs, new LinearLayout.LayoutParams(0, dp(145), 1));
@@ -577,11 +685,9 @@ public class MainActivity extends Activity {
         c.addView(r1);
 
         LinearLayout r2 = row();
-
         LinearLayout earnings = menuCard(
                 "💰", "Earnings", "Balance & payout",
                 v -> showEarnings());
-
         LinearLayout verify = menuCard(
                 "🛡", "Verification", "Worker verification",
                 v -> showWorkerVerification());
@@ -589,51 +695,119 @@ public class MainActivity extends Activity {
         r2.addView(earnings, new LinearLayout.LayoutParams(0, dp(145), 1));
         LinearLayout.LayoutParams p22 =
                 new LinearLayout.LayoutParams(0, dp(145), 1);
-        p22.setMargins(dp(8), dp(0), 0, 0);
+        p22.setMargins(dp(8), 0, 0, 0);
         r2.addView(verify, p22);
         c.addView(r2);
 
-        TextView q = tv("Quick Access", 18, WHITE);
+        TextView q = tv("Work Sources", 18, WHITE);
         q.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         q.setPadding(0, dp(17), 0, dp(6));
         c.addView(q);
 
         LinearLayout r3 = row();
+        r3.addView(menuCard("⚡", "Urgent", "Fast deadlines",
+                v -> showJobs()), new LinearLayout.LayoutParams(0, dp(125), 1));
 
-        LinearLayout notif = menuCard(
-                "🔔", "Alerts", "New updates",
-                v -> showNotifications());
-
-        LinearLayout language = menuCard(
-                "🌐", "Language", "Change language",
-                v -> showLanguage());
-
-        r3.addView(notif, new LinearLayout.LayoutParams(0, dp(125), 1));
-        LinearLayout.LayoutParams p32 =
+        LinearLayout.LayoutParams rp =
                 new LinearLayout.LayoutParams(0, dp(125), 1);
-        p32.setMargins(dp(8), dp(8), 0, 0);
-        r3.addView(language, p32);
+        rp.setMargins(dp(8), 0, 0, 0);
+        r3.addView(menuCard("📦", "Bulk Work", "Large batches",
+                v -> showJobs()), rp);
         c.addView(r3);
+
+        LinearLayout r4 = row();
+        r4.addView(menuCard("🔁", "Recurring", "Repeat work",
+                v -> showJobs()), new LinearLayout.LayoutParams(0, dp(125), 1));
+
+        LinearLayout.LayoutParams r4p =
+                new LinearLayout.LayoutParams(0, dp(125), 1);
+        r4p.setMargins(dp(8), dp(8), 0, 0);
+        r4.addView(menuCard("🌍", "Global", "Worldwide work",
+                v -> showJobs()), r4p);
+        c.addView(r4);
 
         LinearLayout settings = card();
         settings.setOrientation(LinearLayout.HORIZONTAL);
-        TextView si = tv("⚙", 24, WHITE);
-        settings.addView(si, new LinearLayout.LayoutParams(dp(42), dp(45)));
+        settings.addView(tv("⚙", 24, WHITE),
+                new LinearLayout.LayoutParams(dp(42), dp(45)));
+
         TextView st = tv("Settings & Account", 15, WHITE);
         st.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        settings.addView(st);
+        settings.addView(st, new LinearLayout.LayoutParams(0, dp(45), 1));
+
         TextView arrow = tv("›", 28, GRAY);
         arrow.setGravity(Gravity.CENTER);
         settings.addView(arrow, new LinearLayout.LayoutParams(dp(40), dp(45)));
+
         settings.setOnClickListener(v -> showSettings());
         c.addView(settings);
         setMargins(settings, 0, 10, 0, 0);
     }
 
     // ============================================================
+    // AI MASTER MANAGER
+    // ============================================================
+    private void showAIMasterManager() {
+        startScreen(false);
+        LinearLayout c = content();
+
+        c.addView(heading("🤖 AI Master Manager"));
+        c.addView(small(
+                "Decision layer for matching available company work with suitable workers."
+        ));
+
+        LinearLayout hero = card();
+        hero.setBackground(primaryBg());
+        hero.addView(tv("Global Work Matching Engine", 19, WHITE));
+        hero.addView(tv(
+                "The production version will use secure backend data to score workers and jobs in real time.",
+                11, WHITE));
+        c.addView(hero);
+
+        c.addView(wideInfo("🎯", "Worker Earning Target",
+                "₹" + formatNumber(DAILY_EARNING_TARGET_INR) +
+                        " opportunity target/day"));
+        c.addView(wideInfo("💰", "Worker Pool",
+                formatNumber(WORKER_SHARE_PERCENT) + "% of configured job budget"));
+        c.addView(wideInfo("🏢", "Viyzo Platform",
+                formatNumber(VIYZO_SHARE_PERCENT) +
+                        "% for platform costs and remaining margin"));
+        c.addView(wideInfo("⏱", "Target Planning",
+                "Up to " + formatNumber(TARGET_HOURS_PER_DAY) +
+                        " hours/day"));
+
+        TextView factors = tv("Matching Factors", 18, WHITE);
+        factors.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        factors.setPadding(0, dp(15), 0, dp(7));
+        c.addView(factors);
+
+        c.addView(wideInfo("🧠", "Skills",
+                "Task category and required skill"));
+        c.addView(wideInfo("🌐", "Language / Country",
+                "Language, eligibility and location rules"));
+        c.addView(wideInfo("🕐", "Availability",
+                "Current worker workload and capacity"));
+        c.addView(wideInfo("⭐", "Quality",
+                "Quality history and task performance"));
+        c.addView(wideInfo("🛡", "Verification",
+                "Verification level required by the job"));
+        c.addView(wideInfo("📅", "Deadline",
+                "Urgency and time remaining"));
+        c.addView(wideInfo("📦", "Workload",
+                "Quantity divided across suitable workers"));
+
+        Button feed = primary("🔎  Open AI-Matched Work");
+        feed.setOnClickListener(v -> showJobs());
+        c.addView(feed);
+
+        Button back = secondary("← Back to Dashboard");
+        back.setOnClickListener(v -> showDashboard());
+        c.addView(back);
+    }
+
+    // ============================================================
     // JOBS
     // ============================================================
-
     private void showJobs() {
         startScreen(true);
         LinearLayout c = content();
@@ -645,154 +819,273 @@ public class MainActivity extends Activity {
         top.addView(back, new LinearLayout.LayoutParams(dp(42), dp(50)));
 
         LinearLayout titles = column();
-        TextView h = tv("Available Jobs", 21, WHITE);
+        TextView h = tv("Available Work", 21, WHITE);
         h.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         titles.addView(h);
-        titles.addView(tv("Global jobs matched by AI Master Manager", 10, GRAY));
+        titles.addView(tv(
+                "Demo opportunities now • backend will supply real jobs later",
+                10, GRAY));
 
         top.addView(titles, new LinearLayout.LayoutParams(0, dp(50), 1));
         c.addView(top);
 
         c.addView(input("🔎  Search jobs, skills or categories"));
 
-        LinearLayout filter = row();
-
+        LinearLayout filters1 = row();
         Button all = secondary("All");
-        Button remote = secondary("Remote");
-        Button country = secondary("Country");
+        Button urgent = secondary("Urgent");
+        Button bulk = secondary("Bulk");
+        filters1.addView(all, new LinearLayout.LayoutParams(0, dp(48), 1));
 
-        filter.addView(all, new LinearLayout.LayoutParams(0, dp(48), 1));
-        LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(0, dp(48), 1);
-        rp.setMargins(dp(5), 0, 0, 0);
-        filter.addView(remote, rp);
-        LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(0, dp(48), 1);
-        cp.setMargins(dp(5), 0, 0, 0);
-        filter.addView(country, cp);
-        c.addView(filter);
+        LinearLayout f2 = new LinearLayout.LayoutParams(0, dp(48), 1);
+        f2.setMargins(dp(5), 0, 0, 0);
+        filters1.addView(urgent, f2);
 
-        c.addView(jobCard(
-                "🤖", "Product Listing",
-                "1000 products • Remote • Global",
-                "$500", "8 Workers", "3 Days"));
+        LinearLayout f3 = new LinearLayout.LayoutParams(0, dp(48), 1);
+        f3.setMargins(dp(5), 0, 0, 0);
+        filters1.addView(bulk, f3);
+        c.addView(filters1);
 
-        c.addView(jobCard(
-                "📊", "Data Entry",
-                "500 records • Flexible • Global",
-                "$250", "5 Workers", "2 Days"));
+        LinearLayout filters2 = row();
+        Button recurring = secondary("Recurring");
+        Button highPay = secondary("High Pay");
+        Button global = secondary("Global");
+        filters2.addView(recurring, new LinearLayout.LayoutParams(0, dp(48), 1));
 
-        c.addView(jobCard(
-                "📝", "Content Review",
-                "500 items • Remote • Global",
-                "$300", "6 Workers", "3 Days"));
+        LinearLayout hp = new LinearLayout.LayoutParams(0, dp(48), 1);
+        hp.setMargins(dp(5), 0, 0, 0);
+        filters2.addView(highPay, hp);
+
+        LinearLayout gp = new LinearLayout.LayoutParams(0, dp(48), 1);
+        gp.setMargins(dp(5), 0, 0, 0);
+        filters2.addView(global, gp);
+        c.addView(filters2);
+
+        for (JobData job : DEMO_JOBS) {
+            c.addView(jobCard(job));
+        }
 
         Button company = secondary("🏢  Are you a company? Post work");
         company.setOnClickListener(v -> showCompanyPortal());
         c.addView(company);
     }
 
-    private LinearLayout jobCard(String icon, String name, String type,
-                                 String budget, String workers, String deadline) {
+    private LinearLayout jobCard(JobData job) {
         LinearLayout c = card();
 
         LinearLayout top = row();
-        TextView ic = tv(icon, 24, WHITE);
+
+        TextView ic = tv(job.icon, 24, WHITE);
         ic.setGravity(Gravity.CENTER);
         ic.setBackground(outlined(CARD2, BORDER, 16));
         top.addView(ic, new LinearLayout.LayoutParams(dp(48), dp(48)));
 
         LinearLayout names = column();
-        TextView n = tv(name, 16, WHITE);
+        TextView n = tv(job.title, 16, WHITE);
         n.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         names.addView(n);
-        names.addView(tv(type, 10, GRAY));
-
+        names.addView(tv(job.category + " • " + job.workType, 10, GRAY));
         top.addView(names, new LinearLayout.LayoutParams(0, dp(48), 1));
 
-        TextView gl = tv("Global", 10, GREEN);
-        gl.setGravity(Gravity.CENTER);
-        top.addView(gl, new LinearLayout.LayoutParams(dp(52), dp(30)));
+        TextView badge = tv(job.urgency, 9,
+                job.urgency.equals("Urgent") ? ORANGE : GREEN);
+        badge.setGravity(Gravity.CENTER);
+        top.addView(badge, new LinearLayout.LayoutParams(dp(65), dp(30)));
 
         c.addView(top);
 
+        double budget = parseMoney(job.budget);
+        double workerPool = workerPool(budget);
+
         TextView info = tv(
-                "Company Budget   " + budget +
-                "\nWorker Pool       " + (budget.equals("$500") ? "$400" : "$200") +
-                "\nWorkers              " + workers +
-                "\nDeadline              " + deadline,
+                "Demo / Example job\n" +
+                        "Company        " + job.company +
+                        "\nBudget           " + job.budget +
+                        "\nWorker Pool    " + money(workerPool) +
+                        "\nWorkers          " + job.workers +
+                        "\nWorkload         " + job.quantity +
+                        "\nDeadline          " + job.deadline,
                 12, TEXT);
         info.setPadding(0, dp(12), 0, dp(7));
         c.addView(info);
 
         Button details = primary("View Details  →");
-        details.setOnClickListener(v -> showJobDetails(name, budget));
+        details.setOnClickListener(v -> showJobDetails(job));
         c.addView(details);
 
         setMargins(c, 0, 9, 0, 4);
         return c;
     }
 
-    private void showJobDetails(String name, String budget) {
+    private void showJobDetails(JobData job) {
         startScreen(false);
         LinearLayout c = content();
 
         c.addView(heading("Job Details"));
-        c.addView(small("Global work opportunity"));
+        c.addView(small("AI-matched global work opportunity"));
 
-        c.addView(wideInfo("🤖", name, "Remote • Global"));
+        c.addView(wideInfo(job.icon, job.title,
+                job.workType + " • " + job.category));
+
+        double budget = parseMoney(job.budget);
+        double workerPool = workerPool(budget);
+        double platformShare = viyzoShare(budget);
 
         LinearLayout d = card();
         d.addView(tv(
-                "Company Budget       " + budget +
-                "\n\nWorker Pool            $400.00" +
-                "\n\nViyzo Fee                 $100.00" +
-                "\n\nRecommended Workers   8" +
-                "\n\nWorkload per Worker   125 products" +
-                "\n\nDeadline                   3 Days",
+                "Company Budget       " + job.budget +
+                        "\n\nWorker Pool            " + money(workerPool) +
+                        "\n\nViyzo Platform Share " + money(platformShare) +
+                        "\n\nWorkers Needed       " + job.workers +
+                        "\n\nWorkload                " + job.quantity +
+                        "\n\nDeadline                 " + job.deadline +
+                        "\n\nUrgency                   " + job.urgency +
+                        "\n\nRequired Skill         " + job.skill +
+                        "\n\nLanguage                " + job.language,
                 13, TEXT));
         c.addView(d);
         setMargins(d, 0, 12, 0, 12);
 
+        LinearLayout note = card();
+        note.addView(tv("Worker view", 15, WHITE));
+        note.addView(tv(
+                "Workers should see the task payout/earning information relevant to their assignment. Internal platform cost accounting should not be used to mislead users.",
+                11, GRAY));
+        c.addView(note);
+
         TextView req = tv("Requirements", 18, WHITE);
         req.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        req.setPadding(0, dp(15), 0, dp(7));
         c.addView(req);
 
-        c.addView(wideInfo("✓", "Internet", "Good connection"));
-        c.addView(wideInfo("✓", "Skills", "Basic mobile/computer skills"));
-        c.addView(wideInfo("✓", "Quality", "Accuracy and quality"));
+        c.addView(wideInfo("✓", "Skill",
+                job.skill));
+        c.addView(wideInfo("✓", "Language",
+                job.language));
+        c.addView(wideInfo("✓", "Quality",
+                "Accuracy and quality"));
+        c.addView(wideInfo("✓", "Verification",
+                "Job-specific verification may apply"));
 
-        Button apply = primary("🚀  Apply Now");
+        Button apply = primary("🚀  Apply / Join Work Pool");
         apply.setOnClickListener(v -> Toast.makeText(
-                this, "Application saved. Backend connection comes next.",
+                this,
+                "Demo application saved. Real assignment requires backend matching.",
                 Toast.LENGTH_SHORT).show());
         c.addView(apply);
+
+        Button back = secondary("← Back to Work Feed");
+        back.setOnClickListener(v -> showJobs());
+        c.addView(back);
     }
 
     // ============================================================
-    // MY JOBS / EARNINGS / PROFILE
+    // MY WORK / WORK POOL
     // ============================================================
-
     private void showMyJobs() {
         startScreen(true);
         LinearLayout c = content();
 
-        c.addView(heading("My Jobs"));
-        c.addView(small("Work currently assigned to your account."));
+        c.addView(heading("My Work"));
+        c.addView(small("Assignments, work pools and progress."));
 
         LinearLayout active = card();
-        active.addView(wideInfo("💼", "Product Listing", "In Progress • 12%"));
+        active.addView(wideInfo("💼", "Product Listing",
+                "Demo Assignment • In Progress"));
 
         active.addView(tv("125 / 1000 products", 13, TEXT));
+        active.addView(tv("Worker payout is based on approved completed work.",
+                11, GRAY));
         active.addView(tv("Deadline: 3 Days", 11, GRAY));
 
         Button open = primary("Open Work");
-        open.setOnClickListener(v -> Toast.makeText(
-                this, "Work execution screen will connect to job backend.",
-                Toast.LENGTH_SHORT).show());
+        open.setOnClickListener(v -> showWorkExecution());
         active.addView(open);
-
         c.addView(active);
+
+        LinearLayout queue = card();
+        queue.addView(tv("AI Work Queue", 16, WHITE));
+        queue.addView(tv(
+                "1 Active • 2 Ready • 3 Recommended • 0 Waiting",
+                12, GRAY));
+
+        Button pool = secondary("📦  Open Work Pool");
+        pool.setOnClickListener(v -> showWorkPool());
+        queue.addView(pool);
+        c.addView(queue);
+
+        c.addView(wideInfo("⚡", "Urgent Queue",
+                "Ready when eligible work is available"));
+        c.addView(wideInfo("🔁", "Recurring Queue",
+                "Repeat work can return automatically from backend"));
     }
 
+    private void showWorkExecution() {
+        startScreen(false);
+        LinearLayout c = content();
+
+        c.addView(heading("Work Execution"));
+        c.addView(small("Demo task workspace — production task tools connect to backend."));
+
+        c.addView(wideInfo("📦", "Task Batch",
+                "Product Listing • Batch #VZ-DEMO-001"));
+        c.addView(wideInfo("📊", "Progress",
+                "125 / 1000 completed"));
+        c.addView(wideInfo("💰", "Worker Earning",
+                "Shown after approved task calculation"));
+
+        c.addView(input("Task result / item ID"));
+
+        CheckBox done = new CheckBox(this);
+        done.setText("I confirm this task is complete and accurate.");
+        done.setTextColor(TEXT);
+        c.addView(done);
+
+        Button submit = primary("✓  Submit Completed Work");
+        submit.setOnClickListener(v -> {
+            if (!done.isChecked()) {
+                Toast.makeText(this,
+                        "Please confirm the task is complete.",
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+            Toast.makeText(this,
+                    "Demo submission recorded. Quality review will be backend-controlled.",
+                    Toast.LENGTH_SHORT).show();
+        });
+        c.addView(submit);
+
+        Button back = secondary("← Back to My Work");
+        back.setOnClickListener(v -> showMyJobs());
+        c.addView(back);
+    }
+
+    private void showWorkPool() {
+        startScreen(false);
+        LinearLayout c = content();
+
+        c.addView(heading("Work Pool"));
+        c.addView(small(
+                "Batches are divided among eligible workers by the matching engine."
+        ));
+
+        c.addView(wideInfo("📦", "Bulk Pool",
+                "Large batches can be divided into smaller assignments"));
+        c.addView(wideInfo("⚡", "Urgent Pool",
+                "Priority queue for short deadlines"));
+        c.addView(wideInfo("🔁", "Recurring Pool",
+                "Repeat jobs can create future assignments"));
+        c.addView(wideInfo("🌍", "Global Pool",
+                "Country/language eligibility can be configured"));
+
+        Button jobs = primary("🔎  Find Eligible Work");
+        jobs.setOnClickListener(v -> showJobs());
+        c.addView(jobs);
+    }
+
+    // ============================================================
+    // EARNINGS
+    // ============================================================
     private void showEarnings() {
         startScreen(true);
         LinearLayout c = content();
@@ -805,24 +1098,41 @@ public class MainActivity extends Activity {
         balance.setElevation(dp(8));
 
         balance.addView(tv("Available Balance", 12, WHITE));
-        TextView money = tv("$0.00", 32, WHITE);
-        money.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        balance.addView(money);
+        TextView moneyText = tv("₹0.00", 32, WHITE);
+        moneyText.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        balance.addView(moneyText);
 
         Button withdraw = primary("Withdraw");
         withdraw.setBackground(solid(WHITE, 20));
         withdraw.setTextColor(PRIMARY);
         withdraw.setOnClickListener(v -> Toast.makeText(
-                this, "Withdrawal will connect to a country/payment provider.",
+                this,
+                "Withdrawal will connect to a supported country/payment provider.",
                 Toast.LENGTH_SHORT).show());
         balance.addView(withdraw);
 
         c.addView(balance);
         setMargins(balance, 0, 0, 0, 12);
 
+        LinearLayout target = card();
+        target.addView(tv("🎯 Daily Target Planning", 15, WHITE));
+        target.addView(tv(
+                "Opportunity target: ₹" + formatNumber(DAILY_EARNING_TARGET_INR) +
+                        "/day • up to " + formatNumber(TARGET_HOURS_PER_DAY) +
+                        " hours",
+                13, TEXT));
+        target.addView(tv(
+                "At a 50% worker-pool model, about ₹" +
+                        formatNumber(DAILY_EARNING_TARGET_INR * 2) +
+                        " of total job value would be needed to create ₹" +
+                        formatNumber(DAILY_EARNING_TARGET_INR) +
+                        " worker-pool value, before task/quality/payment effects.",
+                11, GRAY));
+        c.addView(target);
+
         LinearLayout r = row();
-        LinearLayout total = statCard("💵", "Total Earned", "$0.00");
-        LinearLayout pending = statCard("⏳", "Pending", "$0.00");
+        LinearLayout total = statCard("💵", "Total Earned", "₹0.00");
+        LinearLayout pending = statCard("⏳", "Pending", "₹0.00");
 
         r.addView(total, new LinearLayout.LayoutParams(0, dp(125), 1));
         LinearLayout.LayoutParams pp =
@@ -831,11 +1141,51 @@ public class MainActivity extends Activity {
         r.addView(pending, pp);
         c.addView(r);
 
-        c.addView(wideInfo("📈", "Transactions", "No transactions yet"));
-        c.addView(secondary("💳  Payment Methods"));
-        c.addView(secondary("📋  Transaction History"));
+        c.addView(wideInfo("📈", "Transactions",
+                "No real transactions yet"));
+        c.addView(wideInfo("🧾", "Payout Status",
+                "Backend/payment provider required"));
+        c.addView(wideInfo("🔒", "Payment Verification",
+                "May be required before withdrawals"));
+
+        Button methods = secondary("💳  Payment Methods");
+        methods.setOnClickListener(v -> showPaymentSettings());
+        c.addView(methods);
+
+        Button history = secondary("📋  Transaction History");
+        history.setOnClickListener(v -> Toast.makeText(
+                this, "Transaction history will come from secure backend.",
+                Toast.LENGTH_SHORT).show());
+        c.addView(history);
     }
 
+    private void showPaymentSettings() {
+        startScreen(false);
+        LinearLayout c = content();
+
+        c.addView(heading("Payment Settings"));
+        c.addView(small(
+                "Payment methods and payout rules should be country/provider specific."
+        ));
+
+        c.addView(wideInfo("🌍", "Country",
+                "Country-specific payout options"));
+        c.addView(wideInfo("🏦", "Bank / Wallet",
+                "Connect supported provider later"));
+        c.addView(wideInfo("🛡", "Payment Verification",
+                "Separate from worker identity verification"));
+
+        c.addView(secondary("＋ Add Payment Method"));
+        c.addView(secondary("📋 Payout Requirements"));
+
+        Button back = secondary("← Back to Earnings");
+        back.setOnClickListener(v -> showEarnings());
+        c.addView(back);
+    }
+
+    // ============================================================
+    // PROFILE
+    // ============================================================
     private void showProfile() {
         startScreen(true);
         LinearLayout c = content();
@@ -862,11 +1212,15 @@ public class MainActivity extends Activity {
         c.addView(profile);
 
         c.addView(wideInfo("🛡", "Verification Status",
-                "Basic Verification • Not completed"));
+                "Basic Worker • Higher levels available"));
 
         Button verify = secondary("🛡  Worker Verification");
         verify.setOnClickListener(v -> showWorkerVerification());
         c.addView(verify);
+
+        Button earnings = secondary("💰  Earnings & Payout");
+        earnings.setOnClickListener(v -> showEarnings());
+        c.addView(earnings);
 
         Button settings = secondary("⚙  Account Settings");
         settings.setOnClickListener(v -> showSettings());
@@ -889,21 +1243,23 @@ public class MainActivity extends Activity {
     // ============================================================
     // WORKER VERIFICATION
     // ============================================================
-
     private void showWorkerVerification() {
         startScreen(false);
         LinearLayout c = content();
 
         c.addView(heading("Worker Verification"));
-        c.addView(small("Complete verification to unlock more work and higher-value jobs."));
+        c.addView(small(
+                "Verification level can control access to higher-value or restricted work."
+        ));
 
-        c.addView(wideInfo("1", "Country", "Select your country"));
+        c.addView(wideInfo("1", "Country",
+                "Country and provider rules"));
         c.addView(wideInfo("2", "Basic Verification",
-                "Name, DOB, phone, email and selfie"));
-        c.addView(wideInfo("3", "Identity Document",
-                "Country/provider requirements may vary"));
-        c.addView(wideInfo("4", "Consent",
-                "Verification and privacy consent"));
+                "Name, DOB, phone, email and consent"));
+        c.addView(wideInfo("3", "Identity Verification",
+                "Document requirements can vary by country/provider"));
+        c.addView(wideInfo("4", "Payout Verification",
+                "Payment provider requirements may apply"));
 
         Button start = primary("Start Verification");
         start.setOnClickListener(v -> showBasicVerification());
@@ -921,6 +1277,11 @@ public class MainActivity extends Activity {
         c.addView(heading("Basic Verification"));
         c.addView(small("Only provide information needed for verification."));
 
+        c.addView(spinner(new String[]{
+                "Select Country", "India", "Bangladesh",
+                "United States", "United Kingdom", "UAE", "Other"
+        }));
+
         c.addView(input("Full Name"));
         c.addView(input("Date of Birth"));
         c.addView(input("Phone Number"));
@@ -928,18 +1289,20 @@ public class MainActivity extends Activity {
 
         Button otp = secondary("📱  Send Phone OTP");
         otp.setOnClickListener(v -> Toast.makeText(
-                this, "OTP will connect to secure backend.",
+                this, "OTP service will connect to secure backend.",
                 Toast.LENGTH_SHORT).show());
         c.addView(otp);
 
         Button selfie = secondary("📷  Take Live Selfie");
         selfie.setOnClickListener(v -> Toast.makeText(
-                this, "Selfie verification will connect to verification service.",
+                this, "Selfie verification will connect to an approved verification service.",
                 Toast.LENGTH_SHORT).show());
         c.addView(selfie);
 
         CheckBox consent = new CheckBox(this);
-        consent.setText("I confirm this information is mine and agree to verification/privacy terms.");
+        consent.setText(
+                "I confirm this information is mine and agree to verification/privacy terms."
+        );
         consent.setTextColor(TEXT);
         consent.setTextSize(12);
         c.addView(consent);
@@ -962,25 +1325,24 @@ public class MainActivity extends Activity {
         LinearLayout c = content();
 
         c.addView(heading("Identity Document"));
-        c.addView(small("Accepted documents depend on country and verification provider."));
+        c.addView(small(
+                "Accepted documents depend on country and verification provider."
+        ));
 
-        Spinner country = new Spinner(this);
-        String[] countries = {
+        c.addView(spinner(new String[]{
                 "Select Country", "India", "United States",
                 "United Kingdom", "Bangladesh", "UAE", "Other"
-        };
-        country.setAdapter(new ArrayAdapter<String>(
-                this,
-                android.R.layout.simple_spinner_dropdown_item,
-                countries));
-        c.addView(country);
+        }));
 
         c.addView(wideInfo("🪪", "Government ID",
-                "Use an accepted document when required."));
+                "Use an accepted document only when required."));
+        c.addView(wideInfo("🔐", "Secure Upload",
+                "Production upload should use encrypted backend storage."));
 
         Button upload = primary("📷  Upload / Capture Document");
         upload.setOnClickListener(v -> Toast.makeText(
-                this, "Secure document upload will connect to backend.",
+                this,
+                "Secure document upload will connect to backend/provider.",
                 Toast.LENGTH_SHORT).show());
         c.addView(upload);
 
@@ -994,14 +1356,18 @@ public class MainActivity extends Activity {
         LinearLayout c = content();
 
         c.addView(heading("Basic Worker Account"));
-        c.addView(small("You can start with basic access where permitted."));
+        c.addView(small(
+                "Basic access may be available where permitted; stronger verification can be required later."
+        ));
 
         c.addView(wideInfo("✓", "Account Created",
                 "Basic account access"));
         c.addView(wideInfo("🛡", "Basic Verification",
                 "Some jobs can remain available"));
         c.addView(wideInfo("🔒", "Higher Verification",
-                "Some high-value jobs or payouts may require stronger verification"));
+                "Some high-value or restricted jobs may require more verification"));
+        c.addView(wideInfo("💳", "Payout Verification",
+                "Payment provider rules may apply before withdrawal"));
 
         Button done = primary("Continue to Dashboard");
         done.setOnClickListener(v -> showDashboard());
@@ -1009,9 +1375,8 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // COMPANY PORTAL — GLOBAL JOB POSTING FOUNDATION
+    // COMPANY PORTAL
     // ============================================================
-
     private void showCompanyPortal() {
         startScreen(false);
         LinearLayout c = content();
@@ -1019,14 +1384,14 @@ public class MainActivity extends Activity {
         c.addView(brandHeader());
         c.addView(heading("Company Work Portal"));
         c.addView(small(
-                "Small or large companies can create work for workers anywhere in the world."
+                "Company onboarding and real job supply will be powered by a secure backend."
         ));
 
         LinearLayout hero = card();
         hero.setBackground(primaryBg());
         hero.addView(tv("🌍  Global Company Jobs", 19, WHITE));
         hero.addView(tv(
-                "Post remote work, choose a country/currency, set workload and budget, and let the AI Manager recommend workers.",
+                "Post remote work, choose country/currency, set workload and budget, then let the matching engine recommend workers.",
                 12, WHITE));
         c.addView(hero);
         setMargins(hero, 0, 0, 0, 13);
@@ -1039,8 +1404,44 @@ public class MainActivity extends Activity {
         companyLogin.setOnClickListener(v -> showCompanyDashboard());
         c.addView(companyLogin);
 
+        Button model = secondary("💰  Pricing / Work Budget Model");
+        model.setOnClickListener(v -> showPricingModel());
+        c.addView(model);
+
         Button back = secondary("← Back to Worker App");
         back.setOnClickListener(v -> showHome());
+        c.addView(back);
+    }
+
+    private void showPricingModel() {
+        startScreen(false);
+        LinearLayout c = content();
+
+        c.addView(heading("Viyzo Work Budget Model"));
+        c.addView(small(
+                "Configurable internal platform model. Final customer pricing, taxes, payment fees and local legal requirements must be handled by the production backend."
+        ));
+
+        c.addView(wideInfo("👥", "Worker Pool",
+                formatNumber(WORKER_SHARE_PERCENT) + "%"));
+        c.addView(wideInfo("🏢", "Viyzo Platform Share",
+                formatNumber(VIYZO_SHARE_PERCENT) + "%"));
+        c.addView(wideInfo("🖥", "Platform Costs",
+                "Backend/server, payments, verification, support, security, refunds/disputes"));
+        c.addView(wideInfo("📈", "Remaining Margin",
+                "Calculated only after actual platform expenses"));
+
+        LinearLayout example = card();
+        example.addView(tv("Example: ₹2,000 total job value", 16, WHITE));
+        example.addView(tv(
+                "Worker pool: ₹1,000\n" +
+                        "Viyzo platform share: ₹1,000\n" +
+                        "Viyzo share is not automatically pure profit.",
+                13, TEXT));
+        c.addView(example);
+
+        Button back = secondary("← Back to Company Portal");
+        back.setOnClickListener(v -> showCompanyPortal());
         c.addView(back);
     }
 
@@ -1061,8 +1462,11 @@ public class MainActivity extends Activity {
         r1.addView(statCard("👥", "Workers", "0"), p);
         c.addView(r1);
 
-        c.addView(wideInfo("💵", "Company Spending", "$0.00"));
-        c.addView(wideInfo("🌍", "Global Reach", "Countries can be configured"));
+        c.addView(wideInfo("💵", "Company Spending", "₹0.00 / $0.00"));
+        c.addView(wideInfo("🌍", "Global Reach",
+                "Countries/languages can be configured"));
+        c.addView(wideInfo("🤖", "AI Manager",
+                "Ready to recommend worker allocation"));
 
         Button post = primary("＋  Post New Work");
         post.setOnClickListener(v -> showPostWork());
@@ -1078,14 +1482,15 @@ public class MainActivity extends Activity {
         LinearLayout c = content();
 
         c.addView(heading("Post New Work"));
-        c.addView(small("This form is designed for global companies of any size."));
+        c.addView(small(
+                "This is the intake form. Submission becomes a real company job only after backend onboarding, payment and review."
+        ));
 
         c.addView(input("Company Name"));
         c.addView(input("Job Title / Work Name"));
         c.addView(input("Job Description"));
 
-        Spinner category = new Spinner(this);
-        String[] categories = {
+        c.addView(spinner(new String[]{
                 "Select Category",
                 "Product Listing",
                 "Data Entry",
@@ -1094,31 +1499,20 @@ public class MainActivity extends Activity {
                 "Research",
                 "Image / Media Work",
                 "Customer Support",
+                "AI Data / Annotation",
                 "Other"
-        };
-        category.setAdapter(new ArrayAdapter<String>(
-                this,
-                android.R.layout.simple_spinner_dropdown_item,
-                categories));
-        c.addView(category);
+        }));
 
-        Spinner companySize = new Spinner(this);
-        String[] sizes = {
+        c.addView(spinner(new String[]{
                 "Company Size",
                 "Small Business",
                 "Startup",
                 "Medium Business",
                 "Enterprise",
                 "Agency / Other"
-        };
-        companySize.setAdapter(new ArrayAdapter<String>(
-                this,
-                android.R.layout.simple_spinner_dropdown_item,
-                sizes));
-        c.addView(companySize);
+        }));
 
-        Spinner country = new Spinner(this);
-        String[] countries = {
+        c.addView(spinner(new String[]{
                 "Worker Location",
                 "Worldwide",
                 "India",
@@ -1129,28 +1523,35 @@ public class MainActivity extends Activity {
                 "Asia",
                 "Africa",
                 "Other / Multiple Countries"
-        };
-        country.setAdapter(new ArrayAdapter<String>(
-                this,
-                android.R.layout.simple_spinner_dropdown_item,
-                countries));
-        c.addView(country);
+        }));
 
-        Spinner currency = new Spinner(this);
-        String[] currencies = {
+        c.addView(spinner(new String[]{
                 "Currency",
                 "USD", "EUR", "GBP", "INR", "AED", "BDT", "Other"
-        };
-        currency.setAdapter(new ArrayAdapter<String>(
-                this,
-                android.R.layout.simple_spinner_dropdown_item,
-                currencies));
-        c.addView(currency);
+        }));
 
         c.addView(input("Company Budget"));
         c.addView(input("Number of Workers Needed"));
         c.addView(input("Workload / Quantity"));
         c.addView(input("Deadline"));
+
+        c.addView(spinner(new String[]{
+                "Urgency",
+                "Normal",
+                "High",
+                "Urgent"
+        }));
+
+        c.addView(spinner(new String[]{
+                "Work Type",
+                "Quick Task",
+                "Bulk",
+                "Project",
+                "Recurring"
+        }));
+
+        c.addView(input("Required Skills"));
+        c.addView(input("Required Language"));
 
         CheckBox remote = new CheckBox(this);
         remote.setText("Remote / Online Work");
@@ -1159,9 +1560,15 @@ public class MainActivity extends Activity {
         c.addView(remote);
 
         CheckBox agree = new CheckBox(this);
-        agree.setText("I confirm that this work and payment information is accurate.");
+        agree.setText(
+                "I confirm that the work, budget and payment information is accurate."
+        );
         agree.setTextColor(TEXT);
         c.addView(agree);
+
+        Button preview = secondary("🧠  Preview AI Allocation");
+        preview.setOnClickListener(v -> showAllocationPreview());
+        c.addView(preview);
 
         Button post = primary("🌍  Submit Work to Viyzo");
         post.setOnClickListener(v -> {
@@ -1173,9 +1580,8 @@ public class MainActivity extends Activity {
             }
 
             Toast.makeText(this,
-                    "Work saved locally. Secure global job backend will receive it when connected.",
+                    "Demo intake saved locally. Real posting requires secure backend/payment onboarding.",
                     Toast.LENGTH_LONG).show();
-
             showCompanyDashboard();
         });
         c.addView(post);
@@ -1185,22 +1591,61 @@ public class MainActivity extends Activity {
         c.addView(back);
     }
 
-    // ============================================================
-    // SETTINGS / NOTIFICATIONS / LANGUAGE / HELP / ABOUT
-    // ============================================================
+    private void showAllocationPreview() {
+        startScreen(false);
+        LinearLayout c = content();
 
+        c.addView(heading("AI Allocation Preview"));
+        c.addView(small(
+                "Example calculation using the configured 50/50 model."
+        ));
+
+        double sample = 2000.0;
+        double worker = workerPool(sample);
+        double platform = viyzoShare(sample);
+
+        c.addView(wideInfo("💼", "Example Total Job Value",
+                "₹" + formatNumber(sample)));
+        c.addView(wideInfo("👥", "Worker Pool",
+                "₹" + formatNumber(worker)));
+        c.addView(wideInfo("🏢", "Viyzo Platform Share",
+                "₹" + formatNumber(platform)));
+
+        int workers = 10;
+        c.addView(wideInfo("👥", "Example Workers",
+                String.valueOf(workers)));
+        c.addView(wideInfo("💰", "Example Pool/Worker",
+                "₹" + formatNumber(worker / workers)));
+
+        c.addView(wideInfo("🤖", "Manager Factors",
+                "Skills • Language • Quality • Availability • Deadline • Verification"));
+
+        Button back = secondary("← Back to Work Posting");
+        back.setOnClickListener(v -> showPostWork());
+        c.addView(back);
+    }
+
+    // ============================================================
+    // NOTIFICATIONS / LANGUAGE / SETTINGS / HELP / ABOUT
+    // ============================================================
     private void showNotifications() {
         startScreen(false);
         LinearLayout c = content();
 
         c.addView(heading("Notifications"));
 
-        c.addView(wideInfo("🤖", "AI Master Manager",
-                "A new Product Listing job is available."));
-        c.addView(wideInfo("💰", "Earnings",
-                "Complete jobs to start earning."));
+        c.addView(wideInfo("⚡", "Urgent Work",
+                "Eligible urgent work can appear here"));
+        c.addView(wideInfo("🤖", "AI Match",
+                "A new AI-matched work opportunity may be available"));
+        c.addView(wideInfo("📦", "Bulk Pool",
+                "Large batches can be split into assignments"));
+        c.addView(wideInfo("🔁", "Recurring",
+                "Repeat work can create future assignments"));
         c.addView(wideInfo("🛡", "Verification",
-                "Complete Worker Verification for more access."));
+                "Complete required verification for eligible work"));
+        c.addView(wideInfo("💰", "Earnings",
+                "Approved work can move to pending/available balance"));
 
         Button back = secondary("← Back");
         back.setOnClickListener(v -> showDashboard());
@@ -1214,14 +1659,21 @@ public class MainActivity extends Activity {
         c.addView(heading("Language"));
 
         String[] languages = {
-                "🇬🇧  English", "🇮🇳  हिन्दी", "🇧🇩  বাংলা",
-                "🇵🇰  اردو", "🇸🇦  العربية", "🇹🇷  Türkçe"
+                "🇬🇧  English",
+                "🇮🇳  हिन्दी",
+                "🇧🇩  বাংলা",
+                "🇵🇰  اردو",
+                "🇸🇦  العربية",
+                "🇹🇷  Türkçe"
         };
 
         for (String lang : languages) {
             Button b = secondary(lang);
             b.setOnClickListener(v -> Toast.makeText(
-                    this, "Selected: " + lang, Toast.LENGTH_SHORT).show());
+                    this,
+                    "Selected: " + lang +
+                            ". Full translation system will connect to localization files/backend.",
+                    Toast.LENGTH_SHORT).show());
             c.addView(b);
         }
     }
@@ -1233,14 +1685,20 @@ public class MainActivity extends Activity {
         c.addView(heading("Settings"));
 
         Button notifications = secondary("🔔  Notification Settings");
+        notifications.setOnClickListener(v -> showNotifications());
         c.addView(notifications);
 
         Button language = secondary("🌐  Language");
         language.setOnClickListener(v -> showLanguage());
         c.addView(language);
 
-        c.addView(secondary("🔐  Privacy"));
-        c.addView(secondary("💳  Payment Settings"));
+        Button privacy = secondary("🔐  Privacy & Data");
+        privacy.setOnClickListener(v -> showPrivacy());
+        c.addView(privacy);
+
+        Button payment = secondary("💳  Payment Settings");
+        payment.setOnClickListener(v -> showPaymentSettings());
+        c.addView(payment);
 
         Button help = secondary("❓  Help & Support");
         help.setOnClickListener(v -> showHelp());
@@ -1256,22 +1714,56 @@ public class MainActivity extends Activity {
         c.addView(logout);
     }
 
+    private void showPrivacy() {
+        startScreen(false);
+        LinearLayout c = content();
+
+        c.addView(heading("Privacy & Data"));
+        c.addView(small(
+                "Production privacy controls should be enforced by secure backend policies and applicable law."
+        ));
+
+        c.addView(wideInfo("🔒", "Data Minimization",
+                "Collect only data needed for the stated purpose"));
+        c.addView(wideInfo("🛡", "Security",
+                "Encrypt sensitive data and restrict access"));
+        c.addView(wideInfo("📷", "Selfie / ID",
+                "Use approved verification providers where required"));
+        c.addView(wideInfo("🗑", "Data Retention",
+                "Retention/deletion rules must be defined"));
+        c.addView(wideInfo("📄", "Consent",
+                "Clear consent and privacy notices are required"));
+
+        Button back = secondary("← Back to Settings");
+        back.setOnClickListener(v -> showSettings());
+        c.addView(back);
+    }
+
     private void showHelp() {
         startScreen(false);
         LinearLayout c = content();
 
         c.addView(heading("Help & Support"));
+
         c.addView(wideInfo("💬", "Worker Support",
-                "Help with jobs, accounts and verification."));
+                "Jobs, accounts, verification and payouts"));
         c.addView(wideInfo("🏢", "Company Support",
-                "Help with job posting and company accounts."));
+                "Job posting, company accounts and payments"));
         c.addView(wideInfo("📚", "Help Center",
-                "Learn how Viyzo works globally."));
+                "Learn how Viyzo work flows are designed"));
+        c.addView(wideInfo("⚖", "Disputes",
+                "Production system needs review and dispute processes"));
 
         Button contact = primary("Contact Support");
         contact.setOnClickListener(v -> Toast.makeText(
-                this, "Support will connect to backend.", Toast.LENGTH_SHORT).show());
+                this,
+                "Support contact system will connect to backend.",
+                Toast.LENGTH_SHORT).show());
         c.addView(contact);
+
+        Button back = secondary("← Back");
+        back.setOnClickListener(v -> showDashboard());
+        c.addView(back);
     }
 
     private void showAbout() {
@@ -1290,20 +1782,63 @@ public class MainActivity extends Activity {
         TextView network = tv("Global Work Network", 12, GRAY);
         network.setGravity(Gravity.CENTER);
         center.addView(network);
-
         c.addView(center);
 
         c.addView(wideInfo("🤖", "AI Master Manager",
-                "Smart job distribution"));
+                "Matching and work distribution foundation"));
         c.addView(wideInfo("🌍", "Global Companies",
-                "Small and large companies can post work"));
+                "Company work intake foundation"));
         c.addView(wideInfo("👥", "Global Workers",
-                "Workers can discover suitable jobs"));
+                "Worker discovery and assignment foundation"));
+        c.addView(wideInfo("📦", "Work Supply",
+                "Urgent • Bulk • Quick • Project • Recurring"));
         c.addView(wideInfo("🛡", "Verification",
-                "Verification levels can be applied to access and payouts"));
+                "Verification levels can control access and payouts"));
+        c.addView(wideInfo("💳", "Payments",
+                "Country/provider backend required"));
+        c.addView(wideInfo("⚙", "Business Model",
+                "Configurable 50% worker pool / 50% Viyzo platform"));
 
-        TextView v = tv("Version 1.0.0", 11, GRAY);
+        TextView v = tv("Version 2.0 UI foundation", 11, GRAY);
         v.setGravity(Gravity.CENTER);
         c.addView(v);
+    }
+
+    // ============================================================
+    // CALCULATIONS
+    // ============================================================
+    private double parseMoney(String text) {
+        if (text == null) return 0.0;
+
+        String clean = text
+                .replace("$", "")
+                .replace("₹", "")
+                .replace(",", "")
+                .trim();
+
+        try {
+            return Double.parseDouble(clean);
+        } catch (Exception e) {
+            return 0.0;
+        }
+    }
+
+    private double workerPool(double total) {
+        return total * WORKER_SHARE_PERCENT / 100.0;
+    }
+
+    private double viyzoShare(double total) {
+        return total * VIYZO_SHARE_PERCENT / 100.0;
+    }
+
+    private String money(double value) {
+        return String.format(Locale.US, "$%.2f", value);
+    }
+
+    private String formatNumber(double value) {
+        if (value == Math.rint(value)) {
+            return String.format(Locale.US, "%.0f", value);
+        }
+        return String.format(Locale.US, "%.2f", value);
     }
 }
