@@ -112,7 +112,7 @@ public class MainActivity extends Activity {
                     "Demo Business", "$300", "600 records", "6",
                     "24 Hours", "Urgent", "Quick Task", "Data entry", "English"),
             new JobData("📦", "Bulk Catalog Review", "E-commerce",
-                    "$1000", "5000 items", "10",
+                    "Demo E-commerce Company", "$1000", "5000 items", "10",
                     "5 Days", "High", "Bulk", "Catalog review", "English/Hindi"),
             new JobData("🔁", "Recurring Content Check", "Content",
                     "Demo Agency", "$750", "1500 items/month", "5",
@@ -837,11 +837,11 @@ public class MainActivity extends Activity {
         Button bulk = secondary("Bulk");
         filters1.addView(all, new LinearLayout.LayoutParams(0, dp(48), 1));
 
-        LinearLayout f2 = new LinearLayout.LayoutParams(0, dp(48), 1);
+        LinearLayout.LayoutParams f2 = new LinearLayout.LayoutParams(0, dp(48), 1);
         f2.setMargins(dp(5), 0, 0, 0);
         filters1.addView(urgent, f2);
 
-        LinearLayout f3 = new LinearLayout.LayoutParams(0, dp(48), 1);
+        LinearLayout.LayoutParams f3 = new LinearLayout.LayoutParams(0, dp(48), 1);
         f3.setMargins(dp(5), 0, 0, 0);
         filters1.addView(bulk, f3);
         c.addView(filters1);
@@ -852,11 +852,11 @@ public class MainActivity extends Activity {
         Button global = secondary("Global");
         filters2.addView(recurring, new LinearLayout.LayoutParams(0, dp(48), 1));
 
-        LinearLayout hp = new LinearLayout.LayoutParams(0, dp(48), 1);
+        LinearLayout.LayoutParams hp = new LinearLayout.LayoutParams(0, dp(48), 1);
         hp.setMargins(dp(5), 0, 0, 0);
         filters2.addView(highPay, hp);
 
-        LinearLayout gp = new LinearLayout.LayoutParams(0, dp(48), 1);
+        LinearLayout.LayoutParams gp = new LinearLayout.LayoutParams(0, dp(48), 1);
         gp.setMargins(dp(5), 0, 0, 0);
         filters2.addView(global, gp);
         c.addView(filters2);
