@@ -16,6 +16,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.text.InputType;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -86,6 +87,8 @@ public class MainActivity extends Activity {
     private static final int AI_VOICE_REQUEST = 7401;
     private static final int AI_AUDIO_PERMISSION_REQUEST = 7402;
     private boolean aiWelcomeSpoken = false;
+    private String pendingAISpeech = "";
+    private boolean aiTtsInitializing = true;
     private String selectedCountryCode = "";
     private String selectedCountryName = "";
     private String selectedLanguageTag = "";
@@ -341,6 +344,7 @@ public class MainActivity extends Activity {
                         LinearLayout.LayoutParams.MATCH_PARENT, dp(56));
         p.setMargins(0, dp(6), 0, dp(6));
         b.setLayoutParams(p);
+        attachButtonVoiceHelp(b);
         return b;
     }
 
@@ -360,7 +364,35 @@ public class MainActivity extends Activity {
                         LinearLayout.LayoutParams.MATCH_PARENT, dp(53));
         p.setMargins(0, dp(5), 0, dp(5));
         b.setLayoutParams(p);
+        attachButtonVoiceHelp(b);
         return b;
+    }
+
+    // Spoken hints run before the existing click action; returning false preserves that action.
+    private void attachButtonVoiceHelp(Button button) {
+        button.setOnTouchListener((view, event) -> {
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                String label = String.valueOf(button.getText()).trim();
+                if (!label.isEmpty()) speakAI(buttonHelpText(label));
+            }
+            return false;
+        });
+    }
+
+    private String buttonHelpText(String label) {
+        String en = "You selected " + label + ". Read the information on this screen. If you need help, tap the AI Master panel or microphone and ask your question.";
+        String hi = "आपने " + label + " चुना है। स्क्रीन पर दी गई जानकारी पढ़ें। मदद चाहिए तो AI Master पैनल या माइक दबाकर सवाल पूछें।";
+        String bn = "আপনি " + label + " বেছে নিয়েছেন। স্ক্রিনের তথ্য পড়ুন। সাহায্যের জন্য AI Master প্যানেল বা মাইকে চাপ দিয়ে প্রশ্ন করুন।";
+        String ur = "آپ نے " + label + " منتخب کیا ہے۔ اسکرین کی معلومات پڑھیں۔ مدد کے لیے AI Master پینل یا مائیک دباکر سوال پوچھیں۔";
+        String ar = "لقد اخترت " + label + ". اقرأ المعلومات على الشاشة. للمساعدة اضغط على لوحة AI Master أو الميكروفون واسأل سؤالك.";
+        String tr = label + " seçeneğini seçtiniz. Ekrandaki bilgileri okuyun. Yardım için AI Master paneline veya mikrofona dokunup sorun.";
+        String lang = aiLocale == null ? "en" : aiLocale.getLanguage();
+        if ("hi".equals(lang)) return hi;
+        if ("bn".equals(lang)) return bn;
+        if ("ur".equals(lang)) return ur;
+        if ("ar".equals(lang)) return ar;
+        if ("tr".equals(lang)) return tr;
+        return en;
     }
 
     private LinearLayout card() {
@@ -527,15 +559,16 @@ public class MainActivity extends Activity {
     // ============================================================
     private String flagForCountry(String code) {
         if (code == null || code.length() != 2) return "🌐";
-        int first = Character.codePointAt(code.toUpperCase(Locale.ROOT), 0) - 65 + 0x1F1E6;
-        int second = Character.codePointAt(code.toUpperCase(Locale.ROOT), 1) - 65 + 0x1F1E6;
+        String upper = code.toUpperCase(Locale.ROOT);
+        int first = upper.charAt(0) - 'A' + 0x1F1E6;
+        int second = upper.charAt(1) - 'A' + 0x1F1E6;
         return new String(Character.toChars(first)) + new String(Character.toChars(second));
     }
 
     private String localeDisplayName(Locale locale) {
-        String nativeName = locale.getDisplayName(locale);
-        if (nativeName == null || nativeName.trim().isEmpty()) nativeName = locale.toLanguageTag();
-        String english = locale.getDisplayName(Locale.ENGLISH);
+        String nativeName = locale.getDisplayLanguage(locale);
+        if (nativeName == null || nativeName.trim().isEmpty()) nativeName = locale.getLanguage();
+        String english = locale.getDisplayLanguage(Locale.ENGLISH);
         if (english != null && !english.equalsIgnoreCase(nativeName)) return nativeName + " — " + english;
         return nativeName;
     }
@@ -556,85 +589,120 @@ public class MainActivity extends Activity {
         TextView subtitle = tv("Global Work Network", 13, GRAY);
         subtitle.setGravity(Gravity.CENTER);
         hero.addView(subtitle);
-        TextView title = heading("🌍 Choose your country and language");
+        TextView title = heading("🌍 Choose your country first");
         title.setGravity(Gravity.CENTER);
         title.setPadding(0, dp(18), 0, dp(6));
         hero.addView(title);
-        TextView explain = tv("AI Master will guide you in the language you select. You can change these settings later.", 13, TEXT);
+        TextView explain = tv("First select your country. Then Viyzo will show languages used in that country, with English always included.", 13, TEXT);
         explain.setGravity(Gravity.CENTER);
         explain.setPadding(dp(8), 0, dp(8), dp(12));
         hero.addView(explain);
         c.addView(hero);
 
-        c.addView(tv("COUNTRY / PAÍS / দেশ / البلد", 13, GRAY));
+        c.addView(tv("1. SELECT COUNTRY / देश चुनें", 13, GRAY));
         String[] iso = Locale.getISOCountries();
         java.util.Arrays.sort(iso, (a, b) -> new Locale("", a).getDisplayCountry(Locale.ENGLISH)
                 .compareToIgnoreCase(new Locale("", b).getDisplayCountry(Locale.ENGLISH)));
+        java.util.ArrayList<String> countryCodes = new java.util.ArrayList<>();
         java.util.ArrayList<String> countryLabels = new java.util.ArrayList<>();
-        int suggested = 0;
+        int suggestedCountry = 0;
         String deviceCountry = Locale.getDefault().getCountry();
-        for (int i = 0; i < iso.length; i++) {
-            Locale countryLocale = new Locale("", iso[i]);
-            String countryName = countryLocale.getDisplayCountry(Locale.ENGLISH);
-            countryLabels.add(flagForCountry(iso[i]) + "  " + countryName + "  (" + iso[i] + ")");
-            if (iso[i].equalsIgnoreCase(deviceCountry)) suggested = i;
+        for (String countryCode : iso) {
+            String countryName = new Locale("", countryCode).getDisplayCountry(Locale.ENGLISH);
+            if (countryName == null || countryName.trim().isEmpty()) continue;
+            countryCodes.add(countryCode);
+            countryLabels.add(flagForCountry(countryCode) + "  " + countryName);
+            if (countryCode.equalsIgnoreCase(deviceCountry)) suggestedCountry = countryCodes.size() - 1;
         }
-        Spinner countries = new Spinner(this);
+        Spinner countrySpinner = new Spinner(this);
         ArrayAdapter<String> countryAdapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_item, countryLabels);
         countryAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        countries.setAdapter(countryAdapter);
-        countries.setSelection(suggested);
-        c.addView(countries, new LinearLayout.LayoutParams(-1, dp(54)));
+        countrySpinner.setAdapter(countryAdapter);
+        countrySpinner.setSelection(suggestedCountry);
+        c.addView(countrySpinner, new LinearLayout.LayoutParams(-1, dp(56)));
 
-        TextView languageTitle = tv("LANGUAGE / भाषा / ভাষা / اللغة", 13, GRAY);
-        languageTitle.setPadding(0, dp(16), 0, dp(2));
-        c.addView(languageTitle);
-        java.util.TreeMap<String, Locale> uniqueLocales = new java.util.TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-        for (Locale loc : Locale.getAvailableLocales()) {
-            String lang = loc.getLanguage();
-            if (lang == null || lang.trim().isEmpty() || lang.equals("und")) continue;
-            if (loc.getCountry() != null && !loc.getCountry().isEmpty()) {
-                uniqueLocales.putIfAbsent(lang + "-" + loc.getCountry(), loc);
-            } else {
-                uniqueLocales.putIfAbsent(lang, loc);
+        c.addView(tv("2. SELECT STATE / REGION", 13, GRAY));
+        Spinner regionSpinner = new Spinner(this);
+        c.addView(regionSpinner, new LinearLayout.LayoutParams(-1, dp(56)));
+        final java.util.ArrayList<String>[] regionChoices = new java.util.ArrayList[]{new java.util.ArrayList<String>()};
+
+        c.addView(tv("3. SELECT LANGUAGE / भाषा चुनें", 13, GRAY));
+        Spinner languageSpinner = new Spinner(this);
+        c.addView(languageSpinner, new LinearLayout.LayoutParams(-1, dp(56)));
+        TextView helper = tv("Only languages associated with the selected country are listed. English is always available as a choice. Regional coverage can vary by language-data source.", 12, GRAY);
+        helper.setPadding(0, dp(7), 0, dp(12));
+        c.addView(helper);
+        c.addView(wideInfo("🤖", "AI Master", "The selected language will be used for AI guidance when Android speech support is available."));
+
+        final java.util.ArrayList<Locale>[] languageChoices = new java.util.ArrayList[]{new java.util.ArrayList<Locale>()};
+        final boolean[] firstCountryCallback = {true};
+        countrySpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) { }
+            @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                if (position < 0 || position >= countryCodes.size()) return;
+                String code = countryCodes.get(position);
+                regionChoices[0] = regionsForCountry(code);
+                ArrayAdapter<String> regionAdapter = new ArrayAdapter<>(MainActivity.this,
+                        android.R.layout.simple_spinner_item, regionChoices[0]);
+                regionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                regionSpinner.setAdapter(regionAdapter);
+                String savedRegion = getSharedPreferences(PREFS, MODE_PRIVATE).getString("region_name", "");
+                if (code.equalsIgnoreCase(getSharedPreferences(PREFS, MODE_PRIVATE).getString("country_code", ""))
+                        && !savedRegion.isEmpty()) {
+                    int ri = regionChoices[0].indexOf(savedRegion);
+                    if (ri >= 0) regionSpinner.setSelection(ri);
+                }
+                languageChoices[0] = languagesForCountry(code);
+                java.util.ArrayList<String> labels = new java.util.ArrayList<>();
+                int selectedLanguage = 0;
+                String currentLanguage = Locale.getDefault().getLanguage();
+                String primaryLanguage = defaultLanguageForCountry(code).getLanguage();
+                for (int i = 0; i < languageChoices[0].size(); i++) {
+                    Locale loc = languageChoices[0].get(i);
+                    labels.add(localeDisplayName(loc));
+                    if (loc.getLanguage().equalsIgnoreCase(primaryLanguage)) selectedLanguage = i;
+                    if (loc.getLanguage().equalsIgnoreCase(currentLanguage)) selectedLanguage = i;
+                }
+                ArrayAdapter<String> adapter = new ArrayAdapter<>(MainActivity.this,
+                        android.R.layout.simple_spinner_item, labels);
+                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                languageSpinner.setAdapter(adapter);
+                if (!firstCountryCallback[0]) {
+                    String savedCountry = getSharedPreferences(PREFS, MODE_PRIVATE).getString("country_code", "");
+                    String savedTag = getSharedPreferences(PREFS, MODE_PRIVATE).getString("language_tag", "");
+                    if (code.equalsIgnoreCase(savedCountry) && !savedTag.isEmpty()) {
+                        for (int i = 0; i < languageChoices[0].size(); i++) {
+                            if (languageChoices[0].get(i).getLanguage().equalsIgnoreCase(Locale.forLanguageTag(savedTag).getLanguage())) {
+                                selectedLanguage = i; break;
+                            }
+                        }
+                    }
+                }
+                firstCountryCallback[0] = false;
+                languageSpinner.setSelection(selectedLanguage);
             }
-        }
-        java.util.ArrayList<Locale> localeChoices = new java.util.ArrayList<>(uniqueLocales.values());
-        localeChoices.sort((a, b) -> localeDisplayName(a).compareToIgnoreCase(localeDisplayName(b)));
-        java.util.ArrayList<String> languageLabels = new java.util.ArrayList<>();
-        int langSuggested = 0;
-        String deviceTag = Locale.getDefault().toLanguageTag();
-        for (int i = 0; i < localeChoices.size(); i++) {
-            Locale loc = localeChoices.get(i);
-            languageLabels.add(localeDisplayName(loc));
-            if (loc.toLanguageTag().equalsIgnoreCase(deviceTag)) langSuggested = i;
-        }
-        Spinner languages = new Spinner(this);
-        ArrayAdapter<String> languageAdapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item, languageLabels);
-        languageAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        languages.setAdapter(languageAdapter);
-        languages.setSelection(langSuggested);
-        c.addView(languages, new LinearLayout.LayoutParams(-1, dp(54)));
+        });
 
-        c.addView(wideInfo("🤖", "AI Master", "I will explain account creation, jobs, verification and earnings step by step."));
         Button continueButton = primary("Continue  →");
         continueButton.setOnClickListener(v -> {
-            int ci = countries.getSelectedItemPosition();
-            int li = languages.getSelectedItemPosition();
-            if (ci < 0 || li < 0 || ci >= iso.length || li >= localeChoices.size()) {
-                Toast.makeText(this, "Please select a country and language.", Toast.LENGTH_LONG).show();
+            int countryIndex = countrySpinner.getSelectedItemPosition();
+            int languageIndex = languageSpinner.getSelectedItemPosition();
+            if (countryIndex < 0 || countryIndex >= countryCodes.size()
+                    || languageIndex < 0 || languageIndex >= languageChoices[0].size()) {
+                Toast.makeText(this, "Please select your country and language.", Toast.LENGTH_LONG).show();
                 return;
             }
-            selectedCountryCode = iso[ci];
+            selectedCountryCode = countryCodes.get(countryIndex);
             selectedCountryName = new Locale("", selectedCountryCode).getDisplayCountry(Locale.ENGLISH);
-            Locale chosen = localeChoices.get(li);
+            String selectedRegion = regionSpinner.getSelectedItem() == null ? "Not specified" : String.valueOf(regionSpinner.getSelectedItem());
+            Locale chosen = languageChoices[0].get(languageIndex);
             aiLocale = chosen;
             selectedLanguageTag = chosen.toLanguageTag();
             getSharedPreferences(PREFS, MODE_PRIVATE).edit()
                     .putString("country_code", selectedCountryCode)
                     .putString("country_name", selectedCountryName)
+                    .putString("region_name", selectedRegion)
                     .putString("language_tag", selectedLanguageTag)
                     .apply();
             setAILanguageByLocale(chosen);
@@ -653,11 +721,224 @@ public class MainActivity extends Activity {
         c.addView(changeLater);
     }
 
+    // Country-aware region selector. India includes every state and union territory;
+    // other federations include major regions where practical and allow a general option.
+    private java.util.ArrayList<String> regionsForCountry(String code) {
+        java.util.ArrayList<String> regions = new java.util.ArrayList<>();
+        regions.add("All regions / Not specified");
+        switch (code.toUpperCase(Locale.ROOT)) {
+            case "IN":
+                regions.addAll(java.util.Arrays.asList(
+                    "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
+                    "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"));
+                break;
+            case "US": regions.addAll(java.util.Arrays.asList("Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware", "Florida", "Georgia", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming", "District of Columbia", "Puerto Rico")); break;
+            case "CA": regions.addAll(java.util.Arrays.asList("Alberta", "British Columbia", "Manitoba", "New Brunswick", "Newfoundland and Labrador", "Northwest Territories", "Nova Scotia", "Nunavut", "Ontario", "Prince Edward Island", "Quebec", "Saskatchewan", "Yukon")); break;
+            case "AU": regions.addAll(java.util.Arrays.asList("New South Wales", "Queensland", "South Australia", "Tasmania", "Victoria", "Western Australia", "Australian Capital Territory", "Northern Territory")); break;
+            case "PK": regions.addAll(java.util.Arrays.asList("Punjab", "Sindh", "Khyber Pakhtunkhwa", "Balochistan", "Islamabad Capital Territory", "Gilgit-Baltistan", "Azad Jammu and Kashmir")); break;
+            case "BD": regions.addAll(java.util.Arrays.asList("Barisal", "Chattogram", "Dhaka", "Khulna", "Mymensingh", "Rajshahi", "Rangpur", "Sylhet")); break;
+            case "GB": regions.addAll(java.util.Arrays.asList("England", "Scotland", "Wales", "Northern Ireland")); break;
+            case "BR": regions.addAll(java.util.Arrays.asList("Acre", "Alagoas", "Amapá", "Amazonas", "Bahia", "Ceará", "Distrito Federal", "Espírito Santo", "Goiás", "Maranhão", "Mato Grosso", "Mato Grosso do Sul", "Minas Gerais", "Pará", "Paraíba", "Paraná", "Pernambuco", "Piauí", "Rio de Janeiro", "Rio Grande do Norte", "Rio Grande do Sul", "Rondônia", "Roraima", "Santa Catarina", "São Paulo", "Sergipe", "Tocantins")); break;
+            case "MX": regions.addAll(java.util.Arrays.asList("Aguascalientes", "Baja California", "Baja California Sur", "Campeche", "Chiapas", "Chihuahua", "Ciudad de México", "Coahuila", "Colima", "Durango", "Guanajuato", "Guerrero", "Hidalgo", "Jalisco", "México", "Michoacán", "Morelos", "Nayarit", "Nuevo León", "Oaxaca", "Puebla", "Querétaro", "Quintana Roo", "San Luis Potosí", "Sinaloa", "Sonora", "Tabasco", "Tamaulipas", "Tlaxcala", "Veracruz", "Yucatán", "Zacatecas")); break;
+            case "DE": regions.addAll(java.util.Arrays.asList("Baden-Württemberg", "Bavaria", "Berlin", "Brandenburg", "Bremen", "Hamburg", "Hesse", "Lower Saxony", "Mecklenburg-Vorpommern", "North Rhine-Westphalia", "Rhineland-Palatinate", "Saarland", "Saxony", "Saxony-Anhalt", "Schleswig-Holstein", "Thuringia")); break;
+            case "CH": regions.addAll(java.util.Arrays.asList("Aargau", "Appenzell Ausserrhoden", "Appenzell Innerrhoden", "Basel-Landschaft", "Basel-Stadt", "Bern", "Fribourg", "Geneva", "Glarus", "Grisons", "Jura", "Lucerne", "Neuchâtel", "Nidwalden", "Obwalden", "Schaffhausen", "Schwyz", "Solothurn", "St. Gallen", "Thurgau", "Ticino", "Uri", "Valais", "Vaud", "Zug", "Zurich")); break;
+            case "MY": regions.addAll(java.util.Arrays.asList("Johor", "Kedah", "Kelantan", "Kuala Lumpur", "Labuan", "Melaka", "Negeri Sembilan", "Pahang", "Penang", "Perak", "Perlis", "Putrajaya", "Sabah", "Sarawak", "Selangor", "Terengganu")); break;
+            case "NP": regions.addAll(java.util.Arrays.asList("Koshi", "Madhesh", "Bagmati", "Gandaki", "Lumbini", "Karnali", "Sudurpashchim")); break;
+            case "ZA": regions.addAll(java.util.Arrays.asList("Eastern Cape", "Free State", "Gauteng", "KwaZulu-Natal", "Limpopo", "Mpumalanga", "Northern Cape", "North West", "Western Cape")); break;
+            default: regions.add("Other / local region"); break;
+        }
+        return regions;
+    }
+
+    // Country-filtered language choices. English is deliberately included for every country.
+    // The device's CLDR/Java locale data supplements the curated official/widely-used languages.
+    private java.util.ArrayList<Locale> languagesForCountry(String countryCode) {
+        java.util.LinkedHashMap<String, Locale> found = new java.util.LinkedHashMap<>();
+        addLanguage(found, "en", countryCode);
+        String[] curated = curatedLanguagesForCountry(countryCode);
+        for (String tag : curated) {
+            Locale loc = Locale.forLanguageTag(tag);
+            if (!loc.getLanguage().isEmpty()) addLanguage(found, loc.getLanguage(), countryCode);
+        }
+        for (Locale loc : Locale.getAvailableLocales()) {
+            if (countryCode.equalsIgnoreCase(loc.getCountry()) && !loc.getLanguage().isEmpty()) {
+                addLanguage(found, loc.getLanguage(), countryCode);
+            }
+        }
+        Locale primary = defaultLanguageForCountry(countryCode);
+        addLanguage(found, primary.getLanguage(), countryCode);
+        java.util.ArrayList<Locale> result = new java.util.ArrayList<>(found.values());
+        result.sort((a, b) -> {
+            if (a.getLanguage().equals("en")) return b.getLanguage().equals("en") ? 0 : -1;
+            if (b.getLanguage().equals("en")) return 1;
+            return localeDisplayName(a).compareToIgnoreCase(localeDisplayName(b));
+        });
+        return result;
+    }
+
+    private void addLanguage(java.util.LinkedHashMap<String, Locale> found, String languageCode, String countryCode) {
+        if (languageCode == null || languageCode.trim().isEmpty()) return;
+        String normalized = languageCode.toLowerCase(Locale.ROOT);
+        Locale loc = new Locale(normalized, countryCode);
+        found.put(normalized, loc);
+    }
+
+    private String[] curatedLanguagesForCountry(String code) {
+        switch (code.toUpperCase(Locale.ROOT)) {
+            case "IN": return new String[]{"as","bn","brx","doi","gu","hi","kn","ks","kok","mai","ml","mni","mr","ne","or","pa","sa","sat","sd","ta","te","ur"};
+            case "US": return new String[]{"es","zh","tl","vi","ar","fr","ko","de","ru","pt","ja","hi"};
+            case "GB": return new String[]{"cy","gd","ga","pl","ur","bn","pa","gu","ar"};
+            case "CA": return new String[]{"fr","iu","cr","oj","zh","pa"};
+            case "AU": return new String[]{"en","zh","ar","vi","it","el","yue"};
+            case "NZ": return new String[]{"mi","sm","to","zh","hi"};
+            case "BD": return new String[]{"bn","ccp","mni"};
+            case "PK": return new String[]{"ur","pa","sd","ps","bal","skr","brh"};
+            case "NP": return new String[]{"ne","mai","bho","new","dty","sat"};
+            case "LK": return new String[]{"si","ta"};
+            case "CN": return new String[]{"zh","ug","bo","ii","mn"};
+            case "TW": return new String[]{"zh","nan","hak"};
+            case "HK": return new String[]{"zh","yue","en"};
+            case "MO": return new String[]{"zh","yue","pt"};
+            case "JP": return new String[]{"ja","ryu","ain"};
+            case "KR": case "KP": return new String[]{"ko"};
+            case "SG": return new String[]{"zh","ms","ta"};
+            case "MY": return new String[]{"ms","zh","ta","iban","bjn"};
+            case "ID": return new String[]{"id","jv","su","min","ace","ban","bug","mak"};
+            case "PH": return new String[]{"fil","ceb","ilo","hil","war","pam","bcl","pag","mrw"};
+            case "TH": return new String[]{"th","lo","km","ms"};
+            case "VN": return new String[]{"vi","km","zh","fr"};
+            case "MM": return new String[]{"my","shn","kar","kac","mnw","hak"};
+            case "KH": return new String[]{"km","fr"};
+            case "LA": return new String[]{"lo","hmn","kdt"};
+            case "IR": return new String[]{"fa","az","ku","bal","lrc"};
+            case "AF": return new String[]{"ps","fa","uz","tk"};
+            case "IQ": return new String[]{"ar","ku","ckb","hy"};
+            case "IL": return new String[]{"he","ar","ru","yi"};
+            case "SA": case "AE": case "QA": case "KW": case "BH": case "OM": case "YE": return new String[]{"ar","ur","fa","hi","ml","bn","tl"};
+            case "EG": case "JO": case "LB": case "SY": case "PS": return new String[]{"ar","fr","hy","ku"};
+            case "MA": case "DZ": case "TN": return new String[]{"ar","zgh","tzm","fr"};
+            case "ET": return new String[]{"am","om","ti","so","sid","wal"};
+            case "KE": return new String[]{"sw","en","ki","luo","kln","kam"};
+            case "TZ": return new String[]{"sw","en","suk","gog","cgg","mas"};
+            case "UG": return new String[]{"en","sw","lg","nyn","ach","teo"};
+            case "ZA": return new String[]{"af","zu","xh","st","tn","ts","ss","ve","nr","nso"};
+            case "NG": return new String[]{"ha","yo","ig","pcm","ff","ibo"};
+            case "GH": return new String[]{"ak","ee","gaa","dag","ha","tw"};
+            case "CM": return new String[]{"fr","en","bas","dua","ewo","ful"};
+            case "SN": return new String[]{"fr","wo","ff","sr"};
+            case "RW": return new String[]{"rw","fr","sw"};
+            case "BI": return new String[]{"rn","fr","sw"};
+            case "CD": return new String[]{"fr","ln","sw","kg","lua"};
+            case "MG": return new String[]{"mg","fr"};
+            case "BR": return new String[]{"pt","gn","yrl"};
+            case "MX": return new String[]{"es","nah","yua","oto","zap","mix"};
+            case "AR": case "CO": case "PE": case "CL": case "VE": case "EC": case "BO": case "PY": case "UY": case "CU": case "DO": case "GT": case "HN": case "SV": case "NI": case "CR": case "PA": return new String[]{"es","qu","gn","ay","ht"};
+            case "ES": return new String[]{"es","ca","gl","eu","oc"};
+            case "FR": return new String[]{"fr","br","oc","co","eu","ca","gsw"};
+            case "BE": return new String[]{"nl","fr","de"};
+            case "CH": return new String[]{"de","fr","it","rm"};
+            case "LU": return new String[]{"lb","fr","de"};
+            case "DE": case "AT": return new String[]{"de","dsb","hsb","fy"};
+            case "IT": return new String[]{"it","de","fr","sc","scn","vec","fur","lld"};
+            case "NL": return new String[]{"nl","fy","pap"};
+            case "IE": return new String[]{"ga","en"};
+            case "FI": return new String[]{"fi","sv","se"};
+            case "SE": return new String[]{"sv","se","fi","yi"};
+            case "NO": return new String[]{"no","nb","nn","se"};
+            case "DK": return new String[]{"da","fo","kl"};
+            case "PL": return new String[]{"pl","cs","uk"};
+            case "CZ": return new String[]{"cs","sk"};
+            case "SK": return new String[]{"sk","hu","rom"};
+            case "RO": return new String[]{"ro","hu","rom"};
+            case "HU": return new String[]{"hu","rom","hr","sk"};
+            case "GR": case "CY": return new String[]{"el","tr"};
+            case "UA": return new String[]{"uk","ru","crh"};
+            case "RU": return new String[]{"ru","tt","ba","cv","ce","sah","os","av","udm"};
+            case "GE": return new String[]{"ka","az","hy","ab"};
+            case "AM": return new String[]{"hy","ru"};
+            case "AZ": return new String[]{"az","ru","hy"};
+            case "KZ": return new String[]{"kk","ru"};
+            case "UZ": return new String[]{"uz","ru","kaa"};
+            case "KG": return new String[]{"ky","ru","uz"};
+            case "TJ": return new String[]{"tg","ru","uz"};
+            case "TM": return new String[]{"tk","ru","uz"};
+            case "TR": return new String[]{"tr","ku","zza","ar"};
+            case "PT": return new String[]{"pt","mwl"};
+            case "IS": return new String[]{"is"};
+            case "MT": return new String[]{"mt","it"};
+            case "RS": return new String[]{"sr","hu","bs","rom"};
+            case "BA": return new String[]{"bs","hr","sr"};
+            case "HR": return new String[]{"hr","sr","it"};
+            case "ME": return new String[]{"sr","cnr","bs","sq"};
+            case "AL": case "XK": return new String[]{"sq","sr"};
+            case "MK": return new String[]{"mk","sq","tr"};
+            case "BG": return new String[]{"bg","tr","rom"};
+            case "MD": return new String[]{"ro","uk","ru","gag"};
+            case "BY": return new String[]{"be","ru"};
+            case "LT": return new String[]{"lt","pl","ru"};
+            case "LV": return new String[]{"lv","ru","lt"};
+            case "EE": return new String[]{"et","ru"};
+            case "FJ": return new String[]{"fj","hi","hif"};
+            case "PG": return new String[]{"tpi","ho","meu"};
+            case "VU": return new String[]{"bi","fr"};
+            case "WS": return new String[]{"sm"};
+            case "TO": return new String[]{"to"};
+            case "SB": return new String[]{"en","tpi"};
+            default: return new String[]{};
+        }
+    }
+
+    private Locale defaultLanguageForCountry(String countryCode) {
+        if (countryCode == null) return Locale.ENGLISH;
+        switch (countryCode.toUpperCase(Locale.ROOT)) {
+            case "IN": return new Locale("hi", "IN");
+            case "BD": return new Locale("bn", "BD");
+            case "PK": return new Locale("ur", "PK");
+            case "US": case "GB": case "AU": case "NZ": case "IE": case "NG": case "GH":
+                return new Locale("en", countryCode);
+            case "SA": case "AE": case "EG": case "IQ": case "JO": case "MA": case "DZ":
+                return new Locale("ar", countryCode);
+            case "FR": return new Locale("fr", "FR");
+            case "ES": case "MX": case "AR": case "CO": case "PE": case "CL":
+                return new Locale("es", countryCode);
+            case "BR": case "PT": return new Locale("pt", countryCode);
+            case "TR": return new Locale("tr", "TR");
+            case "CN": case "TW": return new Locale("zh", countryCode);
+            case "JP": return new Locale("ja", "JP");
+            case "KR": return new Locale("ko", "KR");
+            case "RU": return new Locale("ru", "RU");
+            case "DE": case "AT": return new Locale("de", countryCode);
+            case "IT": return new Locale("it", "IT");
+            case "ID": return new Locale("id", "ID");
+            case "TH": return new Locale("th", "TH");
+            case "VN": return new Locale("vi", "VN");
+            case "MY": return new Locale("ms", "MY");
+            case "PH": return new Locale("fil", "PH");
+            case "IR": return new Locale("fa", "IR");
+            case "NP": return new Locale("ne", "NP");
+            case "LK": return new Locale("si", "LK");
+            case "MM": return new Locale("my", "MM");
+            case "KH": return new Locale("km", "KH");
+            case "LA": return new Locale("lo", "LA");
+            case "ET": return new Locale("am", "ET");
+            case "KE": case "TZ": return new Locale("sw", countryCode);
+            default:
+                for (Locale loc : Locale.getAvailableLocales()) {
+                    if (countryCode.equalsIgnoreCase(loc.getCountry()) && !loc.getLanguage().isEmpty()) return loc;
+                }
+                return Locale.ENGLISH;
+        }
+    }
+
     private void setAILanguageByLocale(Locale locale) {
         aiLocale = locale == null ? Locale.getDefault() : locale;
-        if (aiTts != null) {
+        if (aiTts != null && !aiTtsInitializing) {
             int result = aiTts.setLanguage(aiLocale);
-            aiTtsReady = result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED;
+            aiTtsReady = result != TextToSpeech.LANG_MISSING_DATA
+                    && result != TextToSpeech.LANG_NOT_SUPPORTED;
+            if (!aiTtsReady && aiStatusView != null) {
+                aiStatusView.setText("Selected language text is available, but voice data may need to be installed.");
+            }
         }
     }
 
@@ -1982,11 +2263,12 @@ public class MainActivity extends Activity {
     // ============================================================
     private void initAIMasterVoice() {
         aiTts = new TextToSpeech(this, status -> {
+            aiTtsInitializing = false;
             if (status == TextToSpeech.SUCCESS) {
                 int result = aiTts.setLanguage(aiLocale);
                 aiTtsReady = result != TextToSpeech.LANG_MISSING_DATA
                         && result != TextToSpeech.LANG_NOT_SUPPORTED;
-                aiTts.setSpeechRate(0.94f);
+                aiTts.setSpeechRate(0.90f);
                 aiTts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                     @Override public void onStart(String utteranceId) {
                         runOnUiThread(() -> {
@@ -2004,6 +2286,13 @@ public class MainActivity extends Activity {
                         });
                     }
                 });
+                if (!pendingAISpeech.isEmpty()) {
+                    String queued = pendingAISpeech;
+                    pendingAISpeech = "";
+                    speakAI(queued);
+                }
+            } else {
+                aiTtsReady = false;
             }
         });
     }
@@ -2014,6 +2303,7 @@ public class MainActivity extends Activity {
         panel.setPadding(dp(10), dp(8), dp(10), dp(8));
         panel.setBackground(outlined(Color.rgb(20, 25, 54), PRIMARY, 18));
         panel.setElevation(dp(12));
+        panel.setOnClickListener(v -> showAIMasterVoiceScreen());
 
         LinearLayout top = row();
         TextView icon = tv("🤖", 23, WHITE);
@@ -2023,7 +2313,7 @@ public class MainActivity extends Activity {
         TextView title = tv("AI MASTER", 12, WHITE);
         title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         titleColumn.addView(title);
-        titleColumn.addView(tv("Your Viyzo guide", 9, GRAY));
+        titleColumn.addView(tv("Tap panel for step-by-step voice help", 9, GRAY));
         top.addView(titleColumn, new LinearLayout.LayoutParams(0, dp(37), 1));
         Button mic = new Button(this);
         mic.setText("🎙️");
@@ -2039,7 +2329,7 @@ public class MainActivity extends Activity {
         aiStatusView = tv("🟢 AI Master ready • Tap mic to ask", 10, GRAY);
         aiStatusView.setPadding(dp(4), dp(4), dp(4), 0);
         panel.addView(aiStatusView);
-        aiBubbleView = tv("Ask me about account, jobs, work steps, verification or earnings.", 11, TEXT);
+        aiBubbleView = tv("Tap any main action for spoken guidance, or ask about accounts, jobs, work steps, verification, payments or earnings.", 11, TEXT);
         aiBubbleView.setMaxLines(3);
         aiBubbleView.setPadding(dp(4), dp(3), dp(4), 0);
         panel.addView(aiBubbleView);
@@ -2105,8 +2395,16 @@ public class MainActivity extends Activity {
     private void speakAI(String text) {
         if (text == null || text.trim().isEmpty()) return;
         if (aiBubbleView != null) aiBubbleView.setText(text);
-        if (aiTts == null || !aiTtsReady) {
-            if (aiStatusView != null) aiStatusView.setText("Voice language may be missing in Android speech settings.");
+        // TTS initialization is asynchronous. Queue the first greeting instead of losing it.
+        if (aiTts == null || aiTtsInitializing) {
+            pendingAISpeech = text;
+            if (aiStatusView != null) aiStatusView.setText("AI Master is preparing voice…");
+            return;
+        }
+        if (!aiTtsReady) {
+            pendingAISpeech = "";
+            if (aiStatusView != null) aiStatusView.setText("Voice not installed for this language. Choose another language or install voice data in Android settings.");
+            Toast.makeText(this, "इस भाषा की आवाज़ उपलब्ध नहीं है। भाषा बदलें या Android Text-to-Speech में voice data डाउनलोड करें।", Toast.LENGTH_LONG).show();
             return;
         }
         if (Build.VERSION.SDK_INT >= 21) {
@@ -2114,6 +2412,54 @@ public class MainActivity extends Activity {
         } else {
             aiTts.speak(text, TextToSpeech.QUEUE_FLUSH, null);
         }
+    }
+
+    private void showAIMasterVoiceScreen() {
+        startScreen(false);
+        LinearLayout c = content();
+        c.setPadding(dp(20), dp(24), dp(20), dp(150));
+        TextView back = tv("← Back", 15, TEXT);
+        back.setPadding(0, dp(4), 0, dp(18));
+        back.setOnClickListener(v -> showHome());
+        c.addView(back);
+        LinearLayout hero = column();
+        hero.setGravity(Gravity.CENTER_HORIZONTAL);
+        hero.setPadding(dp(12), dp(20), dp(12), dp(20));
+        TextView bot = tv("🤖", 66, WHITE);
+        bot.setGravity(Gravity.CENTER);
+        hero.addView(bot, new LinearLayout.LayoutParams(-1, dp(100)));
+        TextView title = tv("AI MASTER", 27, WHITE);
+        title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        title.setGravity(Gravity.CENTER);
+        hero.addView(title);
+        TextView subtitle = tv("Your voice guide for every step", 14, GRAY);
+        subtitle.setGravity(Gravity.CENTER);
+        hero.addView(subtitle);
+        c.addView(hero);
+        TextView status = tv("Tap the microphone and ask your question", 14, TEXT);
+        status.setGravity(Gravity.CENTER);
+        status.setPadding(dp(8), dp(10), dp(8), dp(10));
+        c.addView(status);
+        Button mic = primary("🎙  TALK TO AI MASTER");
+        mic.setOnClickListener(v -> startAIVoiceInput());
+        c.addView(mic);
+        Button replay = secondary("🔊  Speak the step-by-step welcome");
+        replay.setOnClickListener(v -> speakAI(aiWelcomeMessage()));
+        c.addView(replay);
+        c.addView(heading("What do you need help with?"));
+        Button account = secondary("Create account / Login");
+        account.setOnClickListener(v -> { String a = aiText("To start, choose Get Started and fill in your own details.", "शुरू करने के लिए Get Started दबाएँ और अपनी जानकारी भरें।", "শুরু করতে Get Started চাপুন এবং নিজের তথ্য দিন।", "شروع کرنے کے لیے Get Started دبائیں اور اپنی معلومات درج کریں۔", "Başlamak için Get Started'a dokunun ve bilgilerinizi girin.", "ابدأ بالضغط على Get Started وأدخل معلوماتك."); speakAI(a); });
+        c.addView(account);
+        Button jobs = secondary("Find and complete work");
+        jobs.setOnClickListener(v -> { speakAI(aiText("Open Jobs and read the task details before accepting.", "Jobs खोलें और काम स्वीकार करने से पहले उसकी जानकारी पढ़ें।", "Jobs খুলুন এবং কাজ গ্রহণের আগে বিবরণ পড়ুন।", "Jobs کھولیں اور کام قبول کرنے سے پہلے تفصیل پڑھیں۔", "Jobs bölümünü açın ve kabul etmeden önce görev ayrıntılarını okuyun.", "افتح Jobs واقرأ التفاصيل قبل قبول المهمة.")); showJobs(); });
+        c.addView(jobs);
+        Button verification = secondary("Verification / KYC help");
+        verification.setOnClickListener(v -> { speakAI(aiText("Open Profile and then Worker Verification.", "Profile खोलें, फिर Worker Verification चुनें।", "Profile খুলুন, তারপর Worker Verification বেছে নিন।", "Profile کھولیں، پھر Worker Verification منتخب کریں۔", "Profile bölümünü açıp Worker Verification'ı seçin.", "افتح Profile ثم اختر Worker Verification.")); showWorkerVerification(); });
+        c.addView(verification);
+        Button earnings = secondary("Earnings / Payments help");
+        earnings.setOnClickListener(v -> { speakAI(aiText("Open Earnings to check your balance and payout information.", "बैलेंस और पेमेंट जानकारी के लिए Earnings खोलें।", "ব্যালেন্স ও পেমেন্টের তথ্য দেখতে Earnings খুলুন।", "بیلنس اور ادائیگی کی معلومات کے لیے Earnings کھولیں۔", "Bakiye ve ödeme bilgileri için Earnings bölümünü açın.", "افتح Earnings لمعرفة الرصيد ومعلومات الدفع.")); showEarnings(); });
+        c.addView(earnings);
+        if (aiBubbleView != null) aiBubbleView.setText("AI Master is ready. Tap the microphone to ask by voice.");
     }
 
     private void setAILanguage(String label) {
