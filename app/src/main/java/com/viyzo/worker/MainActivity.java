@@ -1,6 +1,14 @@
 package com.viyzo.worker;
 
 import android.app.Activity;
+import android.Manifest;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.speech.RecognizerIntent;
+import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
+import android.os.Build;
+import android.os.Handler;
 import android.os.Bundle;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -12,12 +20,12 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
-import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.FrameLayout;
 
 import java.util.Locale;
 
@@ -67,6 +75,16 @@ public class MainActivity extends Activity {
 
     private LinearLayout root;
     private FrameLayout frame;
+
+    // AI Master voice assistant (on-device speech; real LLM answers need backend).
+    private TextToSpeech aiTts;
+    private boolean aiTtsReady = false;
+    private Locale aiLocale = Locale.getDefault();
+    private TextView aiStatusView;
+    private TextView aiBubbleView;
+    private static final int AI_VOICE_REQUEST = 7401;
+    private static final int AI_AUDIO_PERMISSION_REQUEST = 7402;
+    private boolean aiWelcomeSpoken = false;
 
     // ============================================================
     // DEMO JOB MODEL
@@ -130,7 +148,14 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         getWindow().setStatusBarColor(BG);
         getWindow().setNavigationBarColor(BG);
+        initAIMasterVoice();
         showHome();
+        new Handler().postDelayed(() -> {
+            if (!aiWelcomeSpoken) {
+                aiWelcomeSpoken = true;
+                speakAI(aiWelcomeMessage());
+            }
+        }, 1100);
     }
 
     // ============================================================
@@ -236,12 +261,13 @@ public class MainActivity extends Activity {
         scroll.setBackgroundColor(BG);
 
         LinearLayout c = column();
-        c.setPadding(dp(18), dp(16), dp(18), dp(35));
+        c.setPadding(dp(18), dp(16), dp(18), dp(150));
         scroll.addView(c);
 
         frame.addView(scroll, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT));
+        addAIMasterOverlay();
 
         return c;
     }
@@ -1669,11 +1695,17 @@ public class MainActivity extends Activity {
 
         for (String lang : languages) {
             Button b = secondary(lang);
-            b.setOnClickListener(v -> Toast.makeText(
-                    this,
-                    "Selected: " + lang +
-                            ". Full translation system will connect to localization files/backend.",
-                    Toast.LENGTH_SHORT).show());
+            b.setOnClickListener(v -> {
+                setAILanguage(lang);
+                Toast.makeText(this, "AI Master language: " + lang,
+                        Toast.LENGTH_SHORT).show();
+                speakAI(aiText("Language selected. I will try to speak in this language.",
+                        "भाषा चुन ली गई है। मैं इसी भाषा में बोलने की कोशिश करूँगा।",
+                        "ভাষা নির্বাচন করা হয়েছে। আমি এই ভাষায় কথা বলার চেষ্টা করব।",
+                        "زبان منتخب ہوگئی ہے۔ میں اسی زبان میں بات کرنے کی کوشش کروں گا۔",
+                        "تم اختيار اللغة. سأحاول التحدث بهذه اللغة.",
+                        "Dil seçildi. Bu dilde konuşmaya çalışacağım."));
+            });
             c.addView(b);
         }
     }
@@ -1807,6 +1839,209 @@ public class MainActivity extends Activity {
     // ============================================================
     // CALCULATIONS
     // ============================================================
+    // ============================================================
+    // AI MASTER VOICE EXPERIENCE
+    // ============================================================
+    private void initAIMasterVoice() {
+        aiTts = new TextToSpeech(this, status -> {
+            if (status == TextToSpeech.SUCCESS) {
+                int result = aiTts.setLanguage(aiLocale);
+                aiTtsReady = result != TextToSpeech.LANG_MISSING_DATA
+                        && result != TextToSpeech.LANG_NOT_SUPPORTED;
+                aiTts.setSpeechRate(0.94f);
+                aiTts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                    @Override public void onStart(String utteranceId) {
+                        runOnUiThread(() -> {
+                            if (aiStatusView != null) aiStatusView.setText("🔊 AI Master is speaking…");
+                        });
+                    }
+                    @Override public void onDone(String utteranceId) {
+                        runOnUiThread(() -> {
+                            if (aiStatusView != null) aiStatusView.setText("🟢 AI Master ready • Tap mic to ask");
+                        });
+                    }
+                    @Override public void onError(String utteranceId) {
+                        runOnUiThread(() -> {
+                            if (aiStatusView != null) aiStatusView.setText("Voice unavailable • Tap to read/help");
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    private void addAIMasterOverlay() {
+        if (frame == null) return;
+        LinearLayout panel = column();
+        panel.setPadding(dp(10), dp(8), dp(10), dp(8));
+        panel.setBackground(outlined(Color.rgb(20, 25, 54), PRIMARY, 18));
+        panel.setElevation(dp(12));
+
+        LinearLayout top = row();
+        TextView icon = tv("🤖", 23, WHITE);
+        icon.setGravity(Gravity.CENTER);
+        top.addView(icon, new LinearLayout.LayoutParams(dp(35), dp(35)));
+        LinearLayout titleColumn = column();
+        TextView title = tv("AI MASTER", 12, WHITE);
+        title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        titleColumn.addView(title);
+        titleColumn.addView(tv("Your Viyzo guide", 9, GRAY));
+        top.addView(titleColumn, new LinearLayout.LayoutParams(0, dp(37), 1));
+        Button mic = new Button(this);
+        mic.setText("🎙️");
+        mic.setTextSize(17);
+        mic.setAllCaps(false);
+        mic.setTextColor(WHITE);
+        mic.setPadding(0, 0, 0, 0);
+        mic.setBackground(primaryBg());
+        mic.setOnClickListener(v -> startAIVoiceInput());
+        top.addView(mic, new LinearLayout.LayoutParams(dp(48), dp(43)));
+        panel.addView(top);
+
+        aiStatusView = tv("🟢 AI Master ready • Tap mic to ask", 10, GRAY);
+        aiStatusView.setPadding(dp(4), dp(4), dp(4), 0);
+        panel.addView(aiStatusView);
+        aiBubbleView = tv("Ask me about account, jobs, work steps, verification or earnings.", 11, TEXT);
+        aiBubbleView.setMaxLines(3);
+        aiBubbleView.setPadding(dp(4), dp(3), dp(4), 0);
+        panel.addView(aiBubbleView);
+
+        FrameLayout.LayoutParams fp = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+        fp.setMargins(dp(12), 0, dp(12), dp(10));
+        frame.addView(panel, fp);
+    }
+
+    private void startAIVoiceInput() {
+        if (Build.VERSION.SDK_INT >= 23
+                && checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, AI_AUDIO_PERMISSION_REQUEST);
+            if (aiStatusView != null) aiStatusView.setText("Allow microphone permission, then tap mic again.");
+            return;
+        }
+        try {
+            Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                    RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, aiLocale.toLanguageTag());
+            intent.putExtra(RecognizerIntent.EXTRA_PROMPT, aiText(
+                    "Ask AI Master your question", "AI Master से अपना सवाल पूछें",
+                    "AI Master-কে আপনার প্রশ্ন বলুন", "AI Master سے سوال پوچھیں",
+                    "AI Master'a sorunuzu söyleyin", "AI Master'a sorunuzu söyleyin"));
+            startActivityForResult(intent, AI_VOICE_REQUEST);
+            if (aiStatusView != null) aiStatusView.setText("🎙️ Listening… speak now");
+        } catch (Exception e) {
+            Toast.makeText(this, "Voice input is not available on this device. You can still use the app.", Toast.LENGTH_LONG).show();
+            if (aiStatusView != null) aiStatusView.setText("Voice input unavailable on this device.");
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == AI_VOICE_REQUEST && resultCode == RESULT_OK && data != null) {
+            java.util.ArrayList<String> results = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+            if (results != null && !results.isEmpty()) {
+                String question = results.get(0);
+                if (aiBubbleView != null) aiBubbleView.setText("You: " + question);
+                String answer = answerAIQuestion(question);
+                if (aiBubbleView != null) aiBubbleView.setText("You: " + question + "\n\nAI Master: " + answer);
+                speakAI(answer);
+            }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == AI_AUDIO_PERMISSION_REQUEST) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startAIVoiceInput();
+            } else {
+                Toast.makeText(this, "Microphone permission is needed for voice questions. You can still read the AI guide.", Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    private void speakAI(String text) {
+        if (text == null || text.trim().isEmpty()) return;
+        if (aiBubbleView != null) aiBubbleView.setText(text);
+        if (aiTts == null || !aiTtsReady) {
+            if (aiStatusView != null) aiStatusView.setText("Voice language may be missing in Android speech settings.");
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= 21) {
+            aiTts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "viyzo_ai_" + System.currentTimeMillis());
+        } else {
+            aiTts.speak(text, TextToSpeech.QUEUE_FLUSH, null);
+        }
+    }
+
+    private void setAILanguage(String label) {
+        String l = label.toLowerCase(Locale.ROOT);
+        if (l.contains("हिन्दी")) aiLocale = new Locale("hi", "IN");
+        else if (l.contains("বাংলা")) aiLocale = new Locale("bn", "BD");
+        else if (l.contains("اردو")) aiLocale = new Locale("ur", "PK");
+        else if (l.contains("العربية")) aiLocale = new Locale("ar");
+        else if (l.contains("türkçe")) aiLocale = new Locale("tr", "TR");
+        else aiLocale = new Locale("en", "US");
+        if (aiTts != null) {
+            int result = aiTts.setLanguage(aiLocale);
+            aiTtsReady = result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED;
+        }
+    }
+
+    private String aiText(String en, String hi, String bn, String ur, String ar, String tr) {
+        String lang = aiLocale.getLanguage();
+        if ("hi".equals(lang)) return hi;
+        if ("bn".equals(lang)) return bn;
+        if ("ur".equals(lang)) return ur;
+        if ("ar".equals(lang)) return ar;
+        if ("tr".equals(lang)) return tr;
+        return en;
+    }
+
+    private String aiWelcomeMessage() {
+        return aiText(
+                "Welcome to Viyzo Worker. I am AI Master. First create your account, choose your country and language, complete the verification steps available to you, then open Jobs and read each task carefully before accepting it. Demo jobs shown in this version are examples, not confirmed live company work. Real work availability will appear when the live server is connected.",
+                "Viyzo Worker में आपका स्वागत है। मैं AI Master हूँ। पहले अपना अकाउंट बनाइए, देश और भाषा चुनिए, उपलब्ध वेरिफिकेशन पूरा कीजिए, फिर Jobs खोलकर काम की जानकारी पढ़कर ही काम स्वीकार कीजिए। अभी दिखने वाले डेमो जॉब उदाहरण हैं, पक्के लाइव कंपनी जॉब नहीं। असली काम की उपलब्धता लाइव सर्वर जुड़ने पर दिखेगी।",
+                "Viyzo Worker-এ স্বাগতম। আমি AI Master। প্রথমে অ্যাকাউন্ট তৈরি করুন, দেশ ও ভাষা বেছে নিন, উপলব্ধ যাচাইকরণ সম্পন্ন করুন, তারপর Jobs খুলে কাজের বিবরণ পড়ে কাজ গ্রহণ করুন। এখনকার ডেমো কাজগুলো উদাহরণ, নিশ্চিত লাইভ কোম্পানির কাজ নয়। লাইভ সার্ভার যুক্ত হলে প্রকৃত কাজের তথ্য দেখানো যাবে।",
+                "Viyzo Worker میں خوش آمدید۔ میں AI Master ہوں۔ پہلے اکاؤنٹ بنائیں، ملک اور زبان منتخب کریں، دستیاب تصدیق مکمل کریں، پھر Jobs کھول کر کام کی تفصیل پڑھ کر ہی کام قبول کریں۔ ابھی دکھائے گئے ڈیمو کام مثالیں ہیں، تصدیق شدہ لائیو کمپنی کے کام نہیں۔ اصل دستیابی لائیو سرور جڑنے پر دکھائی جائے گی۔",
+                "مرحباً بك في Viyzo Worker. أنا AI Master. أنشئ حسابك أولاً، واختر بلدك ولغتك، وأكمل خطوات التحقق المتاحة، ثم افتح الوظائف واقرأ التفاصيل قبل قبول أي مهمة. الوظائف التجريبية الحالية أمثلة وليست وظائف حقيقية مؤكدة. ستظهر الوظائف الفعلية بعد ربط الخادم المباشر.",
+                "Viyzo Worker'a hoş geldiniz. Ben AI Master. Önce hesap oluşturun, ülkenizi ve dilinizi seçin, mevcut doğrulama adımlarını tamamlayın, ardından Jobs bölümünü açıp ayrıntıları okuyarak işi kabul edin. Şu anki demo işler örnektir, doğrulanmış canlı işler değildir. Gerçek işler canlı sunucu bağlandığında gösterilir.");
+    }
+
+    private String answerAIQuestion(String q) {
+        String x = q == null ? "" : q.toLowerCase(Locale.ROOT);
+        boolean account = hasAny(x, "account", "register", "sign up", "login", "अकाउंट", "खाता", "रजिस्टर", "একাউন্ট", "اکاؤنٹ", "حساب");
+        boolean job = hasAny(x, "job", "work", "काम", "जॉब", "কাজ", "کام", "وظيفة", "iş");
+        boolean money = hasAny(x, "earning", "money", "payment", "withdraw", "पैसा", "कमाई", "पेमेंट", "টাকা", "پیسے", "مال", "ödeme");
+        boolean kyc = hasAny(x, "kyc", "verify", "verification", "document", "selfie", "पहचान", "वेरिफ", "दस्तावेज", "যাচাই", "تصدیق", "doğrula");
+        boolean company = hasAny(x, "company", "client", "business", "कंपनी", "क्लाइंट", "কোম্পানি", "کمپنی", "شركة", "şirket");
+        if (account) return aiText("Open Create Account, enter only your own details, choose your country and language, set a Viyzo password, and submit. Never share your email-provider password or OTP with anyone. This demo does not yet create a secure server account.", "Create Account खोलें, अपनी सही जानकारी भरें, देश और भाषा चुनें, Viyzo पासवर्ड बनाएँ और सबमिट करें। अपना ईमेल पासवर्ड या OTP किसी को न दें। इस डेमो में अभी सुरक्षित सर्वर अकाउंट जुड़ा नहीं है।", "Create Account খুলুন, নিজের তথ্য দিন, দেশ ও ভাষা নির্বাচন করুন, Viyzo পাসওয়ার্ড সেট করে জমা দিন। ইমেইলের পাসওয়ার্ড বা OTP কাউকে দেবেন না। এই ডেমোতে নিরাপদ সার্ভার অ্যাকাউন্ট এখনও যুক্ত নয়।", "Create Account کھولیں، اپنی معلومات درج کریں، ملک اور زبان منتخب کریں، Viyzo پاس ورڈ بنائیں اور جمع کریں۔ اپنا ای میل پاس ورڈ یا OTP کسی کو نہ دیں۔ اس ڈیمو میں محفوظ سرور اکاؤنٹ ابھی منسلک نہیں۔", "Create Account bölümünü açın, kendi bilgilerinizi girin, ülke ve dili seçin ve Viyzo şifresi oluşturun. E-posta şifrenizi veya OTP'nizi kimseyle paylaşmayın. Bu demoda güvenli sunucu hesabı henüz bağlı değil.", "Create Account bölümünü açın, kendi bilgilerinizi girin, ülke ve dili seçin ve Viyzo şifresi oluşturun. E-posta şifrenizi veya OTP'nizi kimseyle paylaşmayın. Bu demoda güvenli sunucu hesabı henüz bağlı değil.");
+        if (kyc) return aiText("Open Profile or Worker Verification. Complete only the steps offered for your country. Document requirements and payout checks must be configured safely for each country; do not upload sensitive documents unless the app shows a clear purpose and secure process.", "Profile या Worker Verification खोलें। अपने देश के लिए जो चरण दिखें वही पूरा करें। दस्तावेज और भुगतान की जाँच देश के अनुसार सुरक्षित तरीके से सेट होनी चाहिए। साफ कारण और सुरक्षित प्रक्रिया के बिना संवेदनशील दस्तावेज अपलोड न करें।", "Profile বা Worker Verification খুলুন। আপনার দেশের জন্য যে ধাপ দেখানো হয় তা সম্পন্ন করুন। স্পষ্ট কারণ ও নিরাপদ ব্যবস্থা ছাড়া সংবেদনশীল নথি আপলোড করবেন না।", "Profile یا Worker Verification کھولیں۔ اپنے ملک کے لیے دکھائے گئے مراحل مکمل کریں۔ واضح وجہ اور محفوظ طریقے کے بغیر حساس دستاویزات اپ لوڈ نہ کریں۔", "Profile veya Worker Verification bölümünü açın. Ülkeniz için gösterilen adımları tamamlayın. Açık amaç ve güvenli süreç olmadan hassas belgeleri yüklemeyin.", "Profile veya Worker Verification bölümünü açın. Ülkeniz için gösterilen adımları tamamlayın. Açık amaç ve güvenli süreç olmadan hassas belgeleri yüklemeyin.");
+        if (money) return aiText("Open Earnings to review the demo balance and payout information. The configured business model allocates 50 percent to the worker pool and 50 percent to Viyzo's platform share before expenses. Earnings are not guaranteed; actual payouts require approved work, real company funds, and a connected payment backend.", "Earnings खोलकर डेमो बैलेंस और पेमेंट जानकारी देखें। मौजूदा मॉडल में 50% वर्कर पूल और 50% Viyzo प्लेटफॉर्म शेयर है; Viyzo के हिस्से से खर्च भी निकलेंगे। कमाई की गारंटी नहीं है। असली पेमेंट के लिए स्वीकृत काम, कंपनी के वास्तविक पैसे और पेमेंट बैकएंड चाहिए।", "Earnings খুলে ডেমো ব্যালেন্স ও পেমেন্ট তথ্য দেখুন। বর্তমান মডেলে ৫০% কর্মী পুল এবং ৫০% Viyzo প্ল্যাটফর্মের অংশ; খরচও এখান থেকে হবে। আয়ের নিশ্চয়তা নেই। প্রকৃত পেমেন্টের জন্য অনুমোদিত কাজ, কোম্পানির অর্থ ও পেমেন্ট ব্যাকএন্ড দরকার।", "Earnings کھول کر ڈیمو بیلنس دیکھیں۔ موجودہ ماڈل میں 50% ورکر پول اور 50% Viyzo پلیٹ فارم کا حصہ ہے، جس سے اخراجات بھی ادا ہوں گے۔ آمدنی کی ضمانت نہیں۔ حقیقی ادائیگی کے لیے منظور شدہ کام، کمپنی کے فنڈز اور پیمنٹ بیک اینڈ ضروری ہے۔", "Earnings bölümünden demo bakiyeyi inceleyin. Mevcut modelde %50 çalışan havuzuna, %50 Viyzo platform payına ayrılır; platform payı masrafları da karşılar. Kazanç garanti değildir; gerçek ödeme için onaylı iş, şirket fonu ve ödeme altyapısı gerekir.", "Earnings bölümünden demo bakiyeyi inceleyin. Mevcut modelde %50 çalışan havuzuna, %50 Viyzo platform payına ayrılır; platform payı masrafları da karşılar. Kazanç garanti değildir; gerçek ödeme için onaylı iş, şirket fonu ve ödeme altyapısı gerekir.");
+        if (company) return aiText("Companies need to onboard, post genuine work with a clear budget, deadline, skills and quality rules, then fund the job. The Company Portal here is a UI foundation; it does not yet send a live job to workers without the backend.", "कंपनी को पहले जुड़ना होगा, असली काम का बजट, डेडलाइन, स्किल और गुणवत्ता नियम देने होंगे, फिर काम के लिए फंड करना होगा। Company Portal अभी UI फाउंडेशन है; बैकएंड के बिना लाइव जॉब वर्कर तक नहीं जाता।", "কোম্পানিকে যুক্ত হয়ে প্রকৃত কাজ, বাজেট, সময়সীমা, দক্ষতা ও মানের নিয়ম দিতে হবে এবং অর্থ জমা করতে হবে। ব্যাকএন্ড ছাড়া এই Company Portal থেকে লাইভ কাজ পাঠানো হয় না।", "کمپنی کو شامل ہو کر حقیقی کام، بجٹ، آخری تاریخ اور معیار بتانا ہوگا اور رقم فراہم کرنی ہوگی۔ بیک اینڈ کے بغیر یہ Company Portal لائیو کام نہیں بھیجتا۔", "Şirketlerin sisteme katılması, gerçek işi, bütçeyi, teslim tarihini ve kalite kurallarını belirtmesi ve işi finanse etmesi gerekir. Arka uç olmadan bu Company Portal canlı iş göndermez.", "Şirketlerin sisteme katılması, gerçek işi, bütçeyi, teslim tarihini ve kalite kurallarını belirtmesi ve işi finanse etmesi gerekir. Arka uç olmadan bu Company Portal canlı iş göndermez.");
+        if (job) return aiText("Open Jobs, choose a task, check the company, requirements, workload, deadline and payment details, then accept only if you can complete it. The current list is demo data. It cannot tell you the true live amount of work until the job backend is connected.", "Jobs खोलें, काम चुनें, कंपनी, जरूरी स्किल, मात्रा, डेडलाइन और पेमेंट पढ़ें; तभी स्वीकार करें जब पूरा कर सकें। अभी की सूची डेमो डेटा है। लाइव बैकएंड जुड़ने तक असली उपलब्ध काम की संख्या नहीं बता सकती।", "Jobs খুলুন, কাজ বেছে নিয়ে কোম্পানি, দক্ষতা, পরিমাণ, সময়সীমা ও পেমেন্ট দেখুন। সম্পন্ন করতে পারবেন তবেই গ্রহণ করুন। বর্তমান তালিকা ডেমো ডেটা; লাইভ ব্যাকএন্ড ছাড়া প্রকৃত কাজের সংখ্যা জানা যাবে না।", "Jobs کھولیں، کام منتخب کریں، کمپنی، مہارت، مقدار، آخری تاریخ اور ادائیگی پڑھیں؛ صرف تب قبول کریں جب مکمل کر سکیں۔ موجودہ فہرست ڈیمو ہے۔ لائیو بیک اینڈ کے بغیر حقیقی دستیاب کام کی تعداد معلوم نہیں ہو سکتی۔", "Jobs bölümünü açın; şirketi, becerileri, miktarı, teslim tarihini ve ödemeyi kontrol edin. Yalnızca tamamlayabileceğiniz işi kabul edin. Şu anki liste demo verisidir; canlı arka uç olmadan gerçek iş sayısı bilinemez.", "Jobs bölümünü açın; şirketi, becerileri, miktarı, teslim tarihini ve ödemeyi kontrol edin. Yalnızca tamamlayabileceğiniz işi kabul edin. Şu anki liste demo verisidir; canlı arka uç olmadan gerçek iş sayısı bilinemez.");
+        return aiText("I can guide you through account creation, jobs, verification, earnings and the Company Portal. Try asking: How do I create an account? Is this live work? How do I get paid? What is verification? This built-in guide uses local rules; full conversational AI needs a secure AI backend.", "मैं अकाउंट, जॉब, वेरिफिकेशन, कमाई और Company Portal में मदद कर सकता हूँ। पूछें: अकाउंट कैसे बनाऊँ? क्या यह लाइव काम है? पेमेंट कैसे मिलेगा? वेरिफिकेशन क्या है? यह स्थानीय नियमों वाला गाइड है; पूरी बातचीत वाला AI जोड़ने के लिए सुरक्षित AI बैकएंड चाहिए।", "আমি অ্যাকাউন্ট, কাজ, যাচাই, আয় ও Company Portal সম্পর্কে সাহায্য করতে পারি। জিজ্ঞাসা করুন: অ্যাকাউন্ট কীভাবে খুলব? এটি কি লাইভ কাজ? পেমেন্ট কীভাবে পাব? সম্পূর্ণ AI-এর জন্য নিরাপদ ব্যাকএন্ড দরকার।", "میں اکاؤنٹ، کام، تصدیق، آمدنی اور Company Portal میں رہنمائی کر سکتا ہوں۔ پوچھیں: اکاؤنٹ کیسے بناؤں؟ کیا یہ لائیو کام ہے؟ ادائیگی کیسے ہوگی؟ مکمل AI کے لیے محفوظ بیک اینڈ ضروری ہے۔", "Hesap, işler, doğrulama, kazanç ve Company Portal konusunda yardımcı olabilirim. Şunu sorun: Hesap nasıl oluşturulur? Bu canlı iş mi? Ödeme nasıl alınır? Tam sohbet yapay zekâsı için güvenli bir arka uç gerekir.", "Hesap, işler, doğrulama, kazanç ve Company Portal konusunda yardımcı olabilirim. Şunu sorun: Hesap nasıl oluşturulur? Bu canlı iş mi? Ödeme nasıl alınır? Tam sohbet yapay zekâsı için güvenli bir arka uç gerekir.");
+    }
+
+    private boolean hasAny(String text, String... terms) {
+        for (String term : terms) if (text.contains(term)) return true;
+        return false;
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (aiTts != null) {
+            aiTts.stop();
+            aiTts.shutdown();
+            aiTts = null;
+        }
+        super.onDestroy();
+    }
+
     private double parseMoney(String text) {
         if (text == null) return 0.0;
 
