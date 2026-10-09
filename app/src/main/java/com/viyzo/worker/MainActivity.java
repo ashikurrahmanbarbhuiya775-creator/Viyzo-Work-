@@ -3,6 +3,7 @@ package com.viyzo.worker;
 import android.app.Activity;
 import android.Manifest;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
@@ -85,6 +86,10 @@ public class MainActivity extends Activity {
     private static final int AI_VOICE_REQUEST = 7401;
     private static final int AI_AUDIO_PERMISSION_REQUEST = 7402;
     private boolean aiWelcomeSpoken = false;
+    private String selectedCountryCode = "";
+    private String selectedCountryName = "";
+    private String selectedLanguageTag = "";
+    private static final String PREFS = "viyzo_global_preferences";
 
     // ============================================================
     // DEMO JOB MODEL
@@ -148,14 +153,25 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         getWindow().setStatusBarColor(BG);
         getWindow().setNavigationBarColor(BG);
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        selectedCountryCode = prefs.getString("country_code", "");
+        selectedCountryName = prefs.getString("country_name", "");
+        selectedLanguageTag = prefs.getString("language_tag", "");
+        if (!selectedLanguageTag.isEmpty()) {
+            aiLocale = Locale.forLanguageTag(selectedLanguageTag);
+        }
         initAIMasterVoice();
-        showHome();
-        new Handler().postDelayed(() -> {
-            if (!aiWelcomeSpoken) {
-                aiWelcomeSpoken = true;
-                speakAI(aiWelcomeMessage());
-            }
-        }, 1100);
+        if (selectedCountryCode.isEmpty() || selectedLanguageTag.isEmpty()) {
+            showCountryLanguageSetup();
+        } else {
+            showHome();
+            new Handler().postDelayed(() -> {
+                if (!aiWelcomeSpoken) {
+                    aiWelcomeSpoken = true;
+                    speakAI(aiWelcomeMessage());
+                }
+            }, 1100);
+        }
     }
 
     // ============================================================
@@ -505,6 +521,147 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
+    // FIRST-RUN GLOBAL COUNTRY + LANGUAGE SELECTOR
+    // Uses Android's ISO country list and available locale list.
+    // Voice availability depends on installed Android speech data.
+    // ============================================================
+    private String flagForCountry(String code) {
+        if (code == null || code.length() != 2) return "🌐";
+        int first = Character.codePointAt(code.toUpperCase(Locale.ROOT), 0) - 65 + 0x1F1E6;
+        int second = Character.codePointAt(code.toUpperCase(Locale.ROOT), 1) - 65 + 0x1F1E6;
+        return new String(Character.toChars(first)) + new String(Character.toChars(second));
+    }
+
+    private String localeDisplayName(Locale locale) {
+        String nativeName = locale.getDisplayName(locale);
+        if (nativeName == null || nativeName.trim().isEmpty()) nativeName = locale.toLanguageTag();
+        String english = locale.getDisplayName(Locale.ENGLISH);
+        if (english != null && !english.equalsIgnoreCase(nativeName)) return nativeName + " — " + english;
+        return nativeName;
+    }
+
+    private void showCountryLanguageSetup() {
+        startScreen(false);
+        LinearLayout c = content();
+        c.setPadding(dp(20), dp(22), dp(20), dp(26));
+
+        LinearLayout hero = column();
+        hero.setGravity(Gravity.CENTER_HORIZONTAL);
+        hero.setPadding(dp(12), dp(8), dp(12), dp(18));
+        hero.addView(logo(38), new LinearLayout.LayoutParams(dp(76), dp(76)));
+        TextView brand = tv("VIYZO", 30, WHITE);
+        brand.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        brand.setGravity(Gravity.CENTER);
+        hero.addView(brand);
+        TextView subtitle = tv("Global Work Network", 13, GRAY);
+        subtitle.setGravity(Gravity.CENTER);
+        hero.addView(subtitle);
+        TextView title = heading("🌍 Choose your country and language");
+        title.setGravity(Gravity.CENTER);
+        title.setPadding(0, dp(18), 0, dp(6));
+        hero.addView(title);
+        TextView explain = tv("AI Master will guide you in the language you select. You can change these settings later.", 13, TEXT);
+        explain.setGravity(Gravity.CENTER);
+        explain.setPadding(dp(8), 0, dp(8), dp(12));
+        hero.addView(explain);
+        c.addView(hero);
+
+        c.addView(tv("COUNTRY / PAÍS / দেশ / البلد", 13, GRAY));
+        String[] iso = Locale.getISOCountries();
+        java.util.Arrays.sort(iso, (a, b) -> new Locale("", a).getDisplayCountry(Locale.ENGLISH)
+                .compareToIgnoreCase(new Locale("", b).getDisplayCountry(Locale.ENGLISH)));
+        java.util.ArrayList<String> countryLabels = new java.util.ArrayList<>();
+        int suggested = 0;
+        String deviceCountry = Locale.getDefault().getCountry();
+        for (int i = 0; i < iso.length; i++) {
+            Locale countryLocale = new Locale("", iso[i]);
+            String countryName = countryLocale.getDisplayCountry(Locale.ENGLISH);
+            countryLabels.add(flagForCountry(iso[i]) + "  " + countryName + "  (" + iso[i] + ")");
+            if (iso[i].equalsIgnoreCase(deviceCountry)) suggested = i;
+        }
+        Spinner countries = new Spinner(this);
+        ArrayAdapter<String> countryAdapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item, countryLabels);
+        countryAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        countries.setAdapter(countryAdapter);
+        countries.setSelection(suggested);
+        c.addView(countries, new LinearLayout.LayoutParams(-1, dp(54)));
+
+        TextView languageTitle = tv("LANGUAGE / भाषा / ভাষা / اللغة", 13, GRAY);
+        languageTitle.setPadding(0, dp(16), 0, dp(2));
+        c.addView(languageTitle);
+        java.util.TreeMap<String, Locale> uniqueLocales = new java.util.TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        for (Locale loc : Locale.getAvailableLocales()) {
+            String lang = loc.getLanguage();
+            if (lang == null || lang.trim().isEmpty() || lang.equals("und")) continue;
+            if (loc.getCountry() != null && !loc.getCountry().isEmpty()) {
+                uniqueLocales.putIfAbsent(lang + "-" + loc.getCountry(), loc);
+            } else {
+                uniqueLocales.putIfAbsent(lang, loc);
+            }
+        }
+        java.util.ArrayList<Locale> localeChoices = new java.util.ArrayList<>(uniqueLocales.values());
+        localeChoices.sort((a, b) -> localeDisplayName(a).compareToIgnoreCase(localeDisplayName(b)));
+        java.util.ArrayList<String> languageLabels = new java.util.ArrayList<>();
+        int langSuggested = 0;
+        String deviceTag = Locale.getDefault().toLanguageTag();
+        for (int i = 0; i < localeChoices.size(); i++) {
+            Locale loc = localeChoices.get(i);
+            languageLabels.add(localeDisplayName(loc));
+            if (loc.toLanguageTag().equalsIgnoreCase(deviceTag)) langSuggested = i;
+        }
+        Spinner languages = new Spinner(this);
+        ArrayAdapter<String> languageAdapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item, languageLabels);
+        languageAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        languages.setAdapter(languageAdapter);
+        languages.setSelection(langSuggested);
+        c.addView(languages, new LinearLayout.LayoutParams(-1, dp(54)));
+
+        c.addView(wideInfo("🤖", "AI Master", "I will explain account creation, jobs, verification and earnings step by step."));
+        Button continueButton = primary("Continue  →");
+        continueButton.setOnClickListener(v -> {
+            int ci = countries.getSelectedItemPosition();
+            int li = languages.getSelectedItemPosition();
+            if (ci < 0 || li < 0 || ci >= iso.length || li >= localeChoices.size()) {
+                Toast.makeText(this, "Please select a country and language.", Toast.LENGTH_LONG).show();
+                return;
+            }
+            selectedCountryCode = iso[ci];
+            selectedCountryName = new Locale("", selectedCountryCode).getDisplayCountry(Locale.ENGLISH);
+            Locale chosen = localeChoices.get(li);
+            aiLocale = chosen;
+            selectedLanguageTag = chosen.toLanguageTag();
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                    .putString("country_code", selectedCountryCode)
+                    .putString("country_name", selectedCountryName)
+                    .putString("language_tag", selectedLanguageTag)
+                    .apply();
+            setAILanguageByLocale(chosen);
+            showHome();
+            aiWelcomeSpoken = true;
+            speakAI(aiText("Welcome to Viyzo. Your country and language are saved. I will guide you step by step.",
+                    "Viyzo में आपका स्वागत है। आपका देश और भाषा सेव हो गए हैं। मैं आपको हर कदम पर समझाऊँगा।",
+                    "Viyzo-তে স্বাগতম। আপনার দেশ ও ভাষা সংরক্ষণ করা হয়েছে। আমি প্রতিটি ধাপে সাহায্য করব।",
+                    "Viyzo میں خوش آمدید۔ آپ کا ملک اور زبان محفوظ ہوگئے ہیں۔ میں ہر قدم پر رہنمائی کروں گا۔",
+                    "مرحباً بك في Viyzo. تم حفظ بلدك ولغتك. سأرشدك خطوة بخطوة.",
+                    "Viyzo'ya hoş geldiniz. Ülkeniz ve diliniz kaydedildi. Size adım adım rehberlik edeceğim."));
+        });
+        c.addView(continueButton);
+        Button changeLater = secondary("I need to change country/language later");
+        changeLater.setOnClickListener(v -> Toast.makeText(this, "You can change this from Settings → Country & Language.", Toast.LENGTH_LONG).show());
+        c.addView(changeLater);
+    }
+
+    private void setAILanguageByLocale(Locale locale) {
+        aiLocale = locale == null ? Locale.getDefault() : locale;
+        if (aiTts != null) {
+            int result = aiTts.setLanguage(aiLocale);
+            aiTtsReady = result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED;
+        }
+    }
+
+    // ============================================================
     // HOME
     // ============================================================
     private void showHome() {
@@ -524,6 +681,15 @@ public class MainActivity extends Activity {
         TextView sub = tv("Global Work Network", 14, GRAY);
         sub.setGravity(Gravity.CENTER);
         center.addView(sub);
+        TextView countryLanguage = tv(flagForCountry(selectedCountryCode) + "  " +
+                (selectedCountryName.isEmpty() ? "Choose country" : selectedCountryName) + "  •  " +
+                (selectedLanguageTag.isEmpty() ? Locale.getDefault().getDisplayLanguage() :
+                        Locale.forLanguageTag(selectedLanguageTag).getDisplayName(Locale.forLanguageTag(selectedLanguageTag))), 11, GRAY);
+        countryLanguage.setGravity(Gravity.CENTER);
+        center.addView(countryLanguage);
+        Button changeLocale = secondary("🌐  Change Country / Language");
+        changeLocale.setOnClickListener(v -> showCountryLanguageSetup());
+        center.addView(changeLocale);
 
         TextView slogan = tv("\nWork Smarter\nEarn Better\nTogether", 19, TEXT);
         slogan.setGravity(Gravity.CENTER);
@@ -1679,35 +1845,7 @@ public class MainActivity extends Activity {
     }
 
     private void showLanguage() {
-        startScreen(false);
-        LinearLayout c = content();
-
-        c.addView(heading("Language"));
-
-        String[] languages = {
-                "🇬🇧  English",
-                "🇮🇳  हिन्दी",
-                "🇧🇩  বাংলা",
-                "🇵🇰  اردو",
-                "🇸🇦  العربية",
-                "🇹🇷  Türkçe"
-        };
-
-        for (String lang : languages) {
-            Button b = secondary(lang);
-            b.setOnClickListener(v -> {
-                setAILanguage(lang);
-                Toast.makeText(this, "AI Master language: " + lang,
-                        Toast.LENGTH_SHORT).show();
-                speakAI(aiText("Language selected. I will try to speak in this language.",
-                        "भाषा चुन ली गई है। मैं इसी भाषा में बोलने की कोशिश करूँगा।",
-                        "ভাষা নির্বাচন করা হয়েছে। আমি এই ভাষায় কথা বলার চেষ্টা করব।",
-                        "زبان منتخب ہوگئی ہے۔ میں اسی زبان میں بات کرنے کی کوشش کروں گا۔",
-                        "تم اختيار اللغة. سأحاول التحدث بهذه اللغة.",
-                        "Dil seçildi. Bu dilde konuşmaya çalışacağım."));
-            });
-            c.addView(b);
-        }
+        showCountryLanguageSetup();
     }
 
     private void showSettings() {
