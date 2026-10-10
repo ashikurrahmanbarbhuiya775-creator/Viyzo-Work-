@@ -1,2563 +1,643 @@
 package com.viyzo.worker;
 
-import android.app.Activity;
 import android.Manifest;
+import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.speech.RecognizerIntent;
-import android.speech.tts.TextToSpeech;
-import android.speech.tts.UtteranceProgressListener;
-import android.os.Build;
-import android.os.Handler;
-import android.os.Bundle;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.os.Build;
+import android.os.Bundle;
+import android.speech.RecognizerIntent;
+import android.speech.tts.TextToSpeech;
 import android.text.InputType;
 import android.view.Gravity;
-import android.view.MotionEvent;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.FrameLayout;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
- * VIYZO WORKER
- * Single-file Android UI foundation.
+ * Viyzo Worker - Android Java starter.
  *
- * IMPORTANT:
- * - This APK currently contains local/demo UI and calculation logic.
- * - Real accounts, OTP, selfie/document verification, company payments,
- *   job synchronization, payouts, AI services and secure backend APIs
- *   must be connected on the server side before production launch.
- * - Demo jobs are clearly labeled as examples.
+ * Configure SUPABASE_PUBLISHABLE_KEY below with the project's PUBLIC publishable/anon key.
+ * Never put a service_role or secret key in an Android app.
+ *
+ * Backend expectations:
+ * - Supabase Auth enabled (email/password)
+ * - public.worker_profiles: id uuid PK references auth.users(id), display_name text,
+ *   country text, preferred_language text
+ * - public.jobs: id uuid PK, title text, description text, category text, country text,
+ *   payment_amount numeric, currency text, status text
+ * - public.earnings: id uuid PK, worker_id uuid, job_id uuid, amount numeric,
+ *   currency text, status text
+ * - RLS policies must protect every table. Do not trust client-side payout/job status changes.
+ *
+ * This is a functional integration scaffold, not a finished production marketplace.
+ * Live payments, KYC, company verification, job assignment, moderation and AI chat require
+ * server-side endpoints/provider configuration and security review.
  */
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements TextToSpeech.OnInitListener {
+    private static final String SUPABASE_URL = "https://jxnfsqxyrakkblizziel.supabase.co";
+    private static final String SUPABASE_PUBLISHABLE_KEY = "PASTE_YOUR_SUPABASE_PUBLISHABLE_KEY_HERE";
 
-    // ============================================================
-    // VIYZO BUSINESS CONFIGURATION
-    // ============================================================
-    // Configurable platform model: 50% worker pool / 50% Viyzo platform.
-    private static final double WORKER_SHARE_PERCENT = 50.0;
-    private static final double VIYZO_SHARE_PERCENT = 50.0;
+    private static final int C_BG = Color.rgb(16, 16, 20);
+    private static final int C_CARD = Color.rgb(28, 28, 36);
+    private static final int C_TEXT = Color.rgb(245, 245, 250);
+    private static final int C_MUTED = Color.rgb(170, 174, 190);
+    private static final int C_ACCENT = Color.rgb(115, 96, 255);
+    private static final int VOICE_REQUEST = 7021;
+    private static final int MIC_PERMISSION = 7022;
+    private static final String PREFS = "viyzo_worker_prefs";
 
-    // Earning opportunity target, NOT a guaranteed income promise.
-    private static final double DAILY_EARNING_TARGET_INR = 1000.0;
-    private static final double TARGET_HOURS_PER_DAY = 10.0;
-    private static final double TARGET_INR_PER_HOUR =
-            DAILY_EARNING_TARGET_INR / TARGET_HOURS_PER_DAY;
-
-    // ============================================================
-    // THEME
-    // ============================================================
-    private final int BG = Color.rgb(7, 12, 22);
-    private final int CARD = Color.rgb(15, 27, 47);
-    private final int CARD2 = Color.rgb(20, 35, 59);
-    private final int BORDER = Color.rgb(39, 65, 103);
-    private final int PRIMARY = Color.rgb(78, 70, 255);
-    private final int PRIMARY2 = Color.rgb(113, 54, 235);
-    private final int WHITE = Color.WHITE;
-    private final int TEXT = Color.rgb(235, 238, 250);
-    private final int GRAY = Color.rgb(155, 165, 185);
-    private final int GREEN = Color.rgb(40, 210, 125);
-    private final int RED = Color.rgb(240, 75, 100);
-    private final int GOLD = Color.rgb(245, 185, 60);
-    private final int BLUE = Color.rgb(65, 150, 255);
-    private final int ORANGE = Color.rgb(255, 145, 55);
-
+    private final ExecutorService io = Executors.newSingleThreadExecutor();
     private LinearLayout root;
-    private FrameLayout frame;
+    private TextToSpeech tts;
+    private boolean ttsReady;
+    private Locale voiceLocale = Locale.US;
+    private String accessToken = "";
+    private String userId = "";
+    private String userEmail = "";
+    private String displayName = "";
+    private String country = "India";
+    private String language = "English";
+    private TextView statusView;
+    private TextView aiAnswerView;
+    private EditText aiQuestion;
+    private boolean busy;
 
-    // AI Master voice assistant (on-device speech; real LLM answers need backend).
-    private TextToSpeech aiTts;
-    private boolean aiTtsReady = false;
-    private Locale aiLocale = Locale.getDefault();
-    private TextView aiStatusView;
-    private TextView aiBubbleView;
-    private static final int AI_VOICE_REQUEST = 7401;
-    private static final int AI_AUDIO_PERMISSION_REQUEST = 7402;
-    private boolean aiWelcomeSpoken = false;
-    private String pendingAISpeech = "";
-    private boolean aiTtsInitializing = true;
-    private String selectedCountryCode = "";
-    private String selectedCountryName = "";
-    private String selectedLanguageTag = "";
-    private static final String PREFS = "viyzo_global_preferences";
+    @Override public void onCreate(Bundle state) {
+        super.onCreate(state);
+        getWindow().setStatusBarColor(C_BG);
+        getWindow().setNavigationBarColor(C_BG);
+        SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
+        accessToken = p.getString("access_token", "");
+        userId = p.getString("user_id", "");
+        userEmail = p.getString("email", "");
+        displayName = p.getString("name", "");
+        country = p.getString("country", "India");
+        language = p.getString("language", "English");
+        tts = new TextToSpeech(this, this);
+        if (!accessToken.isEmpty() && !userId.isEmpty()) showDashboard();
+        else showWelcome();
+    }
 
-    // ============================================================
-    // DEMO JOB MODEL
-    // ============================================================
-    private static class JobData {
-        String icon;
-        String title;
-        String category;
-        String company;
-        String budget;
-        String quantity;
-        String workers;
-        String deadline;
-        String urgency;
-        String workType;
-        String skill;
-        String language;
-
-        JobData(String icon, String title, String category, String company,
-                String budget, String quantity, String workers,
-                String deadline, String urgency, String workType,
-                String skill, String language) {
-            this.icon = icon;
-            this.title = title;
-            this.category = category;
-            this.company = company;
-            this.budget = budget;
-            this.quantity = quantity;
-            this.workers = workers;
-            this.deadline = deadline;
-            this.urgency = urgency;
-            this.workType = workType;
-            this.skill = skill;
-            this.language = language;
+    @Override public void onInit(int result) {
+        if (result == TextToSpeech.SUCCESS) {
+            int status = tts.setLanguage(voiceLocale);
+            if (status == TextToSpeech.LANG_MISSING_DATA || status == TextToSpeech.LANG_NOT_SUPPORTED) {
+                voiceLocale = Locale.US;
+                status = tts.setLanguage(voiceLocale);
+            }
+            ttsReady = status != TextToSpeech.LANG_MISSING_DATA && status != TextToSpeech.LANG_NOT_SUPPORTED;
         }
     }
 
-    private final JobData[] DEMO_JOBS = new JobData[]{
-            new JobData("🤖", "Product Listing", "E-commerce",
-                    "Demo Global Company", "$500", "1000 products", "8",
-                    "3 Days", "Normal", "Bulk", "Basic mobile/computer", "English"),
-            new JobData("⚡", "Urgent Data Cleanup", "Data",
-                    "Demo Business", "$300", "600 records", "6",
-                    "24 Hours", "Urgent", "Quick Task", "Data entry", "English"),
-            new JobData("📦", "Bulk Catalog Review", "E-commerce",
-                    "Demo E-commerce Company", "$1000", "5000 items", "10",
-                    "5 Days", "High", "Bulk", "Catalog review", "English/Hindi"),
-            new JobData("🔁", "Recurring Content Check", "Content",
-                    "Demo Agency", "$750", "1500 items/month", "5",
-                    "Recurring", "Recurring", "Recurring", "Content review", "English"),
-            new JobData("🌍", "Translation Task", "Language",
-                    "Demo Global Client", "$400", "200 pages", "4",
-                    "4 Days", "Normal", "Project", "Translation", "Multiple"),
-            new JobData("📊", "Research & Data Entry", "Research",
-                    "Demo Startup", "$650", "1200 records", "7",
-                    "4 Days", "Normal", "Project", "Research/Data", "English")
-    };
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        getWindow().setStatusBarColor(BG);
-        getWindow().setNavigationBarColor(BG);
-        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        selectedCountryCode = prefs.getString("country_code", "");
-        selectedCountryName = prefs.getString("country_name", "");
-        selectedLanguageTag = prefs.getString("language_tag", "");
-        if (!selectedLanguageTag.isEmpty()) {
-            aiLocale = Locale.forLanguageTag(selectedLanguageTag);
-        }
-        initAIMasterVoice();
-        if (selectedCountryCode.isEmpty() || selectedLanguageTag.isEmpty()) {
-            showCountryLanguageSetup();
-        } else {
-            showHome();
-            new Handler().postDelayed(() -> {
-                if (!aiWelcomeSpoken) {
-                    aiWelcomeSpoken = true;
-                    speakAI(aiWelcomeMessage());
-                }
-            }, 1100);
-        }
+    private void speak(String text) {
+        if (text == null || text.trim().isEmpty()) return;
+        if (tts != null && ttsReady) {
+            if (Build.VERSION.SDK_INT >= 21) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "viyzo_" + System.currentTimeMillis());
+            else tts.speak(text, TextToSpeech.QUEUE_FLUSH, null);
+        } else toast("Voice data is not available. Install Android Text-to-Speech voice data in phone settings.");
     }
 
-    // ============================================================
-    // BASIC UI HELPERS
-    // ============================================================
-    private int dp(float v) {
-        return (int) (v * getResources().getDisplayMetrics().density + 0.5f);
-    }
-
-    private TextView tv(String s, float size, int color) {
-        TextView t = new TextView(this);
-        t.setText(s);
-        t.setTextSize(size);
-        t.setTextColor(color);
-        t.setGravity(Gravity.CENTER_VERTICAL);
-        return t;
-    }
-
-    private TextView heading(String s) {
-        TextView t = tv(s, 24, WHITE);
-        t.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        t.setPadding(0, dp(3), 0, dp(8));
-        return t;
-    }
-
-    private TextView small(String s) {
-        TextView t = tv(s, 13, GRAY);
-        t.setPadding(0, 0, 0, dp(8));
-        return t;
-    }
-
-    private GradientDrawable solid(int color, float radius) {
-        GradientDrawable g = new GradientDrawable();
-        g.setColor(color);
-        g.setCornerRadius(dp(radius));
-        return g;
-    }
-
-    private GradientDrawable outlined(int fill, int stroke, float radius) {
-        GradientDrawable g = new GradientDrawable();
-        g.setColor(fill);
-        g.setCornerRadius(dp(radius));
-        g.setStroke(dp(1), stroke);
-        return g;
-    }
-
-    private GradientDrawable primaryBg() {
-        GradientDrawable g = new GradientDrawable(
-                GradientDrawable.Orientation.LEFT_RIGHT,
-                new int[]{PRIMARY, PRIMARY2}
-        );
-        g.setCornerRadius(dp(20));
-        return g;
-    }
-
-    private LinearLayout column() {
-        LinearLayout l = new LinearLayout(this);
-        l.setOrientation(LinearLayout.VERTICAL);
-        return l;
-    }
-
-    private LinearLayout row() {
-        LinearLayout l = new LinearLayout(this);
-        l.setOrientation(LinearLayout.HORIZONTAL);
-        l.setGravity(Gravity.CENTER_VERTICAL);
-        return l;
-    }
-
-    private void setMargins(View v, int l, int t, int r, int b) {
-        LinearLayout.LayoutParams p =
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT);
-        p.setMargins(dp(l), dp(t), dp(r), dp(b));
-        v.setLayoutParams(p);
-    }
-
-    private void startScreen(boolean bottomNav) {
-        root = column();
-        root.setBackgroundColor(BG);
-
-        frame = new FrameLayout(this);
-
-        if (bottomNav) {
-            LinearLayout.LayoutParams fp =
-                    new LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT, 0);
-            fp.weight = 1;
-            root.addView(frame, fp);
-            root.addView(bottomNav());
-        } else {
-            root.addView(frame, new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.MATCH_PARENT));
-        }
-
-        setContentView(root);
-    }
-
-    private LinearLayout content() {
+    private void setScreen(String title) {
+        root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(18), dp(18), dp(18), dp(18));
+        root.setBackgroundColor(C_BG);
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
-        scroll.setBackgroundColor(BG);
-
-        LinearLayout c = column();
-        c.setPadding(dp(18), dp(16), dp(18), dp(150));
-        scroll.addView(c);
-
-        frame.addView(scroll, new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT));
-        addAIMasterOverlay();
-
-        return c;
-    }
-
-    private TextView logo(int size) {
-        TextView l = tv("V", size, WHITE);
-        l.setGravity(Gravity.CENTER);
-        l.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-
-        GradientDrawable g = new GradientDrawable(
-                GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{Color.rgb(125, 75, 255), Color.rgb(55, 75, 255)});
-        g.setShape(GradientDrawable.OVAL);
-        l.setBackground(g);
-        return l;
-    }
-
-    private LinearLayout brandHeader() {
-        LinearLayout h = row();
-        h.addView(logo(27), new LinearLayout.LayoutParams(dp(54), dp(54)));
-
-        LinearLayout names = column();
-        TextView n = tv("VIYZO", 20, WHITE);
-        n.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        names.addView(n);
-        names.addView(tv("Global Work Network", 10, GRAY));
-
-        LinearLayout.LayoutParams np =
-                new LinearLayout.LayoutParams(0, dp(54), 1);
-        np.setMargins(dp(11), 0, 0, 0);
-        h.addView(names, np);
-
-        TextView bell = tv("🔔", 21, WHITE);
-        bell.setGravity(Gravity.CENTER);
-        bell.setBackground(outlined(CARD, BORDER, 18));
-        bell.setOnClickListener(v -> showNotifications());
-        h.addView(bell, new LinearLayout.LayoutParams(dp(52), dp(52)));
-
-        return h;
-    }
-
-    private Button primary(String label) {
-        Button b = new Button(this);
-        b.setText(label);
-        b.setTextColor(WHITE);
-        b.setTextSize(14);
-        b.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        b.setAllCaps(false);
-        b.setGravity(Gravity.CENTER);
-        b.setBackground(primaryBg());
-        b.setElevation(dp(7));
-
-        LinearLayout.LayoutParams p =
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, dp(56));
-        p.setMargins(0, dp(6), 0, dp(6));
-        b.setLayoutParams(p);
-        attachButtonVoiceHelp(b);
-        return b;
-    }
-
-    private Button secondary(String label) {
-        Button b = new Button(this);
-        b.setText(label);
-        b.setTextColor(TEXT);
-        b.setTextSize(13);
-        b.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        b.setAllCaps(false);
-        b.setGravity(Gravity.CENTER);
-        b.setBackground(outlined(CARD, BORDER, 18));
-        b.setElevation(dp(3));
-
-        LinearLayout.LayoutParams p =
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, dp(53));
-        p.setMargins(0, dp(5), 0, dp(5));
-        b.setLayoutParams(p);
-        attachButtonVoiceHelp(b);
-        return b;
-    }
-
-    // Spoken hints run before the existing click action; returning false preserves that action.
-    private void attachButtonVoiceHelp(Button button) {
-        button.setOnTouchListener((view, event) -> {
-            if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                String label = String.valueOf(button.getText()).trim();
-                if (!label.isEmpty()) speakAI(buttonHelpText(label));
-            }
-            return false;
-        });
-    }
-
-    private String buttonHelpText(String label) {
-        String en = "You selected " + label + ". Read the information on this screen. If you need help, tap the AI Master panel or microphone and ask your question.";
-        String hi = "आपने " + label + " चुना है। स्क्रीन पर दी गई जानकारी पढ़ें। मदद चाहिए तो AI Master पैनल या माइक दबाकर सवाल पूछें।";
-        String bn = "আপনি " + label + " বেছে নিয়েছেন। স্ক্রিনের তথ্য পড়ুন। সাহায্যের জন্য AI Master প্যানেল বা মাইকে চাপ দিয়ে প্রশ্ন করুন।";
-        String ur = "آپ نے " + label + " منتخب کیا ہے۔ اسکرین کی معلومات پڑھیں۔ مدد کے لیے AI Master پینل یا مائیک دباکر سوال پوچھیں۔";
-        String ar = "لقد اخترت " + label + ". اقرأ المعلومات على الشاشة. للمساعدة اضغط على لوحة AI Master أو الميكروفون واسأل سؤالك.";
-        String tr = label + " seçeneğini seçtiniz. Ekrandaki bilgileri okuyun. Yardım için AI Master paneline veya mikrofona dokunup sorun.";
-        String lang = aiLocale == null ? "en" : aiLocale.getLanguage();
-        if ("hi".equals(lang)) return hi;
-        if ("bn".equals(lang)) return bn;
-        if ("ur".equals(lang)) return ur;
-        if ("ar".equals(lang)) return ar;
-        if ("tr".equals(lang)) return tr;
-        return en;
-    }
-
-    private LinearLayout card() {
-        LinearLayout c = column();
-        c.setPadding(dp(15), dp(15), dp(15), dp(15));
-        c.setBackground(outlined(CARD, BORDER, 20));
-        c.setElevation(dp(4));
-        return c;
-    }
-
-    private LinearLayout statCard(String icon, String title, String value) {
-        LinearLayout c = card();
-
-        TextView ic = tv(icon, 24, WHITE);
-        ic.setGravity(Gravity.CENTER);
-        c.addView(ic, new LinearLayout.LayoutParams(dp(45), dp(40)));
-
-        c.addView(tv(title, 11, GRAY));
-
-        TextView v = tv(value, 17, WHITE);
-        v.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        c.addView(v);
-
-        return c;
-    }
-
-    private LinearLayout menuCard(String icon, String title, String desc,
-                                  View.OnClickListener listener) {
-        LinearLayout c = card();
-
-        TextView ic = tv(icon, 25, WHITE);
-        ic.setGravity(Gravity.CENTER);
-        ic.setBackground(outlined(CARD2, BORDER, 17));
-        c.addView(ic, new LinearLayout.LayoutParams(dp(50), dp(50)));
-
-        TextView t = tv(title, 15, WHITE);
-        t.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        t.setPadding(0, dp(9), 0, 0);
-        c.addView(t);
-
-        TextView d = tv(desc, 11, GRAY);
-        d.setPadding(0, dp(4), 0, 0);
-        c.addView(d);
-
-        c.setOnClickListener(listener);
-        return c;
-    }
-
-    private LinearLayout wideInfo(String icon, String title, String value) {
-        LinearLayout c = row();
-        c.setPadding(dp(14), dp(12), dp(14), dp(12));
-        c.setBackground(outlined(CARD, BORDER, 18));
-        c.setElevation(dp(3));
-
-        TextView ic = tv(icon, 23, WHITE);
-        ic.setGravity(Gravity.CENTER);
-        c.addView(ic, new LinearLayout.LayoutParams(dp(45), dp(45)));
-
-        LinearLayout tx = column();
-        tx.addView(tv(title, 11, GRAY));
-
-        TextView v = tv(value, 15, WHITE);
-        v.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        tx.addView(v);
-
-        LinearLayout.LayoutParams tp =
-                new LinearLayout.LayoutParams(0, dp(45), 1);
-        tp.setMargins(dp(10), 0, 0, 0);
-        c.addView(tx, tp);
-
-        return c;
-    }
-
-    private EditText input(String hint) {
-        EditText e = new EditText(this);
-        e.setHint(hint);
-        e.setHintTextColor(Color.rgb(110, 125, 150));
-        e.setTextColor(WHITE);
-        e.setTextSize(14);
-        e.setSingleLine(true);
-        e.setPadding(dp(15), 0, dp(15), 0);
-        e.setBackground(outlined(CARD, BORDER, 17));
-
-        LinearLayout.LayoutParams p =
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, dp(54));
-        p.setMargins(0, dp(6), 0, dp(6));
-        e.setLayoutParams(p);
-        return e;
-    }
-
-    private Spinner spinner(String[] values) {
-        Spinner s = new Spinner(this);
-        s.setAdapter(new ArrayAdapter<String>(
-                this,
-                android.R.layout.simple_spinner_dropdown_item,
-                values));
-
-        LinearLayout.LayoutParams p =
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, dp(52));
-        p.setMargins(0, dp(5), 0, dp(5));
-        s.setLayoutParams(p);
-        return s;
-    }
-
-    // ============================================================
-    // BOTTOM NAVIGATION
-    // ============================================================
-    private LinearLayout bottomNav() {
-        LinearLayout nav = row();
-        nav.setPadding(dp(8), dp(7), dp(8), dp(7));
-        nav.setGravity(Gravity.CENTER);
-        nav.setBackground(outlined(Color.rgb(11, 22, 39), BORDER, 25));
-        nav.setElevation(dp(14));
-
-        String[] icons = {"⌂", "💼", "💳", "●"};
-        String[] names = {"Home", "Jobs", "Earnings", "Profile"};
-
-        for (int i = 0; i < 4; i++) {
-            final int index = i;
-
-            LinearLayout item = column();
-            item.setGravity(Gravity.CENTER);
-
-            TextView ic = tv(icons[i], 21, i == 0 ? WHITE : GRAY);
-            ic.setGravity(Gravity.CENTER);
-
-            TextView nm = tv(names[i], 9, i == 0 ? WHITE : GRAY);
-            nm.setGravity(Gravity.CENTER);
-
-            item.addView(ic, new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, dp(32)));
-            item.addView(nm);
-
-            if (i == 0) item.setBackground(solid(PRIMARY, 17));
-
-            LinearLayout.LayoutParams ip =
-                    new LinearLayout.LayoutParams(0, dp(62), 1);
-            ip.setMargins(dp(3), 0, dp(3), 0);
-            nav.addView(item, ip);
-
-            item.setOnClickListener(v -> {
-                if (index == 0) showDashboard();
-                else if (index == 1) showJobs();
-                else if (index == 2) showEarnings();
-                else showProfile();
-            });
-        }
-
-        LinearLayout.LayoutParams np =
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, dp(78));
-        np.setMargins(dp(9), dp(4), dp(9), dp(10));
-        nav.setLayoutParams(np);
-
-        return nav;
-    }
-
-    // ============================================================
-    // FIRST-RUN GLOBAL COUNTRY + LANGUAGE SELECTOR
-    // Uses Android's ISO country list and available locale list.
-    // Voice availability depends on installed Android speech data.
-    // ============================================================
-    private String flagForCountry(String code) {
-        if (code == null || code.length() != 2) return "🌐";
-        String upper = code.toUpperCase(Locale.ROOT);
-        int first = upper.charAt(0) - 'A' + 0x1F1E6;
-        int second = upper.charAt(1) - 'A' + 0x1F1E6;
-        return new String(Character.toChars(first)) + new String(Character.toChars(second));
-    }
-
-    private String localeDisplayName(Locale locale) {
-        String nativeName = locale.getDisplayLanguage(locale);
-        if (nativeName == null || nativeName.trim().isEmpty()) nativeName = locale.getLanguage();
-        String english = locale.getDisplayLanguage(Locale.ENGLISH);
-        if (english != null && !english.equalsIgnoreCase(nativeName)) return nativeName + " — " + english;
-        return nativeName;
-    }
-
-    private void showCountryLanguageSetup() {
-        startScreen(false);
-        LinearLayout c = content();
-        c.setPadding(dp(20), dp(22), dp(20), dp(26));
-
-        LinearLayout hero = column();
-        hero.setGravity(Gravity.CENTER_HORIZONTAL);
-        hero.setPadding(dp(12), dp(8), dp(12), dp(18));
-        hero.addView(logo(38), new LinearLayout.LayoutParams(dp(76), dp(76)));
-        TextView brand = tv("VIYZO", 30, WHITE);
-        brand.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        scroll.addView(root);
+        setContentView(scroll);
+        TextView brand = text("🤖 VIYZO WORKER", 23, C_TEXT, true);
         brand.setGravity(Gravity.CENTER);
-        hero.addView(brand);
-        TextView subtitle = tv("Global Work Network", 13, GRAY);
+        root.addView(brand, matchWrap());
+        TextView subtitle = text(title, 15, C_MUTED, false);
         subtitle.setGravity(Gravity.CENTER);
-        hero.addView(subtitle);
-        TextView title = heading("🌍 Choose your country first");
-        title.setGravity(Gravity.CENTER);
-        title.setPadding(0, dp(18), 0, dp(6));
-        hero.addView(title);
-        TextView explain = tv("First select your country. Then Viyzo will show languages used in that country, with English always included.", 13, TEXT);
-        explain.setGravity(Gravity.CENTER);
-        explain.setPadding(dp(8), 0, dp(8), dp(12));
-        hero.addView(explain);
-        c.addView(hero);
-
-        c.addView(tv("1. SELECT COUNTRY / देश चुनें", 13, GRAY));
-        String[] iso = Locale.getISOCountries();
-        java.util.Arrays.sort(iso, (a, b) -> new Locale("", a).getDisplayCountry(Locale.ENGLISH)
-                .compareToIgnoreCase(new Locale("", b).getDisplayCountry(Locale.ENGLISH)));
-        java.util.ArrayList<String> countryCodes = new java.util.ArrayList<>();
-        java.util.ArrayList<String> countryLabels = new java.util.ArrayList<>();
-        int suggestedCountry = 0;
-        String deviceCountry = Locale.getDefault().getCountry();
-        for (String countryCode : iso) {
-            String countryName = new Locale("", countryCode).getDisplayCountry(Locale.ENGLISH);
-            if (countryName == null || countryName.trim().isEmpty()) continue;
-            countryCodes.add(countryCode);
-            countryLabels.add(flagForCountry(countryCode) + "  " + countryName);
-            if (countryCode.equalsIgnoreCase(deviceCountry)) suggestedCountry = countryCodes.size() - 1;
-        }
-        Spinner countrySpinner = new Spinner(this);
-        ArrayAdapter<String> countryAdapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item, countryLabels);
-        countryAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        countrySpinner.setAdapter(countryAdapter);
-        countrySpinner.setSelection(suggestedCountry);
-        c.addView(countrySpinner, new LinearLayout.LayoutParams(-1, dp(56)));
-
-        c.addView(tv("2. SELECT STATE / REGION", 13, GRAY));
-        Spinner regionSpinner = new Spinner(this);
-        c.addView(regionSpinner, new LinearLayout.LayoutParams(-1, dp(56)));
-        final java.util.ArrayList<String>[] regionChoices = new java.util.ArrayList[]{new java.util.ArrayList<String>()};
-
-        c.addView(tv("3. SELECT LANGUAGE / भाषा चुनें", 13, GRAY));
-        Spinner languageSpinner = new Spinner(this);
-        c.addView(languageSpinner, new LinearLayout.LayoutParams(-1, dp(56)));
-        TextView helper = tv("Only languages associated with the selected country are listed. English is always available as a choice. Regional coverage can vary by language-data source.", 12, GRAY);
-        helper.setPadding(0, dp(7), 0, dp(12));
-        c.addView(helper);
-        c.addView(wideInfo("🤖", "AI Master", "The selected language will be used for AI guidance when Android speech support is available."));
-
-        final java.util.ArrayList<Locale>[] languageChoices = new java.util.ArrayList[]{new java.util.ArrayList<Locale>()};
-        final boolean[] firstCountryCallback = {true};
-        countrySpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) { }
-            @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                if (position < 0 || position >= countryCodes.size()) return;
-                String code = countryCodes.get(position);
-                regionChoices[0] = regionsForCountry(code);
-                ArrayAdapter<String> regionAdapter = new ArrayAdapter<>(MainActivity.this,
-                        android.R.layout.simple_spinner_item, regionChoices[0]);
-                regionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                regionSpinner.setAdapter(regionAdapter);
-                String savedRegion = getSharedPreferences(PREFS, MODE_PRIVATE).getString("region_name", "");
-                if (code.equalsIgnoreCase(getSharedPreferences(PREFS, MODE_PRIVATE).getString("country_code", ""))
-                        && !savedRegion.isEmpty()) {
-                    int ri = regionChoices[0].indexOf(savedRegion);
-                    if (ri >= 0) regionSpinner.setSelection(ri);
-                }
-                languageChoices[0] = languagesForCountry(code);
-                java.util.ArrayList<String> labels = new java.util.ArrayList<>();
-                int selectedLanguage = 0;
-                String currentLanguage = Locale.getDefault().getLanguage();
-                String primaryLanguage = defaultLanguageForCountry(code).getLanguage();
-                for (int i = 0; i < languageChoices[0].size(); i++) {
-                    Locale loc = languageChoices[0].get(i);
-                    labels.add(localeDisplayName(loc));
-                    if (loc.getLanguage().equalsIgnoreCase(primaryLanguage)) selectedLanguage = i;
-                    if (loc.getLanguage().equalsIgnoreCase(currentLanguage)) selectedLanguage = i;
-                }
-                ArrayAdapter<String> adapter = new ArrayAdapter<>(MainActivity.this,
-                        android.R.layout.simple_spinner_item, labels);
-                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                languageSpinner.setAdapter(adapter);
-                if (!firstCountryCallback[0]) {
-                    String savedCountry = getSharedPreferences(PREFS, MODE_PRIVATE).getString("country_code", "");
-                    String savedTag = getSharedPreferences(PREFS, MODE_PRIVATE).getString("language_tag", "");
-                    if (code.equalsIgnoreCase(savedCountry) && !savedTag.isEmpty()) {
-                        for (int i = 0; i < languageChoices[0].size(); i++) {
-                            if (languageChoices[0].get(i).getLanguage().equalsIgnoreCase(Locale.forLanguageTag(savedTag).getLanguage())) {
-                                selectedLanguage = i; break;
-                            }
-                        }
-                    }
-                }
-                firstCountryCallback[0] = false;
-                languageSpinner.setSelection(selectedLanguage);
-            }
-        });
-
-        Button continueButton = primary("Continue  →");
-        continueButton.setOnClickListener(v -> {
-            int countryIndex = countrySpinner.getSelectedItemPosition();
-            int languageIndex = languageSpinner.getSelectedItemPosition();
-            if (countryIndex < 0 || countryIndex >= countryCodes.size()
-                    || languageIndex < 0 || languageIndex >= languageChoices[0].size()) {
-                Toast.makeText(this, "Please select your country and language.", Toast.LENGTH_LONG).show();
-                return;
-            }
-            selectedCountryCode = countryCodes.get(countryIndex);
-            selectedCountryName = new Locale("", selectedCountryCode).getDisplayCountry(Locale.ENGLISH);
-            String selectedRegion = regionSpinner.getSelectedItem() == null ? "Not specified" : String.valueOf(regionSpinner.getSelectedItem());
-            Locale chosen = languageChoices[0].get(languageIndex);
-            aiLocale = chosen;
-            selectedLanguageTag = chosen.toLanguageTag();
-            getSharedPreferences(PREFS, MODE_PRIVATE).edit()
-                    .putString("country_code", selectedCountryCode)
-                    .putString("country_name", selectedCountryName)
-                    .putString("region_name", selectedRegion)
-                    .putString("language_tag", selectedLanguageTag)
-                    .apply();
-            setAILanguageByLocale(chosen);
-            showHome();
-            aiWelcomeSpoken = true;
-            speakAI(aiText("Welcome to Viyzo. Your country and language are saved. I will guide you step by step.",
-                    "Viyzo में आपका स्वागत है। आपका देश और भाषा सेव हो गए हैं। मैं आपको हर कदम पर समझाऊँगा।",
-                    "Viyzo-তে স্বাগতম। আপনার দেশ ও ভাষা সংরক্ষণ করা হয়েছে। আমি প্রতিটি ধাপে সাহায্য করব।",
-                    "Viyzo میں خوش آمدید۔ آپ کا ملک اور زبان محفوظ ہوگئے ہیں۔ میں ہر قدم پر رہنمائی کروں گا۔",
-                    "مرحباً بك في Viyzo. تم حفظ بلدك ولغتك. سأرشدك خطوة بخطوة.",
-                    "Viyzo'ya hoş geldiniz. Ülkeniz ve diliniz kaydedildi. Size adım adım rehberlik edeceğim."));
-        });
-        c.addView(continueButton);
-        Button changeLater = secondary("I need to change country/language later");
-        changeLater.setOnClickListener(v -> Toast.makeText(this, "You can change this from Settings → Country & Language.", Toast.LENGTH_LONG).show());
-        c.addView(changeLater);
+        subtitle.setPadding(0, dp(4), 0, dp(18));
+        root.addView(subtitle, matchWrap());
     }
 
-    // Country-aware region selector. India includes every state and union territory;
-    // other federations include major regions where practical and allow a general option.
-    private java.util.ArrayList<String> regionsForCountry(String code) {
-        java.util.ArrayList<String> regions = new java.util.ArrayList<>();
-        regions.add("All regions / Not specified");
-        switch (code.toUpperCase(Locale.ROOT)) {
-            case "IN":
-                regions.addAll(java.util.Arrays.asList(
-                    "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
-                    "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"));
-                break;
-            case "US": regions.addAll(java.util.Arrays.asList("Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware", "Florida", "Georgia", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming", "District of Columbia", "Puerto Rico")); break;
-            case "CA": regions.addAll(java.util.Arrays.asList("Alberta", "British Columbia", "Manitoba", "New Brunswick", "Newfoundland and Labrador", "Northwest Territories", "Nova Scotia", "Nunavut", "Ontario", "Prince Edward Island", "Quebec", "Saskatchewan", "Yukon")); break;
-            case "AU": regions.addAll(java.util.Arrays.asList("New South Wales", "Queensland", "South Australia", "Tasmania", "Victoria", "Western Australia", "Australian Capital Territory", "Northern Territory")); break;
-            case "PK": regions.addAll(java.util.Arrays.asList("Punjab", "Sindh", "Khyber Pakhtunkhwa", "Balochistan", "Islamabad Capital Territory", "Gilgit-Baltistan", "Azad Jammu and Kashmir")); break;
-            case "BD": regions.addAll(java.util.Arrays.asList("Barisal", "Chattogram", "Dhaka", "Khulna", "Mymensingh", "Rajshahi", "Rangpur", "Sylhet")); break;
-            case "GB": regions.addAll(java.util.Arrays.asList("England", "Scotland", "Wales", "Northern Ireland")); break;
-            case "BR": regions.addAll(java.util.Arrays.asList("Acre", "Alagoas", "Amapá", "Amazonas", "Bahia", "Ceará", "Distrito Federal", "Espírito Santo", "Goiás", "Maranhão", "Mato Grosso", "Mato Grosso do Sul", "Minas Gerais", "Pará", "Paraíba", "Paraná", "Pernambuco", "Piauí", "Rio de Janeiro", "Rio Grande do Norte", "Rio Grande do Sul", "Rondônia", "Roraima", "Santa Catarina", "São Paulo", "Sergipe", "Tocantins")); break;
-            case "MX": regions.addAll(java.util.Arrays.asList("Aguascalientes", "Baja California", "Baja California Sur", "Campeche", "Chiapas", "Chihuahua", "Ciudad de México", "Coahuila", "Colima", "Durango", "Guanajuato", "Guerrero", "Hidalgo", "Jalisco", "México", "Michoacán", "Morelos", "Nayarit", "Nuevo León", "Oaxaca", "Puebla", "Querétaro", "Quintana Roo", "San Luis Potosí", "Sinaloa", "Sonora", "Tabasco", "Tamaulipas", "Tlaxcala", "Veracruz", "Yucatán", "Zacatecas")); break;
-            case "DE": regions.addAll(java.util.Arrays.asList("Baden-Württemberg", "Bavaria", "Berlin", "Brandenburg", "Bremen", "Hamburg", "Hesse", "Lower Saxony", "Mecklenburg-Vorpommern", "North Rhine-Westphalia", "Rhineland-Palatinate", "Saarland", "Saxony", "Saxony-Anhalt", "Schleswig-Holstein", "Thuringia")); break;
-            case "CH": regions.addAll(java.util.Arrays.asList("Aargau", "Appenzell Ausserrhoden", "Appenzell Innerrhoden", "Basel-Landschaft", "Basel-Stadt", "Bern", "Fribourg", "Geneva", "Glarus", "Grisons", "Jura", "Lucerne", "Neuchâtel", "Nidwalden", "Obwalden", "Schaffhausen", "Schwyz", "Solothurn", "St. Gallen", "Thurgau", "Ticino", "Uri", "Valais", "Vaud", "Zug", "Zurich")); break;
-            case "MY": regions.addAll(java.util.Arrays.asList("Johor", "Kedah", "Kelantan", "Kuala Lumpur", "Labuan", "Melaka", "Negeri Sembilan", "Pahang", "Penang", "Perak", "Perlis", "Putrajaya", "Sabah", "Sarawak", "Selangor", "Terengganu")); break;
-            case "NP": regions.addAll(java.util.Arrays.asList("Koshi", "Madhesh", "Bagmati", "Gandaki", "Lumbini", "Karnali", "Sudurpashchim")); break;
-            case "ZA": regions.addAll(java.util.Arrays.asList("Eastern Cape", "Free State", "Gauteng", "KwaZulu-Natal", "Limpopo", "Mpumalanga", "Northern Cape", "North West", "Western Cape")); break;
-            default: regions.add("Other / local region"); break;
-        }
-        return regions;
+    private void showWelcome() {
+        setScreen("Global work platform");
+        cardText("Find work, manage your profile, and get guided by AI Master.");
+        addButton("Create Worker Account", () -> showSignup());
+        addButton("Login", () -> showLogin());
+        addButton("Company Portal", () -> showCompanyPortal());
+        addButton("AI Master", () -> showAI());
+        addButton("Country & Language", () -> showSettings());
+        addStatus("Demo job examples are not paid work. Real account access requires Supabase setup.");
     }
 
-    // Country-filtered language choices. English is deliberately included for every country.
-    // The device's CLDR/Java locale data supplements the curated official/widely-used languages.
-    private java.util.ArrayList<Locale> languagesForCountry(String countryCode) {
-        java.util.LinkedHashMap<String, Locale> found = new java.util.LinkedHashMap<>();
-        addLanguage(found, "en", countryCode);
-        String[] curated = curatedLanguagesForCountry(countryCode);
-        for (String tag : curated) {
-            Locale loc = Locale.forLanguageTag(tag);
-            if (!loc.getLanguage().isEmpty()) addLanguage(found, loc.getLanguage(), countryCode);
-        }
-        for (Locale loc : Locale.getAvailableLocales()) {
-            if (countryCode.equalsIgnoreCase(loc.getCountry()) && !loc.getLanguage().isEmpty()) {
-                addLanguage(found, loc.getLanguage(), countryCode);
-            }
-        }
-        Locale primary = defaultLanguageForCountry(countryCode);
-        addLanguage(found, primary.getLanguage(), countryCode);
-        java.util.ArrayList<Locale> result = new java.util.ArrayList<>(found.values());
-        result.sort((a, b) -> {
-            if (a.getLanguage().equals("en")) return b.getLanguage().equals("en") ? 0 : -1;
-            if (b.getLanguage().equals("en")) return 1;
-            return localeDisplayName(a).compareToIgnoreCase(localeDisplayName(b));
-        });
-        return result;
-    }
-
-    private void addLanguage(java.util.LinkedHashMap<String, Locale> found, String languageCode, String countryCode) {
-        if (languageCode == null || languageCode.trim().isEmpty()) return;
-        String normalized = languageCode.toLowerCase(Locale.ROOT);
-        Locale loc = new Locale(normalized, countryCode);
-        found.put(normalized, loc);
-    }
-
-    private String[] curatedLanguagesForCountry(String code) {
-        switch (code.toUpperCase(Locale.ROOT)) {
-            case "IN": return new String[]{"as","bn","brx","doi","gu","hi","kn","ks","kok","mai","ml","mni","mr","ne","or","pa","sa","sat","sd","ta","te","ur"};
-            case "US": return new String[]{"es","zh","tl","vi","ar","fr","ko","de","ru","pt","ja","hi"};
-            case "GB": return new String[]{"cy","gd","ga","pl","ur","bn","pa","gu","ar"};
-            case "CA": return new String[]{"fr","iu","cr","oj","zh","pa"};
-            case "AU": return new String[]{"en","zh","ar","vi","it","el","yue"};
-            case "NZ": return new String[]{"mi","sm","to","zh","hi"};
-            case "BD": return new String[]{"bn","ccp","mni"};
-            case "PK": return new String[]{"ur","pa","sd","ps","bal","skr","brh"};
-            case "NP": return new String[]{"ne","mai","bho","new","dty","sat"};
-            case "LK": return new String[]{"si","ta"};
-            case "CN": return new String[]{"zh","ug","bo","ii","mn"};
-            case "TW": return new String[]{"zh","nan","hak"};
-            case "HK": return new String[]{"zh","yue","en"};
-            case "MO": return new String[]{"zh","yue","pt"};
-            case "JP": return new String[]{"ja","ryu","ain"};
-            case "KR": case "KP": return new String[]{"ko"};
-            case "SG": return new String[]{"zh","ms","ta"};
-            case "MY": return new String[]{"ms","zh","ta","iban","bjn"};
-            case "ID": return new String[]{"id","jv","su","min","ace","ban","bug","mak"};
-            case "PH": return new String[]{"fil","ceb","ilo","hil","war","pam","bcl","pag","mrw"};
-            case "TH": return new String[]{"th","lo","km","ms"};
-            case "VN": return new String[]{"vi","km","zh","fr"};
-            case "MM": return new String[]{"my","shn","kar","kac","mnw","hak"};
-            case "KH": return new String[]{"km","fr"};
-            case "LA": return new String[]{"lo","hmn","kdt"};
-            case "IR": return new String[]{"fa","az","ku","bal","lrc"};
-            case "AF": return new String[]{"ps","fa","uz","tk"};
-            case "IQ": return new String[]{"ar","ku","ckb","hy"};
-            case "IL": return new String[]{"he","ar","ru","yi"};
-            case "SA": case "AE": case "QA": case "KW": case "BH": case "OM": case "YE": return new String[]{"ar","ur","fa","hi","ml","bn","tl"};
-            case "EG": case "JO": case "LB": case "SY": case "PS": return new String[]{"ar","fr","hy","ku"};
-            case "MA": case "DZ": case "TN": return new String[]{"ar","zgh","tzm","fr"};
-            case "ET": return new String[]{"am","om","ti","so","sid","wal"};
-            case "KE": return new String[]{"sw","en","ki","luo","kln","kam"};
-            case "TZ": return new String[]{"sw","en","suk","gog","cgg","mas"};
-            case "UG": return new String[]{"en","sw","lg","nyn","ach","teo"};
-            case "ZA": return new String[]{"af","zu","xh","st","tn","ts","ss","ve","nr","nso"};
-            case "NG": return new String[]{"ha","yo","ig","pcm","ff","ibo"};
-            case "GH": return new String[]{"ak","ee","gaa","dag","ha","tw"};
-            case "CM": return new String[]{"fr","en","bas","dua","ewo","ful"};
-            case "SN": return new String[]{"fr","wo","ff","sr"};
-            case "RW": return new String[]{"rw","fr","sw"};
-            case "BI": return new String[]{"rn","fr","sw"};
-            case "CD": return new String[]{"fr","ln","sw","kg","lua"};
-            case "MG": return new String[]{"mg","fr"};
-            case "BR": return new String[]{"pt","gn","yrl"};
-            case "MX": return new String[]{"es","nah","yua","oto","zap","mix"};
-            case "AR": case "CO": case "PE": case "CL": case "VE": case "EC": case "BO": case "PY": case "UY": case "CU": case "DO": case "GT": case "HN": case "SV": case "NI": case "CR": case "PA": return new String[]{"es","qu","gn","ay","ht"};
-            case "ES": return new String[]{"es","ca","gl","eu","oc"};
-            case "FR": return new String[]{"fr","br","oc","co","eu","ca","gsw"};
-            case "BE": return new String[]{"nl","fr","de"};
-            case "CH": return new String[]{"de","fr","it","rm"};
-            case "LU": return new String[]{"lb","fr","de"};
-            case "DE": case "AT": return new String[]{"de","dsb","hsb","fy"};
-            case "IT": return new String[]{"it","de","fr","sc","scn","vec","fur","lld"};
-            case "NL": return new String[]{"nl","fy","pap"};
-            case "IE": return new String[]{"ga","en"};
-            case "FI": return new String[]{"fi","sv","se"};
-            case "SE": return new String[]{"sv","se","fi","yi"};
-            case "NO": return new String[]{"no","nb","nn","se"};
-            case "DK": return new String[]{"da","fo","kl"};
-            case "PL": return new String[]{"pl","cs","uk"};
-            case "CZ": return new String[]{"cs","sk"};
-            case "SK": return new String[]{"sk","hu","rom"};
-            case "RO": return new String[]{"ro","hu","rom"};
-            case "HU": return new String[]{"hu","rom","hr","sk"};
-            case "GR": case "CY": return new String[]{"el","tr"};
-            case "UA": return new String[]{"uk","ru","crh"};
-            case "RU": return new String[]{"ru","tt","ba","cv","ce","sah","os","av","udm"};
-            case "GE": return new String[]{"ka","az","hy","ab"};
-            case "AM": return new String[]{"hy","ru"};
-            case "AZ": return new String[]{"az","ru","hy"};
-            case "KZ": return new String[]{"kk","ru"};
-            case "UZ": return new String[]{"uz","ru","kaa"};
-            case "KG": return new String[]{"ky","ru","uz"};
-            case "TJ": return new String[]{"tg","ru","uz"};
-            case "TM": return new String[]{"tk","ru","uz"};
-            case "TR": return new String[]{"tr","ku","zza","ar"};
-            case "PT": return new String[]{"pt","mwl"};
-            case "IS": return new String[]{"is"};
-            case "MT": return new String[]{"mt","it"};
-            case "RS": return new String[]{"sr","hu","bs","rom"};
-            case "BA": return new String[]{"bs","hr","sr"};
-            case "HR": return new String[]{"hr","sr","it"};
-            case "ME": return new String[]{"sr","cnr","bs","sq"};
-            case "AL": case "XK": return new String[]{"sq","sr"};
-            case "MK": return new String[]{"mk","sq","tr"};
-            case "BG": return new String[]{"bg","tr","rom"};
-            case "MD": return new String[]{"ro","uk","ru","gag"};
-            case "BY": return new String[]{"be","ru"};
-            case "LT": return new String[]{"lt","pl","ru"};
-            case "LV": return new String[]{"lv","ru","lt"};
-            case "EE": return new String[]{"et","ru"};
-            case "FJ": return new String[]{"fj","hi","hif"};
-            case "PG": return new String[]{"tpi","ho","meu"};
-            case "VU": return new String[]{"bi","fr"};
-            case "WS": return new String[]{"sm"};
-            case "TO": return new String[]{"to"};
-            case "SB": return new String[]{"en","tpi"};
-            default: return new String[]{};
-        }
-    }
-
-    private Locale defaultLanguageForCountry(String countryCode) {
-        if (countryCode == null) return Locale.ENGLISH;
-        switch (countryCode.toUpperCase(Locale.ROOT)) {
-            case "IN": return new Locale("hi", "IN");
-            case "BD": return new Locale("bn", "BD");
-            case "PK": return new Locale("ur", "PK");
-            case "US": case "GB": case "AU": case "NZ": case "IE": case "NG": case "GH":
-                return new Locale("en", countryCode);
-            case "SA": case "AE": case "EG": case "IQ": case "JO": case "MA": case "DZ":
-                return new Locale("ar", countryCode);
-            case "FR": return new Locale("fr", "FR");
-            case "ES": case "MX": case "AR": case "CO": case "PE": case "CL":
-                return new Locale("es", countryCode);
-            case "BR": case "PT": return new Locale("pt", countryCode);
-            case "TR": return new Locale("tr", "TR");
-            case "CN": case "TW": return new Locale("zh", countryCode);
-            case "JP": return new Locale("ja", "JP");
-            case "KR": return new Locale("ko", "KR");
-            case "RU": return new Locale("ru", "RU");
-            case "DE": case "AT": return new Locale("de", countryCode);
-            case "IT": return new Locale("it", "IT");
-            case "ID": return new Locale("id", "ID");
-            case "TH": return new Locale("th", "TH");
-            case "VN": return new Locale("vi", "VN");
-            case "MY": return new Locale("ms", "MY");
-            case "PH": return new Locale("fil", "PH");
-            case "IR": return new Locale("fa", "IR");
-            case "NP": return new Locale("ne", "NP");
-            case "LK": return new Locale("si", "LK");
-            case "MM": return new Locale("my", "MM");
-            case "KH": return new Locale("km", "KH");
-            case "LA": return new Locale("lo", "LA");
-            case "ET": return new Locale("am", "ET");
-            case "KE": case "TZ": return new Locale("sw", countryCode);
-            default:
-                for (Locale loc : Locale.getAvailableLocales()) {
-                    if (countryCode.equalsIgnoreCase(loc.getCountry()) && !loc.getLanguage().isEmpty()) return loc;
-                }
-                return Locale.ENGLISH;
-        }
-    }
-
-    private void setAILanguageByLocale(Locale locale) {
-        aiLocale = locale == null ? Locale.getDefault() : locale;
-        if (aiTts != null && !aiTtsInitializing) {
-            int result = aiTts.setLanguage(aiLocale);
-            aiTtsReady = result != TextToSpeech.LANG_MISSING_DATA
-                    && result != TextToSpeech.LANG_NOT_SUPPORTED;
-            if (!aiTtsReady && aiStatusView != null) {
-                aiStatusView.setText("Selected language text is available, but voice data may need to be installed.");
-            }
-        }
-    }
-
-    // ============================================================
-    // HOME
-    // ============================================================
-    private void showHome() {
-        startScreen(false);
-        LinearLayout c = content();
-
-        LinearLayout center = column();
-        center.setGravity(Gravity.CENTER_HORIZONTAL);
-
-        center.addView(logo(58), new LinearLayout.LayoutParams(dp(115), dp(115)));
-
-        TextView name = tv("VIYZO", 39, WHITE);
-        name.setGravity(Gravity.CENTER);
-        name.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        center.addView(name);
-
-        TextView sub = tv("Global Work Network", 14, GRAY);
-        sub.setGravity(Gravity.CENTER);
-        center.addView(sub);
-        TextView countryLanguage = tv(flagForCountry(selectedCountryCode) + "  " +
-                (selectedCountryName.isEmpty() ? "Choose country" : selectedCountryName) + "  •  " +
-                (selectedLanguageTag.isEmpty() ? Locale.getDefault().getDisplayLanguage() :
-                        Locale.forLanguageTag(selectedLanguageTag).getDisplayName(Locale.forLanguageTag(selectedLanguageTag))), 11, GRAY);
-        countryLanguage.setGravity(Gravity.CENTER);
-        center.addView(countryLanguage);
-        Button changeLocale = secondary("🌐  Change Country / Language");
-        changeLocale.setOnClickListener(v -> showCountryLanguageSetup());
-        center.addView(changeLocale);
-
-        TextView slogan = tv("\nWork Smarter\nEarn Better\nTogether", 19, TEXT);
-        slogan.setGravity(Gravity.CENTER);
-        slogan.setPadding(0, dp(30), 0, dp(24));
-        center.addView(slogan);
-
-        TextView globe = tv("🌐", 74, WHITE);
-        globe.setGravity(Gravity.CENTER);
-        center.addView(globe, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(115)));
-
-        Button start = primary("Get Started   →");
-        start.setOnClickListener(v -> showLogin());
-        center.addView(start);
-
-        Button company = secondary("🏢  I'm a Company / Post Work");
-        company.setOnClickListener(v -> showCompanyPortal());
-        center.addView(company);
-
-        Button create = secondary("Create New Worker Account");
-        create.setOnClickListener(v -> showCreateAccount());
-        center.addView(create);
-
-        c.addView(center);
-    }
-
-    // ============================================================
-    // LOGIN / ACCOUNT
-    // ============================================================
-    private void showLogin() {
-        startScreen(false);
-        LinearLayout c = content();
-
-        c.addView(brandHeader());
-        c.addView(heading("Welcome Back"));
-        c.addView(small("Login to your Viyzo Worker account."));
-
-        c.addView(input("Email or Phone"));
-
-        EditText pass = input("Viyzo Password");
-        pass.setInputType(InputType.TYPE_CLASS_TEXT |
-                InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        c.addView(pass);
-
-        Button login = primary("🔐  Login");
-        login.setOnClickListener(v -> {
-            Toast.makeText(this,
-                    "Demo login: secure backend connection is required for real accounts.",
-                    Toast.LENGTH_SHORT).show();
-            showDashboard();
-        });
-        c.addView(login);
-
-        Button company = secondary("🏢  Company Login");
-        company.setOnClickListener(v -> showCompanyPortal());
-        c.addView(company);
-
-        Button create = secondary("Create New Worker Account");
-        create.setOnClickListener(v -> showCreateAccount());
-        c.addView(create);
-    }
-
-    private void showCreateAccount() {
-        startScreen(false);
-        LinearLayout c = content();
-
-        c.addView(brandHeader());
-        c.addView(heading("Create Worker Account"));
-        c.addView(small(
-                "Start with basic access. Stronger verification can unlock more work."
-        ));
-
-        c.addView(input("Full Name"));
-        c.addView(input("Email"));
-        c.addView(input("Phone Number"));
-
-        EditText pass = input("Create Viyzo Password");
-        pass.setInputType(InputType.TYPE_CLASS_TEXT |
-                InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        c.addView(pass);
-
+    private void showSignup() {
+        setScreen("Create worker account");
+        EditText name = field("Full name");
+        EditText email = field("Email address");
+        email.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        EditText phone = field("Phone (optional)");
+        EditText pass = field("Create password (at least 6 characters)");
+        pass.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         CheckBox terms = new CheckBox(this);
-        terms.setText("I agree to Viyzo Terms and Privacy Policy.");
-        terms.setTextColor(TEXT);
-        terms.setTextSize(12);
-        c.addView(terms);
-
-        Button create = primary("🚀  Create Account");
-        create.setOnClickListener(v -> {
-            if (!terms.isChecked()) {
-                Toast.makeText(this,
-                        "Please accept the Terms and Privacy Policy.",
-                        Toast.LENGTH_SHORT).show();
+        terms.setText("I agree to the Terms and Privacy Policy");
+        terms.setTextColor(C_TEXT);
+        root.addView(terms, matchWrap());
+        addButton("Create Account", () -> {
+            String n = value(name), e = value(email), pw = value(pass);
+            if (n.isEmpty() || e.isEmpty() || pw.length() < 6 || !terms.isChecked()) {
+                toast("Enter name, valid email, password (6+ characters), and accept terms.");
                 return;
             }
-            showWorkerVerification();
+            displayName = n;
+            userEmail = e;
+            JSONObject body = new JSONObject();
+            try {
+                body.put("email", e);
+                body.put("password", pw);
+                JSONObject data = new JSONObject();
+                data.put("display_name", n);
+                data.put("phone", value(phone));
+                data.put("country", country);
+                data.put("preferred_language", language);
+                body.put("data", data);
+            } catch (Exception ignored) {}
+            request("POST", "/auth/v1/signup", body, false, (code, response) -> {
+                if (code >= 200 && code < 300) {
+                    JSONObject j = parse(response);
+                    JSONObject user = j.optJSONObject("user");
+                    if (user == null) user = j;
+                    String id = user.optString("id", "");
+                    String token = j.optString("access_token", "");
+                    if (!id.isEmpty() && !token.isEmpty()) {
+                        userId = id; accessToken = token;
+                        saveSession();
+                        upsertProfileThenDashboard();
+                    } else {
+                        toast("Signup submitted. If email confirmation is enabled, confirm your email, then log in.");
+                        showLogin();
+                    }
+                } else toast("Signup failed (" + code + "): " + friendlyError(response));
+            });
         });
-        c.addView(create);
-
-        Button back = secondary("← Back to Login");
-        back.setOnClickListener(v -> showLogin());
-        c.addView(back);
+        addButton("Back", () -> showWelcome());
     }
 
-    // ============================================================
-    // WORKER DASHBOARD
-    // ============================================================
+    private void showLogin() {
+        setScreen("Login securely");
+        EditText email = field("Email address");
+        email.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        EditText pass = field("Password");
+        pass.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        addButton("Login", () -> {
+            String e = value(email), pw = value(pass);
+            if (e.isEmpty() || pw.isEmpty()) { toast("Enter email and password."); return; }
+            JSONObject body = new JSONObject();
+            try { body.put("email", e); body.put("password", pw); } catch (Exception ignored) {}
+            request("POST", "/auth/v1/token?grant_type=password", body, false, (code, response) -> {
+                if (code >= 200 && code < 300) {
+                    JSONObject j = parse(response);
+                    JSONObject user = j.optJSONObject("user");
+                    if (user == null) user = new JSONObject();
+                    accessToken = j.optString("access_token", "");
+                    userId = user.optString("id", "");
+                    userEmail = e;
+                    if (accessToken.isEmpty() || userId.isEmpty()) {
+                        toast("Login response incomplete. Check Supabase Auth settings.");
+                        return;
+                    }
+                    saveSession();
+                    showDashboard();
+                } else toast("Login failed (" + code + "): " + friendlyError(response));
+            });
+        });
+        addButton("Create account", () -> showSignup());
+        addButton("Back", () -> showWelcome());
+    }
+
+    private void upsertProfileThenDashboard() {
+        JSONObject profile = new JSONObject();
+        try {
+            profile.put("id", userId);
+            profile.put("display_name", displayName);
+            profile.put("country", country);
+            profile.put("preferred_language", language);
+        } catch (Exception ignored) {}
+        request("POST", "/rest/v1/worker_profiles?on_conflict=id", profile, true, (code, response) -> {
+            if (code < 200 || code >= 300) {
+                toast("Account created, but profile setup needs checking (" + code + "). Check worker_profiles RLS/table columns.");
+            }
+            showDashboard();
+        }, "resolution=merge-duplicates,return=minimal");
+    }
+
     private void showDashboard() {
-        startScreen(true);
-        LinearLayout c = content();
-
-        c.addView(brandHeader());
-
-        LinearLayout welcome = card();
-        LinearLayout wr = row();
-
-        TextView avatar = tv("👤", 31, WHITE);
-        avatar.setGravity(Gravity.CENTER);
-        avatar.setBackground(outlined(CARD2, BORDER, 35));
-        wr.addView(avatar, new LinearLayout.LayoutParams(dp(58), dp(58)));
-
-        LinearLayout wn = column();
-        TextView w1 = tv("Good day, Ashikur Rahman 👋", 15, WHITE);
-        w1.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        wn.addView(w1);
-        wn.addView(tv("Worker ID: VZ388742", 11, GRAY));
-        wn.addView(tv("● Basic Worker", 11, GREEN));
-
-        LinearLayout.LayoutParams wnp =
-                new LinearLayout.LayoutParams(0, dp(58), 1);
-        wnp.setMargins(dp(11), 0, 0, 0);
-        wr.addView(wn, wnp);
-
-        welcome.addView(wr);
-        c.addView(welcome);
-        setMargins(welcome, 0, 4, 0, 13);
-
-        // Earning opportunity target.
-        LinearLayout target = card();
-        target.setBackground(primaryBg());
-        target.addView(tv("🎯  Daily Earning Opportunity", 16, WHITE));
-        TextView targetValue = tv("₹" +
-                formatNumber(DAILY_EARNING_TARGET_INR) +
-                " target opportunity", 25, WHITE);
-        targetValue.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        target.addView(targetValue);
-        target.addView(tv(
-                "Planning guide: up to " +
-                        formatNumber(TARGET_HOURS_PER_DAY) +
-                        " hours • ~₹" +
-                        formatNumber(TARGET_INR_PER_HOUR) +
-                        "/hour target",
-                11, WHITE));
-        target.addView(tv(
-                "Not guaranteed income — actual earnings depend on real work supply, rate, quality and availability.",
-                10, WHITE));
-        c.addView(target);
-        setMargins(target, 0, 0, 0, 13);
-
-        LinearLayout manager = card();
-        manager.setBackground(primaryBg());
-        TextView mt = tv("🤖  AI Master Manager       ›", 17, WHITE);
-        mt.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        manager.addView(mt);
-        manager.addView(tv(
-                "Matches skills, language, workload, deadline, verification and availability.",
-                11, WHITE));
-        manager.setOnClickListener(v -> showAIMasterManager());
-        c.addView(manager);
-        setMargins(manager, 0, 0, 0, 13);
-
-        LinearLayout r1 = row();
-        LinearLayout jobs = menuCard(
-                "🔎", "Available Jobs", "Explore global work",
-                v -> showJobs());
-        LinearLayout myJobs = menuCard(
-                "📋", "My Work", "Active assignments",
-                v -> showMyJobs());
-
-        r1.addView(jobs, new LinearLayout.LayoutParams(0, dp(145), 1));
-        LinearLayout.LayoutParams p12 =
-                new LinearLayout.LayoutParams(0, dp(145), 1);
-        p12.setMargins(dp(8), dp(15), 0, 0);
-        r1.addView(myJobs, p12);
-        c.addView(r1);
-
-        LinearLayout r2 = row();
-        LinearLayout earnings = menuCard(
-                "💰", "Earnings", "Balance & payout",
-                v -> showEarnings());
-        LinearLayout verify = menuCard(
-                "🛡", "Verification", "Worker verification",
-                v -> showWorkerVerification());
-
-        r2.addView(earnings, new LinearLayout.LayoutParams(0, dp(145), 1));
-        LinearLayout.LayoutParams p22 =
-                new LinearLayout.LayoutParams(0, dp(145), 1);
-        p22.setMargins(dp(8), 0, 0, 0);
-        r2.addView(verify, p22);
-        c.addView(r2);
-
-        TextView q = tv("Work Sources", 18, WHITE);
-        q.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        q.setPadding(0, dp(17), 0, dp(6));
-        c.addView(q);
-
-        LinearLayout r3 = row();
-        r3.addView(menuCard("⚡", "Urgent", "Fast deadlines",
-                v -> showJobs()), new LinearLayout.LayoutParams(0, dp(125), 1));
-
-        LinearLayout.LayoutParams rp =
-                new LinearLayout.LayoutParams(0, dp(125), 1);
-        rp.setMargins(dp(8), 0, 0, 0);
-        r3.addView(menuCard("📦", "Bulk Work", "Large batches",
-                v -> showJobs()), rp);
-        c.addView(r3);
-
-        LinearLayout r4 = row();
-        r4.addView(menuCard("🔁", "Recurring", "Repeat work",
-                v -> showJobs()), new LinearLayout.LayoutParams(0, dp(125), 1));
-
-        LinearLayout.LayoutParams r4p =
-                new LinearLayout.LayoutParams(0, dp(125), 1);
-        r4p.setMargins(dp(8), dp(8), 0, 0);
-        r4.addView(menuCard("🌍", "Global", "Worldwide work",
-                v -> showJobs()), r4p);
-        c.addView(r4);
-
-        LinearLayout settings = card();
-        settings.setOrientation(LinearLayout.HORIZONTAL);
-        settings.addView(tv("⚙", 24, WHITE),
-                new LinearLayout.LayoutParams(dp(42), dp(45)));
-
-        TextView st = tv("Settings & Account", 15, WHITE);
-        st.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        settings.addView(st, new LinearLayout.LayoutParams(0, dp(45), 1));
-
-        TextView arrow = tv("›", 28, GRAY);
-        arrow.setGravity(Gravity.CENTER);
-        settings.addView(arrow, new LinearLayout.LayoutParams(dp(40), dp(45)));
-
-        settings.setOnClickListener(v -> showSettings());
-        c.addView(settings);
-        setMargins(settings, 0, 10, 0, 0);
-    }
-
-    // ============================================================
-    // AI MASTER MANAGER
-    // ============================================================
-    private void showAIMasterManager() {
-        startScreen(false);
-        LinearLayout c = content();
-
-        c.addView(heading("🤖 AI Master Manager"));
-        c.addView(small(
-                "Decision layer for matching available company work with suitable workers."
-        ));
-
-        LinearLayout hero = card();
-        hero.setBackground(primaryBg());
-        hero.addView(tv("Global Work Matching Engine", 19, WHITE));
-        hero.addView(tv(
-                "The production version will use secure backend data to score workers and jobs in real time.",
-                11, WHITE));
-        c.addView(hero);
-
-        c.addView(wideInfo("🎯", "Worker Earning Target",
-                "₹" + formatNumber(DAILY_EARNING_TARGET_INR) +
-                        " opportunity target/day"));
-        c.addView(wideInfo("💰", "Worker Pool",
-                formatNumber(WORKER_SHARE_PERCENT) + "% of configured job budget"));
-        c.addView(wideInfo("🏢", "Viyzo Platform",
-                formatNumber(VIYZO_SHARE_PERCENT) +
-                        "% for platform costs and remaining margin"));
-        c.addView(wideInfo("⏱", "Target Planning",
-                "Up to " + formatNumber(TARGET_HOURS_PER_DAY) +
-                        " hours/day"));
-
-        TextView factors = tv("Matching Factors", 18, WHITE);
-        factors.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        factors.setPadding(0, dp(15), 0, dp(7));
-        c.addView(factors);
-
-        c.addView(wideInfo("🧠", "Skills",
-                "Task category and required skill"));
-        c.addView(wideInfo("🌐", "Language / Country",
-                "Language, eligibility and location rules"));
-        c.addView(wideInfo("🕐", "Availability",
-                "Current worker workload and capacity"));
-        c.addView(wideInfo("⭐", "Quality",
-                "Quality history and task performance"));
-        c.addView(wideInfo("🛡", "Verification",
-                "Verification level required by the job"));
-        c.addView(wideInfo("📅", "Deadline",
-                "Urgency and time remaining"));
-        c.addView(wideInfo("📦", "Workload",
-                "Quantity divided across suitable workers"));
-
-        Button feed = primary("🔎  Open AI-Matched Work");
-        feed.setOnClickListener(v -> showJobs());
-        c.addView(feed);
-
-        Button back = secondary("← Back to Dashboard");
-        back.setOnClickListener(v -> showDashboard());
-        c.addView(back);
-    }
-
-    // ============================================================
-    // JOBS
-    // ============================================================
-    private void showJobs() {
-        startScreen(true);
-        LinearLayout c = content();
-
-        LinearLayout top = row();
-        TextView back = tv("‹", 32, WHITE);
-        back.setGravity(Gravity.CENTER);
-        back.setOnClickListener(v -> showDashboard());
-        top.addView(back, new LinearLayout.LayoutParams(dp(42), dp(50)));
-
-        LinearLayout titles = column();
-        TextView h = tv("Available Work", 21, WHITE);
-        h.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        titles.addView(h);
-        titles.addView(tv(
-                "Demo opportunities now • backend will supply real jobs later",
-                10, GRAY));
-
-        top.addView(titles, new LinearLayout.LayoutParams(0, dp(50), 1));
-        c.addView(top);
-
-        c.addView(input("🔎  Search jobs, skills or categories"));
-
-        LinearLayout filters1 = row();
-        Button all = secondary("All");
-        Button urgent = secondary("Urgent");
-        Button bulk = secondary("Bulk");
-        filters1.addView(all, new LinearLayout.LayoutParams(0, dp(48), 1));
-
-        LinearLayout.LayoutParams f2 = new LinearLayout.LayoutParams(0, dp(48), 1);
-        f2.setMargins(dp(5), 0, 0, 0);
-        filters1.addView(urgent, f2);
-
-        LinearLayout.LayoutParams f3 = new LinearLayout.LayoutParams(0, dp(48), 1);
-        f3.setMargins(dp(5), 0, 0, 0);
-        filters1.addView(bulk, f3);
-        c.addView(filters1);
-
-        LinearLayout filters2 = row();
-        Button recurring = secondary("Recurring");
-        Button highPay = secondary("High Pay");
-        Button global = secondary("Global");
-        filters2.addView(recurring, new LinearLayout.LayoutParams(0, dp(48), 1));
-
-        LinearLayout.LayoutParams hp = new LinearLayout.LayoutParams(0, dp(48), 1);
-        hp.setMargins(dp(5), 0, 0, 0);
-        filters2.addView(highPay, hp);
-
-        LinearLayout.LayoutParams gp = new LinearLayout.LayoutParams(0, dp(48), 1);
-        gp.setMargins(dp(5), 0, 0, 0);
-        filters2.addView(global, gp);
-        c.addView(filters2);
-
-        for (JobData job : DEMO_JOBS) {
-            c.addView(jobCard(job));
-        }
-
-        Button company = secondary("🏢  Are you a company? Post work");
-        company.setOnClickListener(v -> showCompanyPortal());
-        c.addView(company);
-    }
-
-    private LinearLayout jobCard(JobData job) {
-        LinearLayout c = card();
-
-        LinearLayout top = row();
-
-        TextView ic = tv(job.icon, 24, WHITE);
-        ic.setGravity(Gravity.CENTER);
-        ic.setBackground(outlined(CARD2, BORDER, 16));
-        top.addView(ic, new LinearLayout.LayoutParams(dp(48), dp(48)));
-
-        LinearLayout names = column();
-        TextView n = tv(job.title, 16, WHITE);
-        n.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        names.addView(n);
-        names.addView(tv(job.category + " • " + job.workType, 10, GRAY));
-        top.addView(names, new LinearLayout.LayoutParams(0, dp(48), 1));
-
-        TextView badge = tv(job.urgency, 9,
-                job.urgency.equals("Urgent") ? ORANGE : GREEN);
-        badge.setGravity(Gravity.CENTER);
-        top.addView(badge, new LinearLayout.LayoutParams(dp(65), dp(30)));
-
-        c.addView(top);
-
-        double budget = parseMoney(job.budget);
-        double workerPool = workerPool(budget);
-
-        TextView info = tv(
-                "Demo / Example job\n" +
-                        "Company        " + job.company +
-                        "\nBudget           " + job.budget +
-                        "\nWorker Pool    " + money(workerPool) +
-                        "\nWorkers          " + job.workers +
-                        "\nWorkload         " + job.quantity +
-                        "\nDeadline          " + job.deadline,
-                12, TEXT);
-        info.setPadding(0, dp(12), 0, dp(7));
-        c.addView(info);
-
-        Button details = primary("View Details  →");
-        details.setOnClickListener(v -> showJobDetails(job));
-        c.addView(details);
-
-        setMargins(c, 0, 9, 0, 4);
-        return c;
-    }
-
-    private void showJobDetails(JobData job) {
-        startScreen(false);
-        LinearLayout c = content();
-
-        c.addView(heading("Job Details"));
-        c.addView(small("AI-matched global work opportunity"));
-
-        c.addView(wideInfo(job.icon, job.title,
-                job.workType + " • " + job.category));
-
-        double budget = parseMoney(job.budget);
-        double workerPool = workerPool(budget);
-        double platformShare = viyzoShare(budget);
-
-        LinearLayout d = card();
-        d.addView(tv(
-                "Company Budget       " + job.budget +
-                        "\n\nWorker Pool            " + money(workerPool) +
-                        "\n\nViyzo Platform Share " + money(platformShare) +
-                        "\n\nWorkers Needed       " + job.workers +
-                        "\n\nWorkload                " + job.quantity +
-                        "\n\nDeadline                 " + job.deadline +
-                        "\n\nUrgency                   " + job.urgency +
-                        "\n\nRequired Skill         " + job.skill +
-                        "\n\nLanguage                " + job.language,
-                13, TEXT));
-        c.addView(d);
-        setMargins(d, 0, 12, 0, 12);
-
-        LinearLayout note = card();
-        note.addView(tv("Worker view", 15, WHITE));
-        note.addView(tv(
-                "Workers should see the task payout/earning information relevant to their assignment. Internal platform cost accounting should not be used to mislead users.",
-                11, GRAY));
-        c.addView(note);
-
-        TextView req = tv("Requirements", 18, WHITE);
-        req.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        req.setPadding(0, dp(15), 0, dp(7));
-        c.addView(req);
-
-        c.addView(wideInfo("✓", "Skill",
-                job.skill));
-        c.addView(wideInfo("✓", "Language",
-                job.language));
-        c.addView(wideInfo("✓", "Quality",
-                "Accuracy and quality"));
-        c.addView(wideInfo("✓", "Verification",
-                "Job-specific verification may apply"));
-
-        Button apply = primary("🚀  Apply / Join Work Pool");
-        apply.setOnClickListener(v -> Toast.makeText(
-                this,
-                "Demo application saved. Real assignment requires backend matching.",
-                Toast.LENGTH_SHORT).show());
-        c.addView(apply);
-
-        Button back = secondary("← Back to Work Feed");
-        back.setOnClickListener(v -> showJobs());
-        c.addView(back);
-    }
-
-    // ============================================================
-    // MY WORK / WORK POOL
-    // ============================================================
-    private void showMyJobs() {
-        startScreen(true);
-        LinearLayout c = content();
-
-        c.addView(heading("My Work"));
-        c.addView(small("Assignments, work pools and progress."));
-
-        LinearLayout active = card();
-        active.addView(wideInfo("💼", "Product Listing",
-                "Demo Assignment • In Progress"));
-
-        active.addView(tv("125 / 1000 products", 13, TEXT));
-        active.addView(tv("Worker payout is based on approved completed work.",
-                11, GRAY));
-        active.addView(tv("Deadline: 3 Days", 11, GRAY));
-
-        Button open = primary("Open Work");
-        open.setOnClickListener(v -> showWorkExecution());
-        active.addView(open);
-        c.addView(active);
-
-        LinearLayout queue = card();
-        queue.addView(tv("AI Work Queue", 16, WHITE));
-        queue.addView(tv(
-                "1 Active • 2 Ready • 3 Recommended • 0 Waiting",
-                12, GRAY));
-
-        Button pool = secondary("📦  Open Work Pool");
-        pool.setOnClickListener(v -> showWorkPool());
-        queue.addView(pool);
-        c.addView(queue);
-
-        c.addView(wideInfo("⚡", "Urgent Queue",
-                "Ready when eligible work is available"));
-        c.addView(wideInfo("🔁", "Recurring Queue",
-                "Repeat work can return automatically from backend"));
-    }
-
-    private void showWorkExecution() {
-        startScreen(false);
-        LinearLayout c = content();
-
-        c.addView(heading("Work Execution"));
-        c.addView(small("Demo task workspace — production task tools connect to backend."));
-
-        c.addView(wideInfo("📦", "Task Batch",
-                "Product Listing • Batch #VZ-DEMO-001"));
-        c.addView(wideInfo("📊", "Progress",
-                "125 / 1000 completed"));
-        c.addView(wideInfo("💰", "Worker Earning",
-                "Shown after approved task calculation"));
-
-        c.addView(input("Task result / item ID"));
-
-        CheckBox done = new CheckBox(this);
-        done.setText("I confirm this task is complete and accurate.");
-        done.setTextColor(TEXT);
-        c.addView(done);
-
-        Button submit = primary("✓  Submit Completed Work");
-        submit.setOnClickListener(v -> {
-            if (!done.isChecked()) {
-                Toast.makeText(this,
-                        "Please confirm the task is complete.",
-                        Toast.LENGTH_SHORT).show();
-                return;
-            }
-            Toast.makeText(this,
-                    "Demo submission recorded. Quality review will be backend-controlled.",
-                    Toast.LENGTH_SHORT).show();
+        setScreen("Your worker dashboard");
+        cardText("Welcome, " + (displayName.isEmpty() ? userEmail : displayName) + "\n" + country + " • " + language);
+        addButton("Available Jobs", () -> loadJobs());
+        addButton("My Earnings", () -> loadEarnings());
+        addButton("AI Master — ask by voice or text", () -> showAI());
+        addButton("Worker Profile", () -> showProfile());
+        addButton("Company Portal", () -> showCompanyPortal());
+        addButton("Country & Language", () -> showSettings());
+        addButton("Logout", () -> {
+            accessToken = ""; userId = ""; userEmail = ""; displayName = "";
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit().clear().apply();
+            showWelcome();
         });
-        c.addView(submit);
-
-        Button back = secondary("← Back to My Work");
-        back.setOnClickListener(v -> showMyJobs());
-        c.addView(back);
+        addStatus("Live jobs and balances appear only when the Supabase tables and Row Level Security policies are configured.");
     }
 
-    private void showWorkPool() {
-        startScreen(false);
-        LinearLayout c = content();
-
-        c.addView(heading("Work Pool"));
-        c.addView(small(
-                "Batches are divided among eligible workers by the matching engine."
-        ));
-
-        c.addView(wideInfo("📦", "Bulk Pool",
-                "Large batches can be divided into smaller assignments"));
-        c.addView(wideInfo("⚡", "Urgent Pool",
-                "Priority queue for short deadlines"));
-        c.addView(wideInfo("🔁", "Recurring Pool",
-                "Repeat jobs can create future assignments"));
-        c.addView(wideInfo("🌍", "Global Pool",
-                "Country/language eligibility can be configured"));
-
-        Button jobs = primary("🔎  Find Eligible Work");
-        jobs.setOnClickListener(v -> showJobs());
-        c.addView(jobs);
+    private void loadJobs() {
+        if (!requireLogin()) return;
+        setScreen("Available jobs");
+        addButton("Refresh jobs", () -> loadJobs());
+        addButton("Back to dashboard", () -> showDashboard());
+        addStatus("Loading open jobs…");
+        request("GET", "/rest/v1/jobs?select=id,title,description,category,country,payment_amount,currency,status&status=eq.open&order=created_at.desc&limit=50",
+                null, true, (code, response) -> {
+                    if (code < 200 || code >= 300) { addStatus("Could not load jobs (" + code + "): " + friendlyError(response)); return; }
+                    JSONArray arr;
+                    try { arr = new JSONArray(response); } catch (Exception e) { addStatus("Unexpected jobs response."); return; }
+                    if (arr.length() == 0) { addStatus("No open jobs are currently listed."); return; }
+                    for (int i=0; i<arr.length(); i++) {
+                        JSONObject j = arr.optJSONObject(i);
+                        if (j == null) continue;
+                        String title = j.optString("title", "Untitled job");
+                        String desc = j.optString("description", "");
+                        String pay = j.optString("currency", "USD") + " " + j.optString("payment_amount", "0");
+                        cardText(title + "\n" + desc + "\nPayment: " + pay + "\nStatus: " + j.optString("status", "open")
+                                + "\n\nJob listings are read-only here. Acceptance/assignment must be implemented securely on the server.");
+                    }
+                });
     }
 
-    // ============================================================
-    // EARNINGS
-    // ============================================================
-    private void showEarnings() {
-        startScreen(true);
-        LinearLayout c = content();
-
-        c.addView(heading("Earnings"));
-
-        LinearLayout balance = column();
-        balance.setPadding(dp(20), dp(20), dp(20), dp(20));
-        balance.setBackground(primaryBg());
-        balance.setElevation(dp(8));
-
-        balance.addView(tv("Available Balance", 12, WHITE));
-        TextView moneyText = tv("₹0.00", 32, WHITE);
-        moneyText.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        balance.addView(moneyText);
-
-        Button withdraw = primary("Withdraw");
-        withdraw.setBackground(solid(WHITE, 20));
-        withdraw.setTextColor(PRIMARY);
-        withdraw.setOnClickListener(v -> Toast.makeText(
-                this,
-                "Withdrawal will connect to a supported country/payment provider.",
-                Toast.LENGTH_SHORT).show());
-        balance.addView(withdraw);
-
-        c.addView(balance);
-        setMargins(balance, 0, 0, 0, 12);
-
-        LinearLayout target = card();
-        target.addView(tv("🎯 Daily Target Planning", 15, WHITE));
-        target.addView(tv(
-                "Opportunity target: ₹" + formatNumber(DAILY_EARNING_TARGET_INR) +
-                        "/day • up to " + formatNumber(TARGET_HOURS_PER_DAY) +
-                        " hours",
-                13, TEXT));
-        target.addView(tv(
-                "At a 50% worker-pool model, about ₹" +
-                        formatNumber(DAILY_EARNING_TARGET_INR * 2) +
-                        " of total job value would be needed to create ₹" +
-                        formatNumber(DAILY_EARNING_TARGET_INR) +
-                        " worker-pool value, before task/quality/payment effects.",
-                11, GRAY));
-        c.addView(target);
-
-        LinearLayout r = row();
-        LinearLayout total = statCard("💵", "Total Earned", "₹0.00");
-        LinearLayout pending = statCard("⏳", "Pending", "₹0.00");
-
-        r.addView(total, new LinearLayout.LayoutParams(0, dp(125), 1));
-        LinearLayout.LayoutParams pp =
-                new LinearLayout.LayoutParams(0, dp(125), 1);
-        pp.setMargins(dp(8), 0, 0, 0);
-        r.addView(pending, pp);
-        c.addView(r);
-
-        c.addView(wideInfo("📈", "Transactions",
-                "No real transactions yet"));
-        c.addView(wideInfo("🧾", "Payout Status",
-                "Backend/payment provider required"));
-        c.addView(wideInfo("🔒", "Payment Verification",
-                "May be required before withdrawals"));
-
-        Button methods = secondary("💳  Payment Methods");
-        methods.setOnClickListener(v -> showPaymentSettings());
-        c.addView(methods);
-
-        Button history = secondary("📋  Transaction History");
-        history.setOnClickListener(v -> Toast.makeText(
-                this, "Transaction history will come from secure backend.",
-                Toast.LENGTH_SHORT).show());
-        c.addView(history);
+    private void loadEarnings() {
+        if (!requireLogin()) return;
+        setScreen("My earnings");
+        addButton("Back to dashboard", () -> showDashboard());
+        addStatus("Loading your earnings…");
+        request("GET", "/rest/v1/earnings?select=id,amount,currency,status,job_id&worker_id=eq." + userId + "&order=id.desc&limit=100",
+                null, true, (code, response) -> {
+                    if (code < 200 || code >= 300) { addStatus("Could not load earnings (" + code + "): " + friendlyError(response)); return; }
+                    JSONArray arr;
+                    try { arr = new JSONArray(response); } catch (Exception e) { addStatus("Unexpected earnings response."); return; }
+                    double total = 0;
+                    for (int i=0; i<arr.length(); i++) {
+                        JSONObject j = arr.optJSONObject(i);
+                        if (j == null) continue;
+                        double amount = j.optDouble("amount", 0);
+                        total += amount;
+                        cardText(j.optString("currency", "") + " " + amount + " • " + j.optString("status", "pending"));
+                    }
+                    addStatus("Listed earnings total: " + String.format(Locale.US, "%.2f", total)
+                            + "\nThis is a database display, not a confirmed withdrawable balance.");
+                });
     }
 
-    private void showPaymentSettings() {
-        startScreen(false);
-        LinearLayout c = content();
-
-        c.addView(heading("Payment Settings"));
-        c.addView(small(
-                "Payment methods and payout rules should be country/provider specific."
-        ));
-
-        c.addView(wideInfo("🌍", "Country",
-                "Country-specific payout options"));
-        c.addView(wideInfo("🏦", "Bank / Wallet",
-                "Connect supported provider later"));
-        c.addView(wideInfo("🛡", "Payment Verification",
-                "Separate from worker identity verification"));
-
-        c.addView(secondary("＋ Add Payment Method"));
-        c.addView(secondary("📋 Payout Requirements"));
-
-        Button back = secondary("← Back to Earnings");
-        back.setOnClickListener(v -> showEarnings());
-        c.addView(back);
-    }
-
-    // ============================================================
-    // PROFILE
-    // ============================================================
     private void showProfile() {
-        startScreen(true);
-        LinearLayout c = content();
-
-        c.addView(heading("My Profile"));
-
-        LinearLayout profile = card();
-        LinearLayout pr = row();
-
-        TextView av = tv("👤", 34, WHITE);
-        av.setGravity(Gravity.CENTER);
-        av.setBackground(outlined(CARD2, BORDER, 35));
-        pr.addView(av, new LinearLayout.LayoutParams(dp(68), dp(68)));
-
-        LinearLayout pd = column();
-        TextView name = tv("Ashikur Rahman", 17, WHITE);
-        name.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        pd.addView(name);
-        pd.addView(tv("Worker ID: VZ388742", 11, GRAY));
-        pd.addView(tv("● Basic Worker", 11, GREEN));
-
-        pr.addView(pd, new LinearLayout.LayoutParams(0, dp(68), 1));
-        profile.addView(pr);
-        c.addView(profile);
-
-        c.addView(wideInfo("🛡", "Verification Status",
-                "Basic Worker • Higher levels available"));
-
-        Button verify = secondary("🛡  Worker Verification");
-        verify.setOnClickListener(v -> showWorkerVerification());
-        c.addView(verify);
-
-        Button earnings = secondary("💰  Earnings & Payout");
-        earnings.setOnClickListener(v -> showEarnings());
-        c.addView(earnings);
-
-        Button settings = secondary("⚙  Account Settings");
-        settings.setOnClickListener(v -> showSettings());
-        c.addView(settings);
-
-        Button help = secondary("❓  Help & Support");
-        help.setOnClickListener(v -> showHelp());
-        c.addView(help);
-
-        Button about = secondary("ⓘ  About Viyzo");
-        about.setOnClickListener(v -> showAbout());
-        c.addView(about);
-
-        Button logout = primary("Logout");
-        logout.setBackground(solid(RED, 20));
-        logout.setOnClickListener(v -> showHome());
-        c.addView(logout);
-    }
-
-    // ============================================================
-    // WORKER VERIFICATION
-    // ============================================================
-    private void showWorkerVerification() {
-        startScreen(false);
-        LinearLayout c = content();
-
-        c.addView(heading("Worker Verification"));
-        c.addView(small(
-                "Verification level can control access to higher-value or restricted work."
-        ));
-
-        c.addView(wideInfo("1", "Country",
-                "Country and provider rules"));
-        c.addView(wideInfo("2", "Basic Verification",
-                "Name, DOB, phone, email and consent"));
-        c.addView(wideInfo("3", "Identity Verification",
-                "Document requirements can vary by country/provider"));
-        c.addView(wideInfo("4", "Payout Verification",
-                "Payment provider requirements may apply"));
-
-        Button start = primary("Start Verification");
-        start.setOnClickListener(v -> showBasicVerification());
-        c.addView(start);
-
-        Button noDoc = secondary("I Don't Have a Document");
-        noDoc.setOnClickListener(v -> showNoDocument());
-        c.addView(noDoc);
-    }
-
-    private void showBasicVerification() {
-        startScreen(false);
-        LinearLayout c = content();
-
-        c.addView(heading("Basic Verification"));
-        c.addView(small("Only provide information needed for verification."));
-
-        c.addView(spinner(new String[]{
-                "Select Country", "India", "Bangladesh",
-                "United States", "United Kingdom", "UAE", "Other"
-        }));
-
-        c.addView(input("Full Name"));
-        c.addView(input("Date of Birth"));
-        c.addView(input("Phone Number"));
-        c.addView(input("Email Address"));
-
-        Button otp = secondary("📱  Send Phone OTP");
-        otp.setOnClickListener(v -> Toast.makeText(
-                this, "OTP service will connect to secure backend.",
-                Toast.LENGTH_SHORT).show());
-        c.addView(otp);
-
-        Button selfie = secondary("📷  Take Live Selfie");
-        selfie.setOnClickListener(v -> Toast.makeText(
-                this, "Selfie verification will connect to an approved verification service.",
-                Toast.LENGTH_SHORT).show());
-        c.addView(selfie);
-
-        CheckBox consent = new CheckBox(this);
-        consent.setText(
-                "I confirm this information is mine and agree to verification/privacy terms."
-        );
-        consent.setTextColor(TEXT);
-        consent.setTextSize(12);
-        c.addView(consent);
-
-        Button next = primary("Continue Verification");
-        next.setOnClickListener(v -> {
-            if (!consent.isChecked()) {
-                Toast.makeText(this,
-                        "Please accept verification consent.",
-                        Toast.LENGTH_SHORT).show();
-                return;
-            }
-            showDocumentOptions();
-        });
-        c.addView(next);
-    }
-
-    private void showDocumentOptions() {
-        startScreen(false);
-        LinearLayout c = content();
-
-        c.addView(heading("Identity Document"));
-        c.addView(small(
-                "Accepted documents depend on country and verification provider."
-        ));
-
-        c.addView(spinner(new String[]{
-                "Select Country", "India", "United States",
-                "United Kingdom", "Bangladesh", "UAE", "Other"
-        }));
-
-        c.addView(wideInfo("🪪", "Government ID",
-                "Use an accepted document only when required."));
-        c.addView(wideInfo("🔐", "Secure Upload",
-                "Production upload should use encrypted backend storage."));
-
-        Button upload = primary("📷  Upload / Capture Document");
-        upload.setOnClickListener(v -> Toast.makeText(
-                this,
-                "Secure document upload will connect to backend/provider.",
-                Toast.LENGTH_SHORT).show());
-        c.addView(upload);
-
-        Button skip = secondary("Continue Without Document");
-        skip.setOnClickListener(v -> showNoDocument());
-        c.addView(skip);
-    }
-
-    private void showNoDocument() {
-        startScreen(false);
-        LinearLayout c = content();
-
-        c.addView(heading("Basic Worker Account"));
-        c.addView(small(
-                "Basic access may be available where permitted; stronger verification can be required later."
-        ));
-
-        c.addView(wideInfo("✓", "Account Created",
-                "Basic account access"));
-        c.addView(wideInfo("🛡", "Basic Verification",
-                "Some jobs can remain available"));
-        c.addView(wideInfo("🔒", "Higher Verification",
-                "Some high-value or restricted jobs may require more verification"));
-        c.addView(wideInfo("💳", "Payout Verification",
-                "Payment provider rules may apply before withdrawal"));
-
-        Button done = primary("Continue to Dashboard");
-        done.setOnClickListener(v -> showDashboard());
-        c.addView(done);
-    }
-
-    // ============================================================
-    // COMPANY PORTAL
-    // ============================================================
-    private void showCompanyPortal() {
-        startScreen(false);
-        LinearLayout c = content();
-
-        c.addView(brandHeader());
-        c.addView(heading("Company Work Portal"));
-        c.addView(small(
-                "Company onboarding and real job supply will be powered by a secure backend."
-        ));
-
-        LinearLayout hero = card();
-        hero.setBackground(primaryBg());
-        hero.addView(tv("🌍  Global Company Jobs", 19, WHITE));
-        hero.addView(tv(
-                "Post remote work, choose country/currency, set workload and budget, then let the matching engine recommend workers.",
-                12, WHITE));
-        c.addView(hero);
-        setMargins(hero, 0, 0, 0, 13);
-
-        Button post = primary("＋  Post New Work");
-        post.setOnClickListener(v -> showPostWork());
-        c.addView(post);
-
-        Button companyLogin = secondary("🏢  Company Login / Dashboard");
-        companyLogin.setOnClickListener(v -> showCompanyDashboard());
-        c.addView(companyLogin);
-
-        Button model = secondary("💰  Pricing / Work Budget Model");
-        model.setOnClickListener(v -> showPricingModel());
-        c.addView(model);
-
-        Button back = secondary("← Back to Worker App");
-        back.setOnClickListener(v -> showHome());
-        c.addView(back);
-    }
-
-    private void showPricingModel() {
-        startScreen(false);
-        LinearLayout c = content();
-
-        c.addView(heading("Viyzo Work Budget Model"));
-        c.addView(small(
-                "Configurable internal platform model. Final customer pricing, taxes, payment fees and local legal requirements must be handled by the production backend."
-        ));
-
-        c.addView(wideInfo("👥", "Worker Pool",
-                formatNumber(WORKER_SHARE_PERCENT) + "%"));
-        c.addView(wideInfo("🏢", "Viyzo Platform Share",
-                formatNumber(VIYZO_SHARE_PERCENT) + "%"));
-        c.addView(wideInfo("🖥", "Platform Costs",
-                "Backend/server, payments, verification, support, security, refunds/disputes"));
-        c.addView(wideInfo("📈", "Remaining Margin",
-                "Calculated only after actual platform expenses"));
-
-        LinearLayout example = card();
-        example.addView(tv("Example: ₹2,000 total job value", 16, WHITE));
-        example.addView(tv(
-                "Worker pool: ₹1,000\n" +
-                        "Viyzo platform share: ₹1,000\n" +
-                        "Viyzo share is not automatically pure profit.",
-                13, TEXT));
-        c.addView(example);
-
-        Button back = secondary("← Back to Company Portal");
-        back.setOnClickListener(v -> showCompanyPortal());
-        c.addView(back);
-    }
-
-    private void showCompanyDashboard() {
-        startScreen(false);
-        LinearLayout c = content();
-
-        c.addView(heading("Company Dashboard"));
-        c.addView(small("Manage global work and view job status."));
-
-        LinearLayout r1 = row();
-        r1.addView(statCard("📋", "Open Jobs", "0"),
-                new LinearLayout.LayoutParams(0, dp(120), 1));
-
-        LinearLayout.LayoutParams p =
-                new LinearLayout.LayoutParams(0, dp(120), 1);
-        p.setMargins(dp(8), 0, 0, 0);
-        r1.addView(statCard("👥", "Workers", "0"), p);
-        c.addView(r1);
-
-        c.addView(wideInfo("💵", "Company Spending", "₹0.00 / $0.00"));
-        c.addView(wideInfo("🌍", "Global Reach",
-                "Countries/languages can be configured"));
-        c.addView(wideInfo("🤖", "AI Manager",
-                "Ready to recommend worker allocation"));
-
-        Button post = primary("＋  Post New Work");
-        post.setOnClickListener(v -> showPostWork());
-        c.addView(post);
-
-        Button back = secondary("← Back");
-        back.setOnClickListener(v -> showCompanyPortal());
-        c.addView(back);
-    }
-
-    private void showPostWork() {
-        startScreen(false);
-        LinearLayout c = content();
-
-        c.addView(heading("Post New Work"));
-        c.addView(small(
-                "This is the intake form. Submission becomes a real company job only after backend onboarding, payment and review."
-        ));
-
-        c.addView(input("Company Name"));
-        c.addView(input("Job Title / Work Name"));
-        c.addView(input("Job Description"));
-
-        c.addView(spinner(new String[]{
-                "Select Category",
-                "Product Listing",
-                "Data Entry",
-                "Content Review",
-                "Translation",
-                "Research",
-                "Image / Media Work",
-                "Customer Support",
-                "AI Data / Annotation",
-                "Other"
-        }));
-
-        c.addView(spinner(new String[]{
-                "Company Size",
-                "Small Business",
-                "Startup",
-                "Medium Business",
-                "Enterprise",
-                "Agency / Other"
-        }));
-
-        c.addView(spinner(new String[]{
-                "Worker Location",
-                "Worldwide",
-                "India",
-                "United States",
-                "United Kingdom",
-                "Europe",
-                "Middle East",
-                "Asia",
-                "Africa",
-                "Other / Multiple Countries"
-        }));
-
-        c.addView(spinner(new String[]{
-                "Currency",
-                "USD", "EUR", "GBP", "INR", "AED", "BDT", "Other"
-        }));
-
-        c.addView(input("Company Budget"));
-        c.addView(input("Number of Workers Needed"));
-        c.addView(input("Workload / Quantity"));
-        c.addView(input("Deadline"));
-
-        c.addView(spinner(new String[]{
-                "Urgency",
-                "Normal",
-                "High",
-                "Urgent"
-        }));
-
-        c.addView(spinner(new String[]{
-                "Work Type",
-                "Quick Task",
-                "Bulk",
-                "Project",
-                "Recurring"
-        }));
-
-        c.addView(input("Required Skills"));
-        c.addView(input("Required Language"));
-
-        CheckBox remote = new CheckBox(this);
-        remote.setText("Remote / Online Work");
-        remote.setChecked(true);
-        remote.setTextColor(TEXT);
-        c.addView(remote);
-
-        CheckBox agree = new CheckBox(this);
-        agree.setText(
-                "I confirm that the work, budget and payment information is accurate."
-        );
-        agree.setTextColor(TEXT);
-        c.addView(agree);
-
-        Button preview = secondary("🧠  Preview AI Allocation");
-        preview.setOnClickListener(v -> showAllocationPreview());
-        c.addView(preview);
-
-        Button post = primary("🌍  Submit Work to Viyzo");
-        post.setOnClickListener(v -> {
-            if (!agree.isChecked()) {
-                Toast.makeText(this,
-                        "Please confirm the work information.",
-                        Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            Toast.makeText(this,
-                    "Demo intake saved locally. Real posting requires secure backend/payment onboarding.",
-                    Toast.LENGTH_LONG).show();
-            showCompanyDashboard();
-        });
-        c.addView(post);
-
-        Button back = secondary("← Back");
-        back.setOnClickListener(v -> showCompanyPortal());
-        c.addView(back);
-    }
-
-    private void showAllocationPreview() {
-        startScreen(false);
-        LinearLayout c = content();
-
-        c.addView(heading("AI Allocation Preview"));
-        c.addView(small(
-                "Example calculation using the configured 50/50 model."
-        ));
-
-        double sample = 2000.0;
-        double worker = workerPool(sample);
-        double platform = viyzoShare(sample);
-
-        c.addView(wideInfo("💼", "Example Total Job Value",
-                "₹" + formatNumber(sample)));
-        c.addView(wideInfo("👥", "Worker Pool",
-                "₹" + formatNumber(worker)));
-        c.addView(wideInfo("🏢", "Viyzo Platform Share",
-                "₹" + formatNumber(platform)));
-
-        int workers = 10;
-        c.addView(wideInfo("👥", "Example Workers",
-                String.valueOf(workers)));
-        c.addView(wideInfo("💰", "Example Pool/Worker",
-                "₹" + formatNumber(worker / workers)));
-
-        c.addView(wideInfo("🤖", "Manager Factors",
-                "Skills • Language • Quality • Availability • Deadline • Verification"));
-
-        Button back = secondary("← Back to Work Posting");
-        back.setOnClickListener(v -> showPostWork());
-        c.addView(back);
-    }
-
-    // ============================================================
-    // NOTIFICATIONS / LANGUAGE / SETTINGS / HELP / ABOUT
-    // ============================================================
-    private void showNotifications() {
-        startScreen(false);
-        LinearLayout c = content();
-
-        c.addView(heading("Notifications"));
-
-        c.addView(wideInfo("⚡", "Urgent Work",
-                "Eligible urgent work can appear here"));
-        c.addView(wideInfo("🤖", "AI Match",
-                "A new AI-matched work opportunity may be available"));
-        c.addView(wideInfo("📦", "Bulk Pool",
-                "Large batches can be split into assignments"));
-        c.addView(wideInfo("🔁", "Recurring",
-                "Repeat work can create future assignments"));
-        c.addView(wideInfo("🛡", "Verification",
-                "Complete required verification for eligible work"));
-        c.addView(wideInfo("💰", "Earnings",
-                "Approved work can move to pending/available balance"));
-
-        Button back = secondary("← Back");
-        back.setOnClickListener(v -> showDashboard());
-        c.addView(back);
-    }
-
-    private void showLanguage() {
-        showCountryLanguageSetup();
+        setScreen("Worker profile");
+        cardText("Email: " + userEmail + "\nName: " + displayName + "\nCountry: " + country + "\nLanguage: " + language);
+        addButton("Edit country/language", () -> showSettings());
+        addButton("Back", () -> showDashboard());
+        addStatus("Profile verification/KYC is not enabled in this starter. Do not collect identity documents until secure storage and review workflows are configured.");
     }
 
     private void showSettings() {
-        startScreen(false);
-        LinearLayout c = content();
-
-        c.addView(heading("Settings"));
-
-        Button notifications = secondary("🔔  Notification Settings");
-        notifications.setOnClickListener(v -> showNotifications());
-        c.addView(notifications);
-
-        Button language = secondary("🌐  Language");
-        language.setOnClickListener(v -> showLanguage());
-        c.addView(language);
-
-        Button privacy = secondary("🔐  Privacy & Data");
-        privacy.setOnClickListener(v -> showPrivacy());
-        c.addView(privacy);
-
-        Button payment = secondary("💳  Payment Settings");
-        payment.setOnClickListener(v -> showPaymentSettings());
-        c.addView(payment);
-
-        Button help = secondary("❓  Help & Support");
-        help.setOnClickListener(v -> showHelp());
-        c.addView(help);
-
-        Button about = secondary("ⓘ  About Viyzo");
-        about.setOnClickListener(v -> showAbout());
-        c.addView(about);
-
-        Button logout = primary("Logout");
-        logout.setBackground(solid(RED, 20));
-        logout.setOnClickListener(v -> showHome());
-        c.addView(logout);
-    }
-
-    private void showPrivacy() {
-        startScreen(false);
-        LinearLayout c = content();
-
-        c.addView(heading("Privacy & Data"));
-        c.addView(small(
-                "Production privacy controls should be enforced by secure backend policies and applicable law."
-        ));
-
-        c.addView(wideInfo("🔒", "Data Minimization",
-                "Collect only data needed for the stated purpose"));
-        c.addView(wideInfo("🛡", "Security",
-                "Encrypt sensitive data and restrict access"));
-        c.addView(wideInfo("📷", "Selfie / ID",
-                "Use approved verification providers where required"));
-        c.addView(wideInfo("🗑", "Data Retention",
-                "Retention/deletion rules must be defined"));
-        c.addView(wideInfo("📄", "Consent",
-                "Clear consent and privacy notices are required"));
-
-        Button back = secondary("← Back to Settings");
-        back.setOnClickListener(v -> showSettings());
-        c.addView(back);
-    }
-
-    private void showHelp() {
-        startScreen(false);
-        LinearLayout c = content();
-
-        c.addView(heading("Help & Support"));
-
-        c.addView(wideInfo("💬", "Worker Support",
-                "Jobs, accounts, verification and payouts"));
-        c.addView(wideInfo("🏢", "Company Support",
-                "Job posting, company accounts and payments"));
-        c.addView(wideInfo("📚", "Help Center",
-                "Learn how Viyzo work flows are designed"));
-        c.addView(wideInfo("⚖", "Disputes",
-                "Production system needs review and dispute processes"));
-
-        Button contact = primary("Contact Support");
-        contact.setOnClickListener(v -> Toast.makeText(
-                this,
-                "Support contact system will connect to backend.",
-                Toast.LENGTH_SHORT).show());
-        c.addView(contact);
-
-        Button back = secondary("← Back");
-        back.setOnClickListener(v -> showDashboard());
-        c.addView(back);
-    }
-
-    private void showAbout() {
-        startScreen(false);
-        LinearLayout c = content();
-
-        LinearLayout center = column();
-        center.setGravity(Gravity.CENTER_HORIZONTAL);
-        center.addView(logo(35), new LinearLayout.LayoutParams(dp(90), dp(90)));
-
-        TextView name = tv("VIYZO", 30, WHITE);
-        name.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        name.setGravity(Gravity.CENTER);
-        center.addView(name);
-
-        TextView network = tv("Global Work Network", 12, GRAY);
-        network.setGravity(Gravity.CENTER);
-        center.addView(network);
-        c.addView(center);
-
-        c.addView(wideInfo("🤖", "AI Master Manager",
-                "Matching and work distribution foundation"));
-        c.addView(wideInfo("🌍", "Global Companies",
-                "Company work intake foundation"));
-        c.addView(wideInfo("👥", "Global Workers",
-                "Worker discovery and assignment foundation"));
-        c.addView(wideInfo("📦", "Work Supply",
-                "Urgent • Bulk • Quick • Project • Recurring"));
-        c.addView(wideInfo("🛡", "Verification",
-                "Verification levels can control access and payouts"));
-        c.addView(wideInfo("💳", "Payments",
-                "Country/provider backend required"));
-        c.addView(wideInfo("⚙", "Business Model",
-                "Configurable 50% worker pool / 50% Viyzo platform"));
-
-        TextView v = tv("Version 2.0 UI foundation", 11, GRAY);
-        v.setGravity(Gravity.CENTER);
-        c.addView(v);
-    }
-
-    // ============================================================
-    // CALCULATIONS
-    // ============================================================
-    // ============================================================
-    // AI MASTER VOICE EXPERIENCE
-    // ============================================================
-    private void initAIMasterVoice() {
-        aiTts = new TextToSpeech(this, status -> {
-            aiTtsInitializing = false;
-            if (status == TextToSpeech.SUCCESS) {
-                int result = aiTts.setLanguage(aiLocale);
-                aiTtsReady = result != TextToSpeech.LANG_MISSING_DATA
-                        && result != TextToSpeech.LANG_NOT_SUPPORTED;
-                aiTts.setSpeechRate(0.90f);
-                aiTts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
-                    @Override public void onStart(String utteranceId) {
-                        runOnUiThread(() -> {
-                            if (aiStatusView != null) aiStatusView.setText("🔊 AI Master is speaking…");
-                        });
-                    }
-                    @Override public void onDone(String utteranceId) {
-                        runOnUiThread(() -> {
-                            if (aiStatusView != null) aiStatusView.setText("🟢 AI Master ready • Tap mic to ask");
-                        });
-                    }
-                    @Override public void onError(String utteranceId) {
-                        runOnUiThread(() -> {
-                            if (aiStatusView != null) aiStatusView.setText("Voice unavailable • Tap to read/help");
-                        });
-                    }
-                });
-                if (!pendingAISpeech.isEmpty()) {
-                    String queued = pendingAISpeech;
-                    pendingAISpeech = "";
-                    speakAI(queued);
+        setScreen("Country & language");
+        EditText c = field("Country (for example, India)");
+        c.setText(country);
+        EditText l = field("Language (for example, Hindi, English, Bengali)");
+        l.setText(language);
+        addButton("Save", () -> {
+            if (!value(c).trim().isEmpty()) country = value(c).trim();
+            if (!value(l).trim().isEmpty()) language = value(l).trim();
+            voiceLocale = localeFor(language);
+            if (tts != null && ttsReady) {
+                int result = tts.setLanguage(voiceLocale);
+                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                    voiceLocale = Locale.US; tts.setLanguage(voiceLocale);
+                    toast("Selected voice not installed; using available English voice.");
                 }
-            } else {
-                aiTtsReady = false;
             }
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString("country", country)
+                    .putString("language", language).apply();
+            if (!userId.isEmpty()) {
+                JSONObject profile = new JSONObject();
+                try { profile.put("id", userId); profile.put("display_name", displayName); profile.put("country", country); profile.put("preferred_language", language); } catch (Exception ignored) {}
+                request("POST", "/rest/v1/worker_profiles?on_conflict=id", profile, true,
+                        (code, response) -> { if (code >= 200 && code < 300) toast("Saved."); else toast("Saved on phone; profile sync needs RLS/table check."); },
+                        "resolution=merge-duplicates,return=minimal");
+            } else toast("Country and language saved.");
+            showWelcomeOrDashboard();
+        });
+        addButton("Back", () -> showWelcomeOrDashboard());
+    }
+
+    private void showCompanyPortal() {
+        setScreen("Company portal");
+        cardText("Post real work only after company verification, budget funding, fraud checks and server-side approval are implemented.");
+        EditText title = field("Job title");
+        EditText description = field("Job description / deliverables");
+        EditText category = field("Category");
+        EditText budget = field("Budget amount (number)");
+        EditText currency = field("Currency (e.g. USD, INR)");
+        EditText jobCountry = field("Worker country (or Global)");
+        addButton("Submit job request", () -> {
+            if (value(title).trim().isEmpty() || value(description).trim().isEmpty() || value(budget).trim().isEmpty()) {
+                toast("Enter job title, description and budget."); return;
+            }
+            toast("Company job posting is not enabled yet. A secure server endpoint must validate company identity, budget funding, and job status before publishing.");
+        });
+        addButton("Back", () -> showWelcomeOrDashboard());
+        addStatus("The form is a planning UI only. It deliberately does not publish jobs or accept payments.");
+    }
+
+    private void showAI() {
+        setScreen("AI Master");
+        cardText("AI Master can speak and listen on this device. Built-in answers are guidance, not a connected generative AI service.");
+        aiQuestion = field("Type your question");
+        aiAnswerView = text("Ask about accounts, jobs, payments or verification.", 14, C_TEXT, false);
+        aiAnswerView.setPadding(dp(12), dp(12), dp(12), dp(12));
+        aiAnswerView.setBackground(background(C_CARD, 16));
+        root.addView(aiAnswerView, matchWrap());
+        addButton("Ask by text", () -> answerQuestion(value(aiQuestion)));
+        addButton("🎙 Ask by microphone", () -> startVoiceInput());
+        addButton("Speak welcome message", () -> speak("Welcome to Viyzo Worker. I can guide you through the app."));
+        addButton("Back", () -> showWelcomeOrDashboard());
+        addStatus("For real conversational AI, add a server-side AI endpoint. Never embed a private AI API key in this APK.");
+    }
+
+    private void answerQuestion(String q) {
+        if (q == null || q.trim().isEmpty()) { toast("Type or speak a question first."); return; }
+        String x = q.toLowerCase(Locale.ROOT);
+        String answer;
+        if (containsAny(x, "login", "signup", "account", "खाता", "अकाउंट", "लॉगिन")) {
+            answer = "Create your account with your own email and a strong password, then confirm your email if Supabase asks. Never share OTPs or passwords.";
+        } else if (containsAny(x, "job", "work", "काम", "जॉब")) {
+            answer = "Open Available Jobs to see open listings from the connected database. Read the deliverables, deadline and payment carefully. Current app does not automatically assign jobs.";
+        } else if (containsAny(x, "payment", "earning", "withdraw", "पैसा", "कमाई", "पेमेंट")) {
+            answer = "Earnings are shown only if valid records exist. Real withdrawals require a verified payment provider, server-side balance checks and applicable legal compliance. No earnings are guaranteed.";
+        } else if (containsAny(x, "kyc", "verify", "verification", "दस्तावेज", "पहचान")) {
+            answer = "KYC is not active in this starter. Upload identity documents only after the app provides a clear purpose, secure upload, access controls and a privacy notice.";
+        } else if (containsAny(x, "company", "client", "कंपनी")) {
+            answer = "Companies must be verified, submit genuine work, fund the budget and pass server-side review before a job can be published.";
+        } else {
+            answer = "I can guide you about accounts, jobs, earnings, verification and the company portal. This built-in guide is not a full generative AI chat yet.";
+        }
+        if (aiAnswerView != null) aiAnswerView.setText("You: " + q + "\n\nAI Master: " + answer);
+        speak(answer);
+    }
+
+    private void startVoiceInput() {
+        if (Build.VERSION.SDK_INT >= 23 && checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION);
+            toast("Allow microphone access, then tap the microphone button again.");
+            return;
+        }
+        try {
+            Intent i = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            i.putExtra(RecognizerIntent.EXTRA_LANGUAGE, localeFor(language).toLanguageTag());
+            i.putExtra(RecognizerIntent.EXTRA_PROMPT, "Ask AI Master");
+            startActivityForResult(i, VOICE_REQUEST);
+        } catch (Exception e) {
+            toast("Speech recognition is not available on this phone. You can type instead.");
+        }
+    }
+
+    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == VOICE_REQUEST && resultCode == RESULT_OK && data != null) {
+            ArrayList<String> results = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+            if (results != null && !results.isEmpty()) {
+                if (aiQuestion != null) aiQuestion.setText(results.get(0));
+                answerQuestion(results.get(0));
+            }
+        }
+    }
+
+    @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode == MIC_PERMISSION && results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) {
+            toast("Microphone allowed. Tap the microphone button again.");
+        } else if (requestCode == MIC_PERMISSION) toast("Microphone permission denied; text input still works.");
+    }
+
+    private interface ApiCallback { void done(int code, String response); }
+
+    private void request(String method, String path, JSONObject body, boolean auth, ApiCallback callback) {
+        request(method, path, body, auth, callback, null);
+    }
+
+    private void request(String method, String path, JSONObject body, boolean auth, ApiCallback callback, String prefer) {
+        if (SUPABASE_PUBLISHABLE_KEY.startsWith("PASTE_")) {
+            toast("First add your Supabase public Publishable/anon key in MainActivity.java.");
+            return;
+        }
+        if (busy) { toast("Please wait for the current request."); return; }
+        busy = true;
+        io.execute(() -> {
+            HttpURLConnection conn = null;
+            int code = 0;
+            String response = "";
+            try {
+                URL url = new URL(SUPABASE_URL + path);
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod(method);
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(20000);
+                conn.setRequestProperty("apikey", SUPABASE_PUBLISHABLE_KEY);
+                conn.setRequestProperty("Accept", "application/json");
+                if (auth && !accessToken.isEmpty()) conn.setRequestProperty("Authorization", "Bearer " + accessToken);
+                else conn.setRequestProperty("Authorization", "Bearer " + SUPABASE_PUBLISHABLE_KEY);
+                if (prefer != null) conn.setRequestProperty("Prefer", prefer);
+                if (body != null) {
+                    conn.setDoOutput(true);
+                    conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                    byte[] bytes = body.toString().getBytes(StandardCharsets.UTF_8);
+                    try (OutputStream out = conn.getOutputStream()) { out.write(bytes); }
+                }
+                code = conn.getResponseCode();
+                InputStream stream = code >= 200 && code < 400 ? conn.getInputStream() : conn.getErrorStream();
+                if (stream != null) {
+                    StringBuilder sb = new StringBuilder();
+                    try (BufferedReader br = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+                        String line; while ((line = br.readLine()) != null) sb.append(line);
+                    }
+                    response = sb.toString();
+                }
+            } catch (Exception e) {
+                response = "{\"message\":\"" + safeJson(e.getMessage()) + "\"}";
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+            final int finalCode = code;
+            final String finalResponse = response;
+            runOnUiThread(() -> {
+                busy = false;
+                if (finalCode == 0) toast("Network request failed. Check internet and Supabase URL.");
+                callback.done(finalCode, finalResponse);
+            });
         });
     }
 
-    private void addAIMasterOverlay() {
-        if (frame == null) return;
-        LinearLayout panel = column();
-        panel.setPadding(dp(10), dp(8), dp(10), dp(8));
-        panel.setBackground(outlined(Color.rgb(20, 25, 54), PRIMARY, 18));
-        panel.setElevation(dp(12));
-        panel.setOnClickListener(v -> showAIMasterVoiceScreen());
-
-        LinearLayout top = row();
-        TextView icon = tv("🤖", 23, WHITE);
-        icon.setGravity(Gravity.CENTER);
-        top.addView(icon, new LinearLayout.LayoutParams(dp(35), dp(35)));
-        LinearLayout titleColumn = column();
-        TextView title = tv("AI MASTER", 12, WHITE);
-        title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        titleColumn.addView(title);
-        titleColumn.addView(tv("Tap panel for step-by-step voice help", 9, GRAY));
-        top.addView(titleColumn, new LinearLayout.LayoutParams(0, dp(37), 1));
-        Button mic = new Button(this);
-        mic.setText("🎙️");
-        mic.setTextSize(17);
-        mic.setAllCaps(false);
-        mic.setTextColor(WHITE);
-        mic.setPadding(0, 0, 0, 0);
-        mic.setBackground(primaryBg());
-        mic.setOnClickListener(v -> startAIVoiceInput());
-        top.addView(mic, new LinearLayout.LayoutParams(dp(48), dp(43)));
-        panel.addView(top);
-
-        aiStatusView = tv("🟢 AI Master ready • Tap mic to ask", 10, GRAY);
-        aiStatusView.setPadding(dp(4), dp(4), dp(4), 0);
-        panel.addView(aiStatusView);
-        aiBubbleView = tv("Tap any main action for spoken guidance, or ask about accounts, jobs, work steps, verification, payments or earnings.", 11, TEXT);
-        aiBubbleView.setMaxLines(3);
-        aiBubbleView.setPadding(dp(4), dp(3), dp(4), 0);
-        panel.addView(aiBubbleView);
-
-        FrameLayout.LayoutParams fp = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT,
-                Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-        fp.setMargins(dp(12), 0, dp(12), dp(10));
-        frame.addView(panel, fp);
+    private void saveSession() {
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                .putString("access_token", accessToken).putString("user_id", userId)
+                .putString("email", userEmail).putString("name", displayName)
+                .putString("country", country).putString("language", language).apply();
     }
 
-    private void startAIVoiceInput() {
-        if (Build.VERSION.SDK_INT >= 23
-                && checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, AI_AUDIO_PERMISSION_REQUEST);
-            if (aiStatusView != null) aiStatusView.setText("Allow microphone permission, then tap mic again.");
-            return;
+    private boolean requireLogin() {
+        if (accessToken.isEmpty() || userId.isEmpty()) {
+            toast("Please login first.");
+            showLogin();
+            return false;
         }
-        try {
-            Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                    RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, aiLocale.toLanguageTag());
-            intent.putExtra(RecognizerIntent.EXTRA_PROMPT, aiText(
-                    "Ask AI Master your question", "AI Master से अपना सवाल पूछें",
-                    "AI Master-কে আপনার প্রশ্ন বলুন", "AI Master سے سوال پوچھیں",
-                    "AI Master'a sorunuzu söyleyin", "AI Master'a sorunuzu söyleyin"));
-            startActivityForResult(intent, AI_VOICE_REQUEST);
-            if (aiStatusView != null) aiStatusView.setText("🎙️ Listening… speak now");
-        } catch (Exception e) {
-            Toast.makeText(this, "Voice input is not available on this device. You can still use the app.", Toast.LENGTH_LONG).show();
-            if (aiStatusView != null) aiStatusView.setText("Voice input unavailable on this device.");
-        }
+        return true;
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == AI_VOICE_REQUEST && resultCode == RESULT_OK && data != null) {
-            java.util.ArrayList<String> results = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
-            if (results != null && !results.isEmpty()) {
-                String question = results.get(0);
-                if (aiBubbleView != null) aiBubbleView.setText("You: " + question);
-                String answer = answerAIQuestion(question);
-                if (aiBubbleView != null) aiBubbleView.setText("You: " + question + "\n\nAI Master: " + answer);
-                speakAI(answer);
-            }
-        }
+    private void showWelcomeOrDashboard() {
+        if (!accessToken.isEmpty() && !userId.isEmpty()) showDashboard(); else showWelcome();
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == AI_AUDIO_PERMISSION_REQUEST) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startAIVoiceInput();
-            } else {
-                Toast.makeText(this, "Microphone permission is needed for voice questions. You can still read the AI guide.", Toast.LENGTH_LONG).show();
-            }
-        }
+    private EditText field(String hint) {
+        EditText e = new EditText(this);
+        e.setSingleLine(true);
+        e.setTextColor(C_TEXT);
+        e.setHintTextColor(C_MUTED);
+        e.setHint(hint);
+        e.setTextSize(15);
+        e.setPadding(dp(14), dp(8), dp(14), dp(8));
+        e.setBackground(background(C_CARD, 14));
+        LinearLayout.LayoutParams p = matchWrap();
+        p.setMargins(0, dp(5), 0, dp(5));
+        e.setLayoutParams(p);
+        root.addView(e);
+        return e;
     }
 
-    private void speakAI(String text) {
-        if (text == null || text.trim().isEmpty()) return;
-        if (aiBubbleView != null) aiBubbleView.setText(text);
-        // TTS initialization is asynchronous. Queue the first greeting instead of losing it.
-        if (aiTts == null || aiTtsInitializing) {
-            pendingAISpeech = text;
-            if (aiStatusView != null) aiStatusView.setText("AI Master is preparing voice…");
-            return;
-        }
-        if (!aiTtsReady) {
-            pendingAISpeech = "";
-            if (aiStatusView != null) aiStatusView.setText("Voice not installed for this language. Choose another language or install voice data in Android settings.");
-            Toast.makeText(this, "इस भाषा की आवाज़ उपलब्ध नहीं है। भाषा बदलें या Android Text-to-Speech में voice data डाउनलोड करें।", Toast.LENGTH_LONG).show();
-            return;
-        }
-        if (Build.VERSION.SDK_INT >= 21) {
-            aiTts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "viyzo_ai_" + System.currentTimeMillis());
-        } else {
-            aiTts.speak(text, TextToSpeech.QUEUE_FLUSH, null);
-        }
+    private void addButton(String label, Runnable action) {
+        Button b = new Button(this);
+        b.setText(label);
+        b.setTextColor(Color.WHITE);
+        b.setAllCaps(false);
+        b.setTextSize(15);
+        b.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        b.setBackground(background(C_ACCENT, 14));
+        LinearLayout.LayoutParams p = matchWrap();
+        p.setMargins(0, dp(6), 0, dp(6));
+        b.setLayoutParams(p);
+        b.setOnClickListener(v -> action.run());
+        root.addView(b);
     }
 
-    private void showAIMasterVoiceScreen() {
-        startScreen(false);
-        LinearLayout c = content();
-        c.setPadding(dp(20), dp(24), dp(20), dp(150));
-        TextView back = tv("← Back", 15, TEXT);
-        back.setPadding(0, dp(4), 0, dp(18));
-        back.setOnClickListener(v -> showHome());
-        c.addView(back);
-        LinearLayout hero = column();
-        hero.setGravity(Gravity.CENTER_HORIZONTAL);
-        hero.setPadding(dp(12), dp(20), dp(12), dp(20));
-        TextView bot = tv("🤖", 66, WHITE);
-        bot.setGravity(Gravity.CENTER);
-        hero.addView(bot, new LinearLayout.LayoutParams(-1, dp(100)));
-        TextView title = tv("AI MASTER", 27, WHITE);
-        title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        title.setGravity(Gravity.CENTER);
-        hero.addView(title);
-        TextView subtitle = tv("Your voice guide for every step", 14, GRAY);
-        subtitle.setGravity(Gravity.CENTER);
-        hero.addView(subtitle);
-        c.addView(hero);
-        TextView status = tv("Tap the microphone and ask your question", 14, TEXT);
-        status.setGravity(Gravity.CENTER);
-        status.setPadding(dp(8), dp(10), dp(8), dp(10));
-        c.addView(status);
-        Button mic = primary("🎙  TALK TO AI MASTER");
-        mic.setOnClickListener(v -> startAIVoiceInput());
-        c.addView(mic);
-        Button replay = secondary("🔊  Speak the step-by-step welcome");
-        replay.setOnClickListener(v -> speakAI(aiWelcomeMessage()));
-        c.addView(replay);
-        c.addView(heading("What do you need help with?"));
-        Button account = secondary("Create account / Login");
-        account.setOnClickListener(v -> { String a = aiText("To start, choose Get Started and fill in your own details.", "शुरू करने के लिए Get Started दबाएँ और अपनी जानकारी भरें।", "শুরু করতে Get Started চাপুন এবং নিজের তথ্য দিন।", "شروع کرنے کے لیے Get Started دبائیں اور اپنی معلومات درج کریں۔", "Başlamak için Get Started'a dokunun ve bilgilerinizi girin.", "ابدأ بالضغط على Get Started وأدخل معلوماتك."); speakAI(a); });
-        c.addView(account);
-        Button jobs = secondary("Find and complete work");
-        jobs.setOnClickListener(v -> { speakAI(aiText("Open Jobs and read the task details before accepting.", "Jobs खोलें और काम स्वीकार करने से पहले उसकी जानकारी पढ़ें।", "Jobs খুলুন এবং কাজ গ্রহণের আগে বিবরণ পড়ুন।", "Jobs کھولیں اور کام قبول کرنے سے پہلے تفصیل پڑھیں۔", "Jobs bölümünü açın ve kabul etmeden önce görev ayrıntılarını okuyun.", "افتح Jobs واقرأ التفاصيل قبل قبول المهمة.")); showJobs(); });
-        c.addView(jobs);
-        Button verification = secondary("Verification / KYC help");
-        verification.setOnClickListener(v -> { speakAI(aiText("Open Profile and then Worker Verification.", "Profile खोलें, फिर Worker Verification चुनें।", "Profile খুলুন, তারপর Worker Verification বেছে নিন।", "Profile کھولیں، پھر Worker Verification منتخب کریں۔", "Profile bölümünü açıp Worker Verification'ı seçin.", "افتح Profile ثم اختر Worker Verification.")); showWorkerVerification(); });
-        c.addView(verification);
-        Button earnings = secondary("Earnings / Payments help");
-        earnings.setOnClickListener(v -> { speakAI(aiText("Open Earnings to check your balance and payout information.", "बैलेंस और पेमेंट जानकारी के लिए Earnings खोलें।", "ব্যালেন্স ও পেমেন্টের তথ্য দেখতে Earnings খুলুন।", "بیلنس اور ادائیگی کی معلومات کے لیے Earnings کھولیں۔", "Bakiye ve ödeme bilgileri için Earnings bölümünü açın.", "افتح Earnings لمعرفة الرصيد ومعلومات الدفع.")); showEarnings(); });
-        c.addView(earnings);
-        if (aiBubbleView != null) aiBubbleView.setText("AI Master is ready. Tap the microphone to ask by voice.");
+    private void cardText(String message) {
+        TextView t = text(message, 14, C_TEXT, false);
+        t.setPadding(dp(14), dp(14), dp(14), dp(14));
+        t.setBackground(background(C_CARD, 15));
+        LinearLayout.LayoutParams p = matchWrap();
+        p.setMargins(0, dp(5), 0, dp(7));
+        root.addView(t, p);
     }
 
-    private void setAILanguage(String label) {
-        String l = label.toLowerCase(Locale.ROOT);
-        if (l.contains("हिन्दी")) aiLocale = new Locale("hi", "IN");
-        else if (l.contains("বাংলা")) aiLocale = new Locale("bn", "BD");
-        else if (l.contains("اردو")) aiLocale = new Locale("ur", "PK");
-        else if (l.contains("العربية")) aiLocale = new Locale("ar");
-        else if (l.contains("türkçe")) aiLocale = new Locale("tr", "TR");
-        else aiLocale = new Locale("en", "US");
-        if (aiTts != null) {
-            int result = aiTts.setLanguage(aiLocale);
-            aiTtsReady = result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED;
-        }
+    private void addStatus(String message) {
+        TextView t = text(message, 12, C_MUTED, false);
+        t.setPadding(dp(4), dp(8), dp(4), dp(8));
+        root.addView(t, matchWrap());
     }
 
-    private String aiText(String en, String hi, String bn, String ur, String ar, String tr) {
-        String lang = aiLocale.getLanguage();
-        if ("hi".equals(lang)) return hi;
-        if ("bn".equals(lang)) return bn;
-        if ("ur".equals(lang)) return ur;
-        if ("ar".equals(lang)) return ar;
-        if ("tr".equals(lang)) return tr;
-        return en;
+    private TextView text(String value, float size, int color, boolean bold) {
+        TextView t = new TextView(this);
+        t.setText(value);
+        t.setTextSize(size);
+        t.setTextColor(color);
+        if (bold) t.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        return t;
     }
 
-    private String aiWelcomeMessage() {
-        return aiText(
-                "Welcome to Viyzo Worker. I am AI Master. First create your account, choose your country and language, complete the verification steps available to you, then open Jobs and read each task carefully before accepting it. Demo jobs shown in this version are examples, not confirmed live company work. Real work availability will appear when the live server is connected.",
-                "Viyzo Worker में आपका स्वागत है। मैं AI Master हूँ। पहले अपना अकाउंट बनाइए, देश और भाषा चुनिए, उपलब्ध वेरिफिकेशन पूरा कीजिए, फिर Jobs खोलकर काम की जानकारी पढ़कर ही काम स्वीकार कीजिए। अभी दिखने वाले डेमो जॉब उदाहरण हैं, पक्के लाइव कंपनी जॉब नहीं। असली काम की उपलब्धता लाइव सर्वर जुड़ने पर दिखेगी।",
-                "Viyzo Worker-এ স্বাগতম। আমি AI Master। প্রথমে অ্যাকাউন্ট তৈরি করুন, দেশ ও ভাষা বেছে নিন, উপলব্ধ যাচাইকরণ সম্পন্ন করুন, তারপর Jobs খুলে কাজের বিবরণ পড়ে কাজ গ্রহণ করুন। এখনকার ডেমো কাজগুলো উদাহরণ, নিশ্চিত লাইভ কোম্পানির কাজ নয়। লাইভ সার্ভার যুক্ত হলে প্রকৃত কাজের তথ্য দেখানো যাবে।",
-                "Viyzo Worker میں خوش آمدید۔ میں AI Master ہوں۔ پہلے اکاؤنٹ بنائیں، ملک اور زبان منتخب کریں، دستیاب تصدیق مکمل کریں، پھر Jobs کھول کر کام کی تفصیل پڑھ کر ہی کام قبول کریں۔ ابھی دکھائے گئے ڈیمو کام مثالیں ہیں، تصدیق شدہ لائیو کمپنی کے کام نہیں۔ اصل دستیابی لائیو سرور جڑنے پر دکھائی جائے گی۔",
-                "مرحباً بك في Viyzo Worker. أنا AI Master. أنشئ حسابك أولاً، واختر بلدك ولغتك، وأكمل خطوات التحقق المتاحة، ثم افتح الوظائف واقرأ التفاصيل قبل قبول أي مهمة. الوظائف التجريبية الحالية أمثلة وليست وظائف حقيقية مؤكدة. ستظهر الوظائف الفعلية بعد ربط الخادم المباشر.",
-                "Viyzo Worker'a hoş geldiniz. Ben AI Master. Önce hesap oluşturun, ülkenizi ve dilinizi seçin, mevcut doğrulama adımlarını tamamlayın, ardından Jobs bölümünü açıp ayrıntıları okuyarak işi kabul edin. Şu anki demo işler örnektir, doğrulanmış canlı işler değildir. Gerçek işler canlı sunucu bağlandığında gösterilir.");
+    private GradientDrawable background(int color, int radiusDp) {
+        GradientDrawable d = new GradientDrawable();
+        d.setColor(color);
+        d.setCornerRadius(dp(radiusDp));
+        d.setStroke(dp(1), Color.rgb(48, 48, 62));
+        return d;
     }
 
-    private String answerAIQuestion(String q) {
-        String x = q == null ? "" : q.toLowerCase(Locale.ROOT);
-        boolean account = hasAny(x, "account", "register", "sign up", "login", "अकाउंट", "खाता", "रजिस्टर", "একাউন্ট", "اکاؤنٹ", "حساب");
-        boolean job = hasAny(x, "job", "work", "काम", "जॉब", "কাজ", "کام", "وظيفة", "iş");
-        boolean money = hasAny(x, "earning", "money", "payment", "withdraw", "पैसा", "कमाई", "पेमेंट", "টাকা", "پیسے", "مال", "ödeme");
-        boolean kyc = hasAny(x, "kyc", "verify", "verification", "document", "selfie", "पहचान", "वेरिफ", "दस्तावेज", "যাচাই", "تصدیق", "doğrula");
-        boolean company = hasAny(x, "company", "client", "business", "कंपनी", "क्लाइंट", "কোম্পানি", "کمپنی", "شركة", "şirket");
-        if (account) return aiText("Open Create Account, enter only your own details, choose your country and language, set a Viyzo password, and submit. Never share your email-provider password or OTP with anyone. This demo does not yet create a secure server account.", "Create Account खोलें, अपनी सही जानकारी भरें, देश और भाषा चुनें, Viyzo पासवर्ड बनाएँ और सबमिट करें। अपना ईमेल पासवर्ड या OTP किसी को न दें। इस डेमो में अभी सुरक्षित सर्वर अकाउंट जुड़ा नहीं है।", "Create Account খুলুন, নিজের তথ্য দিন, দেশ ও ভাষা নির্বাচন করুন, Viyzo পাসওয়ার্ড সেট করে জমা দিন। ইমেইলের পাসওয়ার্ড বা OTP কাউকে দেবেন না। এই ডেমোতে নিরাপদ সার্ভার অ্যাকাউন্ট এখনও যুক্ত নয়।", "Create Account کھولیں، اپنی معلومات درج کریں، ملک اور زبان منتخب کریں، Viyzo پاس ورڈ بنائیں اور جمع کریں۔ اپنا ای میل پاس ورڈ یا OTP کسی کو نہ دیں۔ اس ڈیمو میں محفوظ سرور اکاؤنٹ ابھی منسلک نہیں۔", "Create Account bölümünü açın, kendi bilgilerinizi girin, ülke ve dili seçin ve Viyzo şifresi oluşturun. E-posta şifrenizi veya OTP'nizi kimseyle paylaşmayın. Bu demoda güvenli sunucu hesabı henüz bağlı değil.", "Create Account bölümünü açın, kendi bilgilerinizi girin, ülke ve dili seçin ve Viyzo şifresi oluşturun. E-posta şifrenizi veya OTP'nizi kimseyle paylaşmayın. Bu demoda güvenli sunucu hesabı henüz bağlı değil.");
-        if (kyc) return aiText("Open Profile or Worker Verification. Complete only the steps offered for your country. Document requirements and payout checks must be configured safely for each country; do not upload sensitive documents unless the app shows a clear purpose and secure process.", "Profile या Worker Verification खोलें। अपने देश के लिए जो चरण दिखें वही पूरा करें। दस्तावेज और भुगतान की जाँच देश के अनुसार सुरक्षित तरीके से सेट होनी चाहिए। साफ कारण और सुरक्षित प्रक्रिया के बिना संवेदनशील दस्तावेज अपलोड न करें।", "Profile বা Worker Verification খুলুন। আপনার দেশের জন্য যে ধাপ দেখানো হয় তা সম্পন্ন করুন। স্পষ্ট কারণ ও নিরাপদ ব্যবস্থা ছাড়া সংবেদনশীল নথি আপলোড করবেন না।", "Profile یا Worker Verification کھولیں۔ اپنے ملک کے لیے دکھائے گئے مراحل مکمل کریں۔ واضح وجہ اور محفوظ طریقے کے بغیر حساس دستاویزات اپ لوڈ نہ کریں۔", "Profile veya Worker Verification bölümünü açın. Ülkeniz için gösterilen adımları tamamlayın. Açık amaç ve güvenli süreç olmadan hassas belgeleri yüklemeyin.", "Profile veya Worker Verification bölümünü açın. Ülkeniz için gösterilen adımları tamamlayın. Açık amaç ve güvenli süreç olmadan hassas belgeleri yüklemeyin.");
-        if (money) return aiText("Open Earnings to review the demo balance and payout information. The configured business model allocates 50 percent to the worker pool and 50 percent to Viyzo's platform share before expenses. Earnings are not guaranteed; actual payouts require approved work, real company funds, and a connected payment backend.", "Earnings खोलकर डेमो बैलेंस और पेमेंट जानकारी देखें। मौजूदा मॉडल में 50% वर्कर पूल और 50% Viyzo प्लेटफॉर्म शेयर है; Viyzo के हिस्से से खर्च भी निकलेंगे। कमाई की गारंटी नहीं है। असली पेमेंट के लिए स्वीकृत काम, कंपनी के वास्तविक पैसे और पेमेंट बैकएंड चाहिए।", "Earnings খুলে ডেমো ব্যালেন্স ও পেমেন্ট তথ্য দেখুন। বর্তমান মডেলে ৫০% কর্মী পুল এবং ৫০% Viyzo প্ল্যাটফর্মের অংশ; খরচও এখান থেকে হবে। আয়ের নিশ্চয়তা নেই। প্রকৃত পেমেন্টের জন্য অনুমোদিত কাজ, কোম্পানির অর্থ ও পেমেন্ট ব্যাকএন্ড দরকার।", "Earnings کھول کر ڈیمو بیلنس دیکھیں۔ موجودہ ماڈل میں 50% ورکر پول اور 50% Viyzo پلیٹ فارم کا حصہ ہے، جس سے اخراجات بھی ادا ہوں گے۔ آمدنی کی ضمانت نہیں۔ حقیقی ادائیگی کے لیے منظور شدہ کام، کمپنی کے فنڈز اور پیمنٹ بیک اینڈ ضروری ہے۔", "Earnings bölümünden demo bakiyeyi inceleyin. Mevcut modelde %50 çalışan havuzuna, %50 Viyzo platform payına ayrılır; platform payı masrafları da karşılar. Kazanç garanti değildir; gerçek ödeme için onaylı iş, şirket fonu ve ödeme altyapısı gerekir.", "Earnings bölümünden demo bakiyeyi inceleyin. Mevcut modelde %50 çalışan havuzuna, %50 Viyzo platform payına ayrılır; platform payı masrafları da karşılar. Kazanç garanti değildir; gerçek ödeme için onaylı iş, şirket fonu ve ödeme altyapısı gerekir.");
-        if (company) return aiText("Companies need to onboard, post genuine work with a clear budget, deadline, skills and quality rules, then fund the job. The Company Portal here is a UI foundation; it does not yet send a live job to workers without the backend.", "कंपनी को पहले जुड़ना होगा, असली काम का बजट, डेडलाइन, स्किल और गुणवत्ता नियम देने होंगे, फिर काम के लिए फंड करना होगा। Company Portal अभी UI फाउंडेशन है; बैकएंड के बिना लाइव जॉब वर्कर तक नहीं जाता।", "কোম্পানিকে যুক্ত হয়ে প্রকৃত কাজ, বাজেট, সময়সীমা, দক্ষতা ও মানের নিয়ম দিতে হবে এবং অর্থ জমা করতে হবে। ব্যাকএন্ড ছাড়া এই Company Portal থেকে লাইভ কাজ পাঠানো হয় না।", "کمپنی کو شامل ہو کر حقیقی کام، بجٹ، آخری تاریخ اور معیار بتانا ہوگا اور رقم فراہم کرنی ہوگی۔ بیک اینڈ کے بغیر یہ Company Portal لائیو کام نہیں بھیجتا۔", "Şirketlerin sisteme katılması, gerçek işi, bütçeyi, teslim tarihini ve kalite kurallarını belirtmesi ve işi finanse etmesi gerekir. Arka uç olmadan bu Company Portal canlı iş göndermez.", "Şirketlerin sisteme katılması, gerçek işi, bütçeyi, teslim tarihini ve kalite kurallarını belirtmesi ve işi finanse etmesi gerekir. Arka uç olmadan bu Company Portal canlı iş göndermez.");
-        if (job) return aiText("Open Jobs, choose a task, check the company, requirements, workload, deadline and payment details, then accept only if you can complete it. The current list is demo data. It cannot tell you the true live amount of work until the job backend is connected.", "Jobs खोलें, काम चुनें, कंपनी, जरूरी स्किल, मात्रा, डेडलाइन और पेमेंट पढ़ें; तभी स्वीकार करें जब पूरा कर सकें। अभी की सूची डेमो डेटा है। लाइव बैकएंड जुड़ने तक असली उपलब्ध काम की संख्या नहीं बता सकती।", "Jobs খুলুন, কাজ বেছে নিয়ে কোম্পানি, দক্ষতা, পরিমাণ, সময়সীমা ও পেমেন্ট দেখুন। সম্পন্ন করতে পারবেন তবেই গ্রহণ করুন। বর্তমান তালিকা ডেমো ডেটা; লাইভ ব্যাকএন্ড ছাড়া প্রকৃত কাজের সংখ্যা জানা যাবে না।", "Jobs کھولیں، کام منتخب کریں، کمپنی، مہارت، مقدار، آخری تاریخ اور ادائیگی پڑھیں؛ صرف تب قبول کریں جب مکمل کر سکیں۔ موجودہ فہرست ڈیمو ہے۔ لائیو بیک اینڈ کے بغیر حقیقی دستیاب کام کی تعداد معلوم نہیں ہو سکتی۔", "Jobs bölümünü açın; şirketi, becerileri, miktarı, teslim tarihini ve ödemeyi kontrol edin. Yalnızca tamamlayabileceğiniz işi kabul edin. Şu anki liste demo verisidir; canlı arka uç olmadan gerçek iş sayısı bilinemez.", "Jobs bölümünü açın; şirketi, becerileri, miktarı, teslim tarihini ve ödemeyi kontrol edin. Yalnızca tamamlayabileceğiniz işi kabul edin. Şu anki liste demo verisidir; canlı arka uç olmadan gerçek iş sayısı bilinemez.");
-        return aiText("I can guide you through account creation, jobs, verification, earnings and the Company Portal. Try asking: How do I create an account? Is this live work? How do I get paid? What is verification? This built-in guide uses local rules; full conversational AI needs a secure AI backend.", "मैं अकाउंट, जॉब, वेरिफिकेशन, कमाई और Company Portal में मदद कर सकता हूँ। पूछें: अकाउंट कैसे बनाऊँ? क्या यह लाइव काम है? पेमेंट कैसे मिलेगा? वेरिफिकेशन क्या है? यह स्थानीय नियमों वाला गाइड है; पूरी बातचीत वाला AI जोड़ने के लिए सुरक्षित AI बैकएंड चाहिए।", "আমি অ্যাকাউন্ট, কাজ, যাচাই, আয় ও Company Portal সম্পর্কে সাহায্য করতে পারি। জিজ্ঞাসা করুন: অ্যাকাউন্ট কীভাবে খুলব? এটি কি লাইভ কাজ? পেমেন্ট কীভাবে পাব? সম্পূর্ণ AI-এর জন্য নিরাপদ ব্যাকএন্ড দরকার।", "میں اکاؤنٹ، کام، تصدیق، آمدنی اور Company Portal میں رہنمائی کر سکتا ہوں۔ پوچھیں: اکاؤنٹ کیسے بناؤں؟ کیا یہ لائیو کام ہے؟ ادائیگی کیسے ہوگی؟ مکمل AI کے لیے محفوظ بیک اینڈ ضروری ہے۔", "Hesap, işler, doğrulama, kazanç ve Company Portal konusunda yardımcı olabilirim. Şunu sorun: Hesap nasıl oluşturulur? Bu canlı iş mi? Ödeme nasıl alınır? Tam sohbet yapay zekâsı için güvenli bir arka uç gerekir.", "Hesap, işler, doğrulama, kazanç ve Company Portal konusunda yardımcı olabilirim. Şunu sorun: Hesap nasıl oluşturulur? Bu canlı iş mi? Ödeme nasıl alınır? Tam sohbet yapay zekâsı için güvenli bir arka uç gerekir.");
+    private LinearLayout.LayoutParams matchWrap() {
+        return new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
     }
 
-    private boolean hasAny(String text, String... terms) {
-        for (String term : terms) if (text.contains(term)) return true;
+    private int dp(float v) {
+        return (int)(v * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private String value(EditText e) { return e == null || e.getText() == null ? "" : e.getText().toString().trim(); }
+    private void toast(String s) { Toast.makeText(this, s, Toast.LENGTH_LONG).show(); }
+
+    private JSONObject parse(String s) {
+        try { return new JSONObject(s); } catch (Exception e) { return new JSONObject(); }
+    }
+
+    private String friendlyError(String s) {
+        JSONObject j = parse(s);
+        String msg = j.optString("msg", j.optString("message", j.optString("error_description", s)));
+        if (msg == null || msg.trim().isEmpty()) return "Unknown server error";
+        return msg.length() > 220 ? msg.substring(0, 220) : msg;
+    }
+
+    private String safeJson(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ");
+    }
+
+    private Locale localeFor(String name) {
+        String n = name == null ? "" : name.toLowerCase(Locale.ROOT);
+        if (n.contains("hindi") || n.contains("हिंदी")) return new Locale("hi", "IN");
+        if (n.contains("bengali") || n.contains("বাংলা")) return new Locale("bn", "IN");
+        if (n.contains("urdu") || n.contains("اردو")) return new Locale("ur", "IN");
+        if (n.contains("arabic") || n.contains("العربية")) return new Locale("ar");
+        if (n.contains("turkish") || n.contains("türk")) return new Locale("tr");
+        if (n.contains("spanish") || n.contains("español")) return new Locale("es");
+        if (n.contains("french") || n.contains("français")) return Locale.FRENCH;
+        if (n.contains("portuguese")) return new Locale("pt");
+        if (n.contains("german")) return Locale.GERMAN;
+        return Locale.US;
+    }
+
+    private boolean containsAny(String value, String... terms) {
+        for (String t : terms) if (value.contains(t)) return true;
         return false;
     }
 
-    @Override
-    protected void onDestroy() {
-        if (aiTts != null) {
-            aiTts.stop();
-            aiTts.shutdown();
-            aiTts = null;
+    @Override protected void onDestroy() {
+        if (tts != null) {
+            tts.stop();
+            tts.shutdown();
+            tts = null;
         }
+        io.shutdownNow();
         super.onDestroy();
-    }
-
-    private double parseMoney(String text) {
-        if (text == null) return 0.0;
-
-        String clean = text
-                .replace("$", "")
-                .replace("₹", "")
-                .replace(",", "")
-                .trim();
-
-        try {
-            return Double.parseDouble(clean);
-        } catch (Exception e) {
-            return 0.0;
-        }
-    }
-
-    private double workerPool(double total) {
-        return total * WORKER_SHARE_PERCENT / 100.0;
-    }
-
-    private double viyzoShare(double total) {
-        return total * VIYZO_SHARE_PERCENT / 100.0;
-    }
-
-    private String money(double value) {
-        return String.format(Locale.US, "$%.2f", value);
-    }
-
-    private String formatNumber(double value) {
-        if (value == Math.rint(value)) {
-            return String.format(Locale.US, "%.0f", value);
-        }
-        return String.format(Locale.US, "%.2f", value);
     }
 }
