@@ -1279,7 +1279,7 @@ public class MainActivity extends Activity {
                 startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW,
                         android.net.Uri.parse("https://github.com/ashikurrahmanbarbhuiya775-creator/Viyzo-Work-/actions")));
             } catch (Exception ignored) {
-                toast("Open GitHub Actions in your browser to check the latest APK build.");
+                Toast.makeText(this, "Open GitHub Actions in your browser to check the latest APK build.", Toast.LENGTH_LONG).show();
             }
         });
         c.addView(build);
