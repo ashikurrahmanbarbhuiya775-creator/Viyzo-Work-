@@ -1139,12 +1139,41 @@ public class MainActivity extends Activity {
                 } catch (Exception ex) {
                     runOnUiThread(() -> {
                         login.setEnabled(true);
-                        status.setText("Login failed: " + (ex.getMessage() == null ? "Please try again." : ex.getMessage()));
+                        String message = ex.getMessage() == null ? "Please try again." : ex.getMessage();
+                        if (message.toLowerCase(Locale.ROOT).contains("email not confirmed")) message = "Email not confirmed. Tap “Resend Confirmation Email” above, then open the link sent to your inbox. Check Spam/Junk too.";
+                        status.setText("Login failed: " + message);
                     });
                 }
             }).start();
         });
         c.addView(login);
+
+        Button resend = secondary("✉️  Resend Confirmation Email");
+        resend.setOnClickListener(v -> {
+            String e = email.getText().toString().trim();
+            if (e.isEmpty()) {
+                status.setText("Enter your email address first, then tap Resend Confirmation Email.");
+                return;
+            }
+            resend.setEnabled(false);
+            status.setText("Requesting a new confirmation email…");
+            new Thread(() -> {
+                try {
+                    JSONObject body = new JSONObject().put("email", e).put("type", "signup");
+                    apiRequest("/auth/v1/resend", "POST", body, false, null);
+                    runOnUiThread(() -> {
+                        resend.setEnabled(true);
+                        status.setText("If this account needs confirmation, Supabase has accepted the request. Check Inbox and Spam/Junk.");
+                    });
+                } catch (Exception ex) {
+                    runOnUiThread(() -> {
+                        resend.setEnabled(true);
+                        status.setText("Could not resend confirmation: " + (ex.getMessage() == null ? "Please try again later." : ex.getMessage()));
+                    });
+                }
+            }).start();
+        });
+        c.addView(resend);
 
         Button company = secondary("🏢  Company Login");
         company.setOnClickListener(v -> showCompanyPortal());
