@@ -35,6 +35,12 @@ form{display:grid;gap:12px;max-width:440px}label{display:grid;gap:6px;color:var(
       <div class="metric"><span>Verifications</span><strong id="verificationsCount">—</strong></div>
       <div class="metric"><span>Earnings records</span><strong id="earningsCount">—</strong></div>
     </div>
+    <section style="margin-top:24px;padding-top:20px;border-top:1px solid var(--line)">
+      <h2>Funded work orders awaiting review</h2>
+      <p class="muted">Only orders with a confirmed matching deposit appear here. Approving publishes the job to workers; rejecting does not automatically refund the company.</p>
+      <div id="reviewJobs" class="muted">Loading funded work orders…</div>
+      <div id="reviewMessage" class="message" role="status" aria-live="polite"></div>
+    </section>
     <div class="actions"><button id="refreshButton" type="button">Refresh metrics</button><button id="logoutButton" class="secondary" type="button">Sign out</button></div>
     <div id="dashboardMessage" class="message" role="status" aria-live="polite"></div>
   </section>
@@ -51,6 +57,43 @@ const $ = (id) => document.getElementById(id);
 const loginPanel = $('loginPanel'), dashboardPanel = $('dashboardPanel');
 function message(id, text, kind='') { const el=$(id); el.textContent=text; el.className='message'+(kind?' '+kind:''); }
 function showDashboard(show) { loginPanel.classList.toggle('hidden',show); dashboardPanel.classList.toggle('hidden',!show); }
+function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+function renderReviewJobs(items) {
+  const root = $('reviewJobs');
+  if (!items.length) { root.textContent = 'No funded work orders are waiting for review.'; return; }
+  root.innerHTML = items.map(j => {
+    const share = Number(j.payment_amount) * Number(j.task_limit || 1);
+    return '<article style="padding:14px 0;border-bottom:1px solid var(--line)"><strong>'+escapeHtml(j.title)+'</strong>'+
+      '<div style="margin-top:6px">Worker reserve: ₹'+share.toLocaleString('en-IN')+' · Viyzo 50% share: ₹'+share.toLocaleString('en-IN')+
+      ' · Total funded: ₹'+(share*2).toLocaleString('en-IN')+'</div><div class="muted">'+Number(j.task_limit||1)+' task slot(s) · '+escapeHtml(j.currency||'INR')+
+      ' · '+new Date(j.created_at).toLocaleString()+'</div>'+(j.description?'<p>'+escapeHtml(j.description)+'</p>':'')+
+      '<div class="actions"><button type="button" data-review-action="approve_job" data-job-id="'+escapeHtml(j.id)+'">Approve & publish</button>'+
+      '<button type="button" class="secondary" data-review-action="reject_job" data-job-id="'+escapeHtml(j.id)+'">Reject</button></div></article>';
+  }).join('');
+}
+$('reviewJobs').addEventListener('click', async event => {
+  const button = event.target.closest('button[data-review-action]');
+  if (!button) return;
+  const action = button.dataset.reviewAction;
+  if (action === 'reject_job' && !window.confirm('Reject this funded work order? This does not automatically refund the company.')) return;
+  button.disabled = true;
+  message('reviewMessage', action === 'approve_job' ? 'Verifying funding and publishing job…' : 'Rejecting work order…');
+  try {
+    const {data:{session},error} = await supabase.auth.getSession();
+    if (error || !session) throw new Error('Please sign in again.');
+    const response = await fetch(SUPABASE_URL + '/functions/v1/supervisor-dashboard', {
+      method:'POST', headers:{Authorization:'Bearer '+session.access_token, apikey:SUPABASE_PUBLISHABLE_KEY, 'Content-Type':'application/json'},
+      body:JSON.stringify({action,job_id:button.dataset.jobId})
+    });
+    const result = await response.json().catch(()=>({}));
+    if (!response.ok) throw new Error(result.message || result.error || 'Review action failed.');
+    message('reviewMessage', action === 'approve_job' ? 'Work order approved and published to workers.' : 'Work order rejected. Refund must be handled separately.','success');
+    await loadMetrics();
+  } catch (err) {
+    message('reviewMessage',err?.message || 'Could not complete review.','error');
+    button.disabled = false;
+  }
+});
 async function loadMetrics() {
   $('refreshButton').disabled = true;
   message('dashboardMessage','Loading live metrics…');
@@ -71,6 +114,7 @@ async function loadMetrics() {
     $('applicationsCount').textContent = data.metrics.applications ?? 0;
     $('verificationsCount').textContent = data.metrics.verifications ?? 0;
     $('earningsCount').textContent = data.metrics.earnings_records ?? 0;
+    renderReviewJobs(data.pending_review_jobs || []);
     $('rolePill').textContent = 'Role: '+data.role;
     message('dashboardMessage','Live data refreshed successfully.','success');
   } catch (err) {
