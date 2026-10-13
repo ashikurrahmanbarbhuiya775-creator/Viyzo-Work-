@@ -40,6 +40,10 @@ form{display:grid;gap:12px;max-width:440px}label{display:grid;gap:6px;color:var(
       <p class="muted">Only orders with a confirmed matching deposit appear here. Approving publishes the job to workers; rejecting does not automatically refund the company.</p>
       <div id="reviewJobs" class="muted">Loading funded work orders…</div>
       <div id="reviewMessage" class="message" role="status" aria-live="polite"></div>
+      <h2 style="margin-top:24px">Worker completion submissions</h2>
+      <p class="muted">Approve a verified completion to create a pending earning record. This does not send a bank payout automatically.</p>
+      <div id="taskSubmissions" class="muted">Loading submissions…</div>
+      <div id="taskReviewMessage" class="message" role="status" aria-live="polite"></div>
     </section>
     <div class="actions"><button id="refreshButton" type="button">Refresh metrics</button><button id="logoutButton" class="secondary" type="button">Sign out</button></div>
     <div id="dashboardMessage" class="message" role="status" aria-live="polite"></div>
@@ -58,6 +62,42 @@ const loginPanel = $('loginPanel'), dashboardPanel = $('dashboardPanel');
 function message(id, text, kind='') { const el=$(id); el.textContent=text; el.className='message'+(kind?' '+kind:''); }
 function showDashboard(show) { loginPanel.classList.toggle('hidden',show); dashboardPanel.classList.toggle('hidden',!show); }
 function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+function renderTaskSubmissions(items) {
+  const root = $('taskSubmissions');
+  if (!items.length) { root.textContent = 'No worker completion submissions are waiting for review.'; return; }
+  root.innerHTML = items.map(s => {
+    const job = Array.isArray(s.jobs) ? s.jobs[0] : s.jobs;
+    return '<article style="padding:14px 0;border-bottom:1px solid var(--line)"><strong>'+escapeHtml(job?.title || 'Viyzo work order')+'</strong>'+
+      '<div class="muted">Submitted: '+new Date(s.created_at).toLocaleString()+' · Worker ID: '+escapeHtml(s.worker_id)+'</div>'+
+      '<p style="white-space:pre-wrap">'+escapeHtml(s.completion_note)+'</p>'+
+      (s.proof_url?'<p><a href="'+escapeHtml(s.proof_url)+'" target="_blank" rel="noopener noreferrer">Open submitted proof</a></p>':'')+
+      '<div class="actions"><button type="button" data-task-action="approve_submission" data-submission-id="'+escapeHtml(s.id)+'">Approve completion</button>'+
+      '<button type="button" class="secondary" data-task-action="reject_submission" data-submission-id="'+escapeHtml(s.id)+'">Reject completion</button></div></article>';
+  }).join('');
+}
+$('taskSubmissions').addEventListener('click', async event => {
+  const button = event.target.closest('button[data-task-action]');
+  if (!button) return;
+  const action = button.dataset.taskAction;
+  if (action === 'reject_submission' && !window.confirm('Reject this task completion?')) return;
+  button.disabled = true;
+  message('taskReviewMessage', action === 'approve_submission' ? 'Checking worker reserve and recording earnings…' : 'Rejecting completion…');
+  try {
+    const {data:{session},error} = await supabase.auth.getSession();
+    if (error || !session) throw new Error('Please sign in again.');
+    const response = await fetch(SUPABASE_URL + '/functions/v1/supervisor-dashboard', {
+      method:'POST', headers:{Authorization:'Bearer '+session.access_token, apikey:SUPABASE_PUBLISHABLE_KEY, 'Content-Type':'application/json'},
+      body:JSON.stringify({action,submission_id:button.dataset.submissionId})
+    });
+    const result = await response.json().catch(()=>({}));
+    if (!response.ok) throw new Error(result.message || result.error || 'Task review failed.');
+    message('taskReviewMessage', action === 'approve_submission' ? 'Completion approved. Earning is recorded as pending; no bank payment has been sent.' : 'Completion rejected.','success');
+    await loadMetrics();
+  } catch (err) {
+    message('taskReviewMessage',err?.message || 'Could not review completion.','error');
+    button.disabled = false;
+  }
+});
 function renderReviewJobs(items) {
   const root = $('reviewJobs');
   if (!items.length) { root.textContent = 'No funded work orders are waiting for review.'; return; }
@@ -115,6 +155,7 @@ async function loadMetrics() {
     $('verificationsCount').textContent = data.metrics.verifications ?? 0;
     $('earningsCount').textContent = data.metrics.earnings_records ?? 0;
     renderReviewJobs(data.pending_review_jobs || []);
+    renderTaskSubmissions(data.pending_task_submissions || []);
     $('rolePill').textContent = 'Role: '+data.role;
     message('dashboardMessage','Live data refreshed successfully.','success');
   } catch (err) {
