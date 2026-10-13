@@ -1745,6 +1745,13 @@ public class MainActivity extends Activity {
                         item.addView(heading(job==null?"Viyzo work order":job.optString("title","Viyzo work order")));
                         item.addView(small("Application status: "+app.optString("status","submitted")));
                         if(job!=null) item.addView(tv("Worker payment per approved task: ₹"+formatNumber(job.optDouble("payment_amount",0)),13,GREEN));
+                        if(job!=null && "open".equals(job.optString("status",""))) {
+                            Button complete=primary("Submit Completed Work");
+                            String appId=app.optString("id","");
+                            String jobTitle=job.optString("title","Viyzo work order");
+                            complete.setOnClickListener(v -> showCompletionSubmission(appId,jobTitle));
+                            item.addView(complete);
+                        }
                         item.addView(small("Applied: "+app.optString("created_at","")));
                         setMargins(item,0,8,0,8);
                         c.addView(item);
@@ -1754,6 +1761,38 @@ public class MainActivity extends Activity {
                 runOnUiThread(() -> status.setText("Could not load applications: "+ex.getMessage()));
             }
         }).start();
+    }
+
+    private void showCompletionSubmission(String applicationId, String title) {
+        startScreen(false);
+        LinearLayout c=content();
+        c.addView(heading("Submit Completed Work"));
+        c.addView(small(title));
+        EditText note=input("Describe completed work (5+ characters)");
+        note.setSingleLine(false); note.setMinLines(3); note.setGravity(Gravity.TOP);
+        c.addView(note);
+        EditText proof=input("Proof URL (optional HTTPS link)");
+        c.addView(proof);
+        TextView status=small(""); c.addView(status);
+        Button submit=primary("Send for Review");
+        submit.setOnClickListener(v -> {
+            String summary=note.getText().toString().trim(), link=proof.getText().toString().trim();
+            if(summary.length()<5){status.setText("Please add a completion summary.");return;}
+            if(!link.isEmpty()&&!link.startsWith("https://")){status.setText("Proof URL must use HTTPS.");return;}
+            submit.setEnabled(false);
+            new Thread(() -> {
+                try {
+                    JSONObject body=new JSONObject().put("action","submit_completion").put("application_id",applicationId).put("completion_note",summary);
+                    if(!link.isEmpty()) body.put("proof_url",link);
+                    apiRequest("/functions/v1/worker-task","POST",body,true,null);
+                    runOnUiThread(() -> status.setText("Submitted for supervisor review. This is not a payout confirmation."));
+                } catch(Exception ex) {
+                    runOnUiThread(() -> { submit.setEnabled(true); status.setText("Submission failed: "+ex.getMessage()); });
+                }
+            }).start();
+        });
+        c.addView(submit);
+        Button back=secondary("Back to My Work"); back.setOnClickListener(v -> showMyJobs()); c.addView(back);
     }
 
     private void showWorkExecution() {
