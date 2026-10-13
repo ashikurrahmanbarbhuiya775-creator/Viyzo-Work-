@@ -118,7 +118,7 @@ public class MainActivity extends Activity {
         connection.disconnect();
         String raw = text.toString().trim();
         JSONObject result = raw.startsWith("{") ? new JSONObject(raw) : new JSONObject().put("_raw", raw);
-        if (code < 200 || code >= 300) throw new Exception(result.optString("msg", result.optString("message", result.optString("error_description", result.optString("error", "Request failed"))) + " (HTTP " + code + ")"));
+        if (code < 200 || code >= 300) { String message = result.optString("msg", result.optString("message", result.optString("error_description", result.optString("error", "Request failed")))); throw new Exception(message + " (HTTP " + code + ")"); }
         return result;
     }
 
