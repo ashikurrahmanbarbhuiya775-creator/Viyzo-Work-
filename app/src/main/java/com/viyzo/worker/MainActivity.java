@@ -1164,7 +1164,7 @@ public class MainActivity extends Activity {
         demoTitle.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         demoNotice.addView(demoTitle);
         demoNotice.addView(tv(
-                "Real worker accounts, company jobs, verification, and payouts are not connected yet. Do not enter a real password or rely on displayed demo work or balances.",
+                "Worker login, live job listings, applications, and earnings records connect to Viyzo. Identity verification and real bank payouts are not connected yet. Only apply to jobs shown in Available Work; demo examples elsewhere are not live jobs.",
                 11, TEXT));
         c.addView(demoNotice);
         setMargins(demoNotice, 0, 4, 0, 13);
@@ -1178,10 +1178,10 @@ public class MainActivity extends Activity {
         wr.addView(avatar, new LinearLayout.LayoutParams(dp(58), dp(58)));
 
         LinearLayout wn = column();
-        TextView w1 = tv("Good day, Ashikur Rahman 👋", 15, WHITE);
+        TextView w1 = tv("Good day, " + (workerName.isEmpty() ? (userEmail.isEmpty() ? "Worker" : userEmail) : workerName) + " 👋", 15, WHITE);
         w1.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         wn.addView(w1);
-        wn.addView(tv("Worker ID: VZ388742", 11, GRAY));
+        wn.addView(tv("Account ID: " + (userId.isEmpty() ? "Not signed in" : userId.substring(0, Math.min(8, userId.length()))), 11, GRAY));
         wn.addView(tv("● Basic Worker", 11, GREEN));
 
         LinearLayout.LayoutParams wnp =
@@ -1847,10 +1847,10 @@ public class MainActivity extends Activity {
         pr.addView(av, new LinearLayout.LayoutParams(dp(68), dp(68)));
 
         LinearLayout pd = column();
-        TextView name = tv("Ashikur Rahman", 17, WHITE);
+        TextView name = tv(workerName.isEmpty() ? (userEmail.isEmpty() ? "Viyzo Worker" : userEmail) : workerName, 17, WHITE);
         name.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         pd.addView(name);
-        pd.addView(tv("Worker ID: VZ388742", 11, GRAY));
+        pd.addView(tv("Account ID: " + (userId.isEmpty() ? "Not signed in" : userId.substring(0, Math.min(8, userId.length()))), 11, GRAY));
         pd.addView(tv("● Basic Worker", 11, GREEN));
 
         pr.addView(pd, new LinearLayout.LayoutParams(0, dp(68), 1));
@@ -1882,7 +1882,7 @@ public class MainActivity extends Activity {
 
         Button logout = primary("Logout");
         logout.setBackground(solid(RED, 20));
-        logout.setOnClickListener(v -> showHome());
+        logout.setOnClickListener(v -> { clearLiveSession(); showHome(); });
         c.addView(logout);
     }
 
