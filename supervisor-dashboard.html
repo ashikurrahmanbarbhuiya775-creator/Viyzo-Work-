@@ -45,7 +45,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.0';
 const SUPABASE_URL = 'https://jxnfsqxyrakkblizziel.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_skl_ZZCN1w0m6AaKYzBucQ_8AmS6Wvx';
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: false }
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
 });
 const $ = (id) => document.getElementById(id);
 const loginPanel = $('loginPanel'), dashboardPanel = $('dashboardPanel');
