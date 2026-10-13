@@ -1153,6 +1153,18 @@ public class MainActivity extends Activity {
         c.addView(manager);
         setMargins(manager, 0, 0, 0, 13);
 
+        LinearLayout supervisor = card();
+        supervisor.setBackground(outlined(CARD2, BORDER, 18));
+        TextView supervisorTitle = tv("🧭  Supervisor Console       ›", 17, WHITE);
+        supervisorTitle.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        supervisor.addView(supervisorTitle);
+        supervisor.addView(tv(
+                "Review task progress, worker verification, payout screens and build/release checks.",
+                11, GRAY));
+        supervisor.setOnClickListener(v -> showSupervisorConsole());
+        c.addView(supervisor);
+        setMargins(supervisor, 0, 0, 0, 13);
+
         LinearLayout r1 = row();
         LinearLayout jobs = menuCard(
                 "🔎", "Available Jobs", "Explore global work",
@@ -1226,6 +1238,59 @@ public class MainActivity extends Activity {
         settings.setOnClickListener(v -> showSettings());
         c.addView(settings);
         setMargins(settings, 0, 10, 0, 0);
+    }
+
+    // ============================================================
+    // SUPERVISOR CONSOLE
+    // ============================================================
+    private void showSupervisorConsole() {
+        startScreen(false);
+        LinearLayout c = content();
+
+        c.addView(heading("🧭 Supervisor Console"));
+        c.addView(small("A quick operational checklist for the current app build. Live company-wide monitoring requires the backend to be connected."));
+
+        LinearLayout status = card();
+        status.setBackground(primaryBg());
+        status.addView(tv("🟡  Work supply: Demo mode", 16, WHITE));
+        status.addView(tv("Real company jobs and worker activity are not live until a secure server is connected.", 11, WHITE));
+        c.addView(status);
+        setMargins(status, 0, 0, 0, 10);
+
+        c.addView(wideInfo("📋", "Task supervision", "Open My Work to review the assignments currently shown in this app."));
+        Button work = secondary("📋  Review My Work");
+        work.setOnClickListener(v -> showMyJobs());
+        c.addView(work);
+
+        c.addView(wideInfo("🛡", "Worker verification", "Review the verification steps available in this build."));
+        Button verify = secondary("🛡  Open Verification");
+        verify.setOnClickListener(v -> showWorkerVerification());
+        c.addView(verify);
+
+        c.addView(wideInfo("💰", "Payout review", "Open Earnings to inspect the app's displayed balance and payout information."));
+        Button earnings = secondary("💰  Open Earnings");
+        earnings.setOnClickListener(v -> showEarnings());
+        c.addView(earnings);
+
+        c.addView(wideInfo("🏗", "APK build status", "Build status must be confirmed in GitHub Actions. This screen does not claim that a new APK has passed."));
+        Button build = primary("🔎  Check GitHub Actions");
+        build.setOnClickListener(v -> {
+            try {
+                startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW,
+                        android.net.Uri.parse("https://github.com/ashikurrahmanbarbhuiya775-creator/Viyzo-Work-/actions")));
+            } catch (Exception ignored) {
+                toast("Open GitHub Actions in your browser to check the latest APK build.");
+            }
+        });
+        c.addView(build);
+
+        Button jobs = secondary("🔎  Review Available Jobs");
+        jobs.setOnClickListener(v -> showJobs());
+        c.addView(jobs);
+
+        Button back = secondary("← Back to Dashboard");
+        back.setOnClickListener(v -> showDashboard());
+        c.addView(back);
     }
 
     // ============================================================
