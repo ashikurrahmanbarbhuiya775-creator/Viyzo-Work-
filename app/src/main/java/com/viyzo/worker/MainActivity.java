@@ -1432,65 +1432,94 @@ public class MainActivity extends Activity {
     // JOBS
     // ============================================================
     private void showJobs() {
+        if (accessToken.isEmpty() || userId.isEmpty()) { showLogin(); return; }
         startScreen(true);
         LinearLayout c = content();
+        c.addView(heading("Available Work"));
+        c.addView(small("Live funded work orders from Viyzo. Demo opportunities are not mixed into this list."));
+        TextView status = small("Loading available jobs…");
+        c.addView(status);
+        Button refresh = secondary("↻ Refresh jobs");
+        c.addView(refresh);
+        refresh.setOnClickListener(v -> showJobs());
+        new Thread(() -> {
+            try {
+                JSONArray jobs = apiArray("/rest/v1/jobs?select=id,title,description,category,payment_amount,currency,task_limit,created_at&status=eq.open&order=created_at.desc&limit=50");
+                runOnUiThread(() -> {
+                    status.setText(jobs.length() == 0 ? "No live funded jobs are available right now. Check again later." : jobs.length() + " live job(s) available.");
+                    for (int i = 0; i < jobs.length(); i++) {
+                        JSONObject job = jobs.optJSONObject(i);
+                        if (job != null) c.addView(liveJobCard(job));
+                    }
+                });
+            } catch (Exception ex) {
+                runOnUiThread(() -> status.setText("Could not load live jobs: " + (ex.getMessage() == null ? "Please try again." : ex.getMessage())));
+            }
+        }).start();
+        Button myWork = secondary("📋 My Work");
+        myWork.setOnClickListener(v -> showMyJobs());
+        c.addView(myWork);
+    }
 
-        LinearLayout top = row();
-        TextView back = tv("‹", 32, WHITE);
-        back.setGravity(Gravity.CENTER);
-        back.setOnClickListener(v -> showDashboard());
-        top.addView(back, new LinearLayout.LayoutParams(dp(42), dp(50)));
+    private LinearLayout liveJobCard(JSONObject job) {
+        LinearLayout c = card();
+        String title = job.optString("title", "Viyzo work order");
+        String category = job.optString("category", "General");
+        double amount = job.optDouble("payment_amount", 0);
+        int slots = job.optInt("task_limit", 1);
+        c.addView(heading(title));
+        c.addView(small(category + " • " + job.optString("currency", "INR")));
+        c.addView(tv("Worker payment per approved task: ₹" + formatNumber(amount), 15, GREEN));
+        c.addView(tv("Task slots: " + slots, 12, TEXT));
+        String description = job.optString("description", "");
+        if (!description.isEmpty()) c.addView(tv(description, 12, GRAY));
+        Button details = primary("View Job / Apply");
+        details.setOnClickListener(v -> showLiveJobDetails(job));
+        c.addView(details);
+        setMargins(c, 0, 8, 0, 8);
+        return c;
+    }
 
-        LinearLayout titles = column();
-        TextView h = tv("Available Work", 21, WHITE);
-        h.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        titles.addView(h);
-        titles.addView(tv(
-                "Demo opportunities now • backend will supply real jobs later",
-                10, GRAY));
-
-        top.addView(titles, new LinearLayout.LayoutParams(0, dp(50), 1));
-        c.addView(top);
-
-        c.addView(input("🔎  Search jobs, skills or categories"));
-
-        LinearLayout filters1 = row();
-        Button all = secondary("All");
-        Button urgent = secondary("Urgent");
-        Button bulk = secondary("Bulk");
-        filters1.addView(all, new LinearLayout.LayoutParams(0, dp(48), 1));
-
-        LinearLayout.LayoutParams f2 = new LinearLayout.LayoutParams(0, dp(48), 1);
-        f2.setMargins(dp(5), 0, 0, 0);
-        filters1.addView(urgent, f2);
-
-        LinearLayout.LayoutParams f3 = new LinearLayout.LayoutParams(0, dp(48), 1);
-        f3.setMargins(dp(5), 0, 0, 0);
-        filters1.addView(bulk, f3);
-        c.addView(filters1);
-
-        LinearLayout filters2 = row();
-        Button recurring = secondary("Recurring");
-        Button highPay = secondary("High Pay");
-        Button global = secondary("Global");
-        filters2.addView(recurring, new LinearLayout.LayoutParams(0, dp(48), 1));
-
-        LinearLayout.LayoutParams hp = new LinearLayout.LayoutParams(0, dp(48), 1);
-        hp.setMargins(dp(5), 0, 0, 0);
-        filters2.addView(highPay, hp);
-
-        LinearLayout.LayoutParams gp = new LinearLayout.LayoutParams(0, dp(48), 1);
-        gp.setMargins(dp(5), 0, 0, 0);
-        filters2.addView(global, gp);
-        c.addView(filters2);
-
-        for (JobData job : DEMO_JOBS) {
-            c.addView(jobCard(job));
-        }
-
-        Button company = secondary("🏢  Are you a company? Post work");
-        company.setOnClickListener(v -> showCompanyPortal());
-        c.addView(company);
+    private void showLiveJobDetails(JSONObject job) {
+        startScreen(false);
+        LinearLayout c = content();
+        String jobId = job.optString("id", "");
+        String title = job.optString("title", "Viyzo work order");
+        double amount = job.optDouble("payment_amount", 0);
+        c.addView(heading(title));
+        c.addView(small("Live Viyzo work order • INR"));
+        c.addView(wideInfo("💰", "Worker payment per approved task", "₹" + formatNumber(amount)));
+        c.addView(wideInfo("📦", "Task slots", String.valueOf(job.optInt("task_limit", 1))));
+        c.addView(tv(job.optString("description", "No additional description provided."), 13, TEXT));
+        c.addView(small("Payment is pending until the work is completed and reviewed. Applying does not guarantee selection or income."));
+        TextView status = small("");
+        c.addView(status);
+        Button apply = primary("🚀 Apply for this Work");
+        apply.setOnClickListener(v -> {
+            if (accessToken.isEmpty() || userId.isEmpty()) { showLogin(); return; }
+            apply.setEnabled(false);
+            status.setText("Submitting your application securely…");
+            new Thread(() -> {
+                try {
+                    JSONObject body = new JSONObject().put("job_id", jobId).put("worker_id", userId)
+                            .put("message", "Applied from Viyzo Worker Android app").put("status", "submitted");
+                    apiRequest("/rest/v1/job_applications", "POST", body, true, "return=minimal");
+                    runOnUiThread(() -> {
+                        status.setText("Application submitted successfully.");
+                        Toast.makeText(this, "Application submitted.", Toast.LENGTH_SHORT).show();
+                    });
+                } catch (Exception ex) {
+                    runOnUiThread(() -> {
+                        apply.setEnabled(true);
+                        status.setText("Application failed: " + (ex.getMessage() == null ? "Please try again." : ex.getMessage()));
+                    });
+                }
+            }).start();
+        });
+        c.addView(apply);
+        Button back = secondary("← Back to Available Work");
+        back.setOnClickListener(v -> showJobs());
+        c.addView(back);
     }
 
     private LinearLayout jobCard(JobData job) {
