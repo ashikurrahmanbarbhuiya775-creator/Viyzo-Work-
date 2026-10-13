@@ -1014,24 +1014,48 @@ public class MainActivity extends Activity {
     private void showLogin() {
         startScreen(false);
         LinearLayout c = content();
-
         c.addView(brandHeader());
         c.addView(heading("Welcome Back"));
-        c.addView(small("Login to your Viyzo Worker account."));
+        c.addView(small("Sign in to your real Viyzo account. Your password is sent only to Supabase Auth over HTTPS."));
 
-        c.addView(input("Email or Phone"));
+        EditText email = input("Email address");
+        email.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        if (!userEmail.isEmpty()) email.setText(userEmail);
+        c.addView(email);
 
         EditText pass = input("Viyzo Password");
-        pass.setInputType(InputType.TYPE_CLASS_TEXT |
-                InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        pass.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         c.addView(pass);
 
-        Button login = primary("🔐  Login");
+        TextView status = small("");
+        c.addView(status);
+        Button login = primary("🔐  Login securely");
         login.setOnClickListener(v -> {
-            Toast.makeText(this,
-                    "Demo login: secure backend connection is required for real accounts.",
-                    Toast.LENGTH_SHORT).show();
-            showDashboard();
+            String e = email.getText().toString().trim();
+            String p = pass.getText().toString();
+            if (e.isEmpty() || p.isEmpty()) {
+                status.setText("Enter your email and Viyzo password.");
+                return;
+            }
+            login.setEnabled(false);
+            status.setText("Connecting securely to Viyzo…");
+            new Thread(() -> {
+                try {
+                    JSONObject body = new JSONObject().put("email", e).put("password", p);
+                    JSONObject auth = apiRequest("/auth/v1/token?grant_type=password", "POST", body, false, null);
+                    saveSession(auth);
+                    runOnUiThread(() -> {
+                        login.setEnabled(true);
+                        Toast.makeText(this, "Signed in to Viyzo.", Toast.LENGTH_SHORT).show();
+                        showDashboard();
+                    });
+                } catch (Exception ex) {
+                    runOnUiThread(() -> {
+                        login.setEnabled(true);
+                        status.setText("Login failed: " + (ex.getMessage() == null ? "Please try again." : ex.getMessage()));
+                    });
+                }
+            }).start();
         });
         c.addView(login);
 
@@ -1042,25 +1066,29 @@ public class MainActivity extends Activity {
         Button create = secondary("Create New Worker Account");
         create.setOnClickListener(v -> showCreateAccount());
         c.addView(create);
+
+        Button back = secondary("← Back");
+        back.setOnClickListener(v -> showHome());
+        c.addView(back);
     }
 
     private void showCreateAccount() {
         startScreen(false);
         LinearLayout c = content();
-
         c.addView(brandHeader());
         c.addView(heading("Create Worker Account"));
-        c.addView(small(
-                "Start with basic access. Stronger verification can unlock more work."
-        ));
+        c.addView(small("Create a real account. Use an email address you control. Never share your OTP or password with anyone."));
 
-        c.addView(input("Full Name"));
-        c.addView(input("Email"));
-        c.addView(input("Phone Number"));
-
-        EditText pass = input("Create Viyzo Password");
-        pass.setInputType(InputType.TYPE_CLASS_TEXT |
-                InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        EditText name = input("Full name");
+        c.addView(name);
+        EditText email = input("Email address");
+        email.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        c.addView(email);
+        EditText phone = input("Phone number (optional)");
+        phone.setInputType(InputType.TYPE_CLASS_PHONE);
+        c.addView(phone);
+        EditText pass = input("Create Viyzo Password (8+ characters)");
+        pass.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         c.addView(pass);
 
         CheckBox terms = new CheckBox(this);
@@ -1068,16 +1096,50 @@ public class MainActivity extends Activity {
         terms.setTextColor(TEXT);
         terms.setTextSize(12);
         c.addView(terms);
+        TextView status = small("");
+        c.addView(status);
 
         Button create = primary("🚀  Create Account");
         create.setOnClickListener(v -> {
-            if (!terms.isChecked()) {
-                Toast.makeText(this,
-                        "Please accept the Terms and Privacy Policy.",
-                        Toast.LENGTH_SHORT).show();
+            String n = name.getText().toString().trim();
+            String e = email.getText().toString().trim();
+            String p = pass.getText().toString();
+            if (n.isEmpty() || e.isEmpty() || p.length() < 8) {
+                status.setText("Enter your name, a valid email, and a password of at least 8 characters.");
                 return;
             }
-            showWorkerVerification();
+            if (!terms.isChecked()) {
+                status.setText("Please accept the Terms and Privacy Policy.");
+                return;
+            }
+            create.setEnabled(false);
+            status.setText("Creating your account securely…");
+            new Thread(() -> {
+                try {
+                    JSONObject metadata = new JSONObject().put("full_name", n).put("phone", phone.getText().toString().trim()).put("account_type", "worker");
+                    JSONObject body = new JSONObject().put("email", e).put("password", p).put("data", metadata);
+                    JSONObject auth = apiRequest("/auth/v1/signup", "POST", body, false, null);
+                    String token = auth.optString("access_token", "");
+                    if (!token.isEmpty()) {
+                        saveSession(auth);
+                        runOnUiThread(() -> {
+                            create.setEnabled(true);
+                            Toast.makeText(this, "Viyzo account created.", Toast.LENGTH_LONG).show();
+                            showDashboard();
+                        });
+                    } else {
+                        runOnUiThread(() -> {
+                            create.setEnabled(true);
+                            status.setText("Account request accepted. Check your email for confirmation, then sign in.");
+                        });
+                    }
+                } catch (Exception ex) {
+                    runOnUiThread(() -> {
+                        create.setEnabled(true);
+                        status.setText("Could not create account: " + (ex.getMessage() == null ? "Please try again." : ex.getMessage()));
+                    });
+                }
+            }).start();
         });
         c.addView(create);
 
