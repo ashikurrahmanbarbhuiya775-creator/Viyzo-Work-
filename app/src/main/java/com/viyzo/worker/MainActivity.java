@@ -1628,7 +1628,13 @@ public class MainActivity extends Activity {
                 } catch (Exception ex) {
                     runOnUiThread(() -> {
                         apply.setEnabled(true);
-                        status.setText("Application failed: " + (ex.getMessage() == null ? "Please try again." : ex.getMessage()));
+                        String error = ex.getMessage() == null ? "Please try again." : ex.getMessage();
+                        String lower = error.toLowerCase(Locale.ROOT);
+                        if (lower.contains("23505") || lower.contains("duplicate key") || lower.contains("unique constraint")) {
+                            status.setText("You have already applied for this work. Open My Work to check your application status.");
+                        } else {
+                            status.setText("Application failed: " + error);
+                        }
                     });
                 }
             }).start();
@@ -1830,7 +1836,7 @@ public class MainActivity extends Activity {
         LinearLayout c = content();
 
         c.addView(heading("Work Execution"));
-        c.addView(small("Demo task workspace — production task tools connect to backend."));
+        c.addView(small("DEMO ONLY — this workspace does not submit real work or create earnings. For real funded jobs, use Available Work → My Work → Submit Completed Work for supervisor review."));
 
         c.addView(wideInfo("📦", "Task Batch",
                 "Product Listing • Batch #VZ-DEMO-001"));
