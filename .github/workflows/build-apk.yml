@@ -1,6 +1,7 @@
 name: Build Viyzo APK
 
 # Keep only the newest APK build running for this branch.
+# Rebuild APK on every main-branch source update; artifact is for testing only.
 concurrency:
   group: viyzo-apk-${{ github.ref }}
   cancel-in-progress: true
