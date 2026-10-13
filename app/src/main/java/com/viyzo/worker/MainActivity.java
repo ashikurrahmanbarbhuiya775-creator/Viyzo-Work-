@@ -1771,19 +1771,50 @@ public class MainActivity extends Activity {
         new Thread(() -> {
             try {
                 JSONArray apps = apiArray("/rest/v1/job_applications?select=id,job_id,status,created_at,jobs(title,payment_amount,currency,status)&worker_id=eq." + userId + "&order=created_at.desc&limit=100");
+                JSONArray submissions = new JSONArray();
+                String submissionLoadWarning = "";
+                try {
+                    JSONObject response = apiRequest("/functions/v1/worker-task", "GET", null, true, null);
+                    submissions = response.optJSONArray("submissions");
+                    if (submissions == null) submissions = new JSONArray();
+                } catch (Exception submissionError) {
+                    submissionLoadWarning = " • Review status could not be refreshed";
+                }
+                final JSONArray finalSubmissions = submissions;
+                final String finalSubmissionWarning = submissionLoadWarning;
                 runOnUiThread(() -> {
-                    status.setText(apps.length() == 0 ? "No applications yet." : "Applications: " + apps.length());
+                    status.setText((apps.length() == 0 ? "No applications yet." : "Applications: " + apps.length()) + finalSubmissionWarning);
                     for (int i=0;i<apps.length();i++) {
                         JSONObject app=apps.optJSONObject(i);
                         if(app==null) continue;
                         JSONObject job=app.optJSONObject("jobs");
+                        String appId = app.optString("id","");
+                        JSONObject submission = null;
+                        for (int si=0;si<finalSubmissions.length();si++) {
+                            JSONObject candidate=finalSubmissions.optJSONObject(si);
+                            if(candidate!=null && appId.equals(candidate.optString("application_id",""))) {
+                                submission=candidate;
+                                break;
+                            }
+                        }
                         LinearLayout item=card();
                         item.addView(heading(job==null?"Viyzo work order":job.optString("title","Viyzo work order")));
                         item.addView(small("Application status: "+app.optString("status","submitted")));
                         if(job!=null) item.addView(tv("Worker payment per approved task: ₹"+formatNumber(job.optDouble("payment_amount",0)),13,GREEN));
-                        if(job!=null && "open".equals(job.optString("status",""))) {
+                        if (submission != null) {
+                            String reviewStatus = submission.optString("status","submitted");
+                            item.addView(small("Work review: " + reviewStatus));
+                            String reviewNote = submission.optString("review_note","");
+                            if (!reviewNote.isEmpty()) item.addView(small("Supervisor note: " + reviewNote));
+                            if ("submitted".equals(reviewStatus)) {
+                                item.addView(small("Your work is waiting for supervisor review. No earnings are approved by this status alone."));
+                            } else if ("approved".equals(reviewStatus)) {
+                                item.addView(small("Work approved. Check Earnings for a separately recorded earning; approval does not confirm a bank payout."));
+                            } else if ("rejected".equals(reviewStatus)) {
+                                item.addView(small("Work was not approved. Review the supervisor note before taking further action."));
+                            }
+                        } else if(job!=null && "open".equals(job.optString("status",""))) {
                             Button complete=primary("Submit Completed Work");
-                            String appId=app.optString("id","");
                             String jobTitle=job.optString("title","Viyzo work order");
                             complete.setOnClickListener(v -> showCompletionSubmission(appId,jobTitle));
                             item.addView(complete);
