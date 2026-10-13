@@ -1736,76 +1736,73 @@ public class MainActivity extends Activity {
     // EARNINGS
     // ============================================================
     private void showEarnings() {
+        if (accessToken.isEmpty() || userId.isEmpty()) { showLogin(); return; }
         startScreen(true);
         LinearLayout c = content();
-
         c.addView(heading("Earnings"));
-
-        LinearLayout balance = column();
-        balance.setPadding(dp(20), dp(20), dp(20), dp(20));
-        balance.setBackground(primaryBg());
-        balance.setElevation(dp(8));
-
-        balance.addView(tv("Available Balance", 12, WHITE));
-        TextView moneyText = tv("₹0.00", 32, WHITE);
-        moneyText.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        balance.addView(moneyText);
-
-        Button withdraw = primary("Withdraw");
-        withdraw.setBackground(solid(WHITE, 20));
-        withdraw.setTextColor(PRIMARY);
-        withdraw.setOnClickListener(v -> Toast.makeText(
-                this,
-                "Withdrawal will connect to a supported country/payment provider.",
-                Toast.LENGTH_SHORT).show());
-        balance.addView(withdraw);
-
+        c.addView(small("Live records from your account. Pending earnings are not withdrawable and no bank transfer is initiated here."));
+        LinearLayout balance = card();
+        balance.addView(tv("Approved / paid work records",14,GRAY));
+        TextView totalText=tv("₹0.00",30,WHITE);
+        totalText.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        balance.addView(totalText);
+        TextView pendingText=tv("Pending: ₹0.00",14,GOLD);
+        balance.addView(pendingText);
         c.addView(balance);
-        setMargins(balance, 0, 0, 0, 12);
-
-        LinearLayout target = card();
-        target.addView(tv("🎯 Daily Target Planning", 15, WHITE));
-        target.addView(tv(
-                "Opportunity target: ₹" + formatNumber(DAILY_EARNING_TARGET_INR) +
-                        "/day • up to " + formatNumber(TARGET_HOURS_PER_DAY) +
-                        " hours",
-                13, TEXT));
-        target.addView(tv(
-                "At a 50% worker-pool model, about ₹" +
-                        formatNumber(DAILY_EARNING_TARGET_INR * 2) +
-                        " of total job value would be needed to create ₹" +
-                        formatNumber(DAILY_EARNING_TARGET_INR) +
-                        " worker-pool value, before task/quality/payment effects.",
-                11, GRAY));
-        c.addView(target);
-
-        LinearLayout r = row();
-        LinearLayout total = statCard("💵", "Total Earned", "₹0.00");
-        LinearLayout pending = statCard("⏳", "Pending", "₹0.00");
-
-        r.addView(total, new LinearLayout.LayoutParams(0, dp(125), 1));
-        LinearLayout.LayoutParams pp =
-                new LinearLayout.LayoutParams(0, dp(125), 1);
-        pp.setMargins(dp(8), 0, 0, 0);
-        r.addView(pending, pp);
-        c.addView(r);
-
-        c.addView(wideInfo("📈", "Transactions",
-                "No real transactions yet"));
-        c.addView(wideInfo("🧾", "Payout Status",
-                "Backend/payment provider required"));
-        c.addView(wideInfo("🔒", "Payment Verification",
-                "May be required before withdrawals"));
-
-        Button methods = secondary("💳  Payment Methods");
+        setMargins(balance,0,0,0,12);
+        TextView status=small("Loading earnings…");
+        c.addView(status);
+        Button refresh=secondary("Refresh Earnings");
+        refresh.setOnClickListener(v -> showEarnings());
+        c.addView(refresh);
+        new Thread(() -> {
+            try {
+                JSONArray earnings=apiArray("/rest/v1/earnings?select=id,amount,currency,status,created_at,job_id&worker_id=eq."+userId+"&order=created_at.desc&limit=100");
+                JSONArray payouts=apiArray("/rest/v1/worker_payouts?select=id,amount,currency,status,reference,created_at&worker_id=eq."+userId+"&order=created_at.desc&limit=100");
+                double total=0,pending=0,paid=0,approved=0;
+                for(int i=0;i<earnings.length();i++){
+                    JSONObject e=earnings.optJSONObject(i); if(e==null) continue;
+                    double amount=e.optDouble("amount",0); String st=e.optString("status","");
+                    if("pending".equals(st)) pending+=amount;
+                    if("approved".equals(st)) approved+=amount;
+                    if("paid".equals(st)) paid+=amount;
+                }
+                total=approved+paid;
+                final double fTotal=total,fPending=pending,fPaid=paid,fApproved=approved;
+                runOnUiThread(() -> {
+                    totalText.setText("₹"+formatNumber(fTotal));
+                    pendingText.setText("Pending: ₹"+formatNumber(fPending));
+                    status.setText("Earning records: "+earnings.length()+" • Payout records: "+payouts.length());
+                    LinearLayout summary=card();
+                    summary.addView(wideInfo("✓","Approved earnings","₹"+formatNumber(fApproved)));
+                    summary.addView(wideInfo("🏦","Marked paid","₹"+formatNumber(fPaid)));
+                    c.addView(summary);
+                    c.addView(heading("Earning History"));
+                    if(earnings.length()==0) c.addView(small("No real earnings recorded yet."));
+                    for(int i=0;i<earnings.length();i++){
+                        JSONObject e=earnings.optJSONObject(i); if(e==null) continue;
+                        LinearLayout item=card();
+                        item.addView(tv("₹"+formatNumber(e.optDouble("amount",0))+" "+e.optString("currency","INR"),17,WHITE));
+                        item.addView(small("Status: "+e.optString("status","pending")+" • "+e.optString("created_at","")));
+                        c.addView(item); setMargins(item,0,6,0,6);
+                    }
+                    c.addView(heading("Payout History"));
+                    if(payouts.length()==0) c.addView(small("No payout records. Bank payments are not connected yet."));
+                    for(int i=0;i<payouts.length();i++){
+                        JSONObject p=payouts.optJSONObject(i); if(p==null) continue;
+                        LinearLayout item=card();
+                        item.addView(tv("₹"+formatNumber(p.optDouble("amount",0)),16,WHITE));
+                        item.addView(small("Payout status: "+p.optString("status","pending")+" • "+p.optString("created_at","")));
+                        c.addView(item); setMargins(item,0,6,0,6);
+                    }
+                });
+            } catch(Exception ex) {
+                runOnUiThread(() -> status.setText("Could not load earnings: "+ex.getMessage()));
+            }
+        }).start();
+        Button methods=secondary("Payment Methods / Requirements");
         methods.setOnClickListener(v -> showPaymentSettings());
         c.addView(methods);
-
-        Button history = secondary("📋  Transaction History");
-        history.setOnClickListener(v -> Toast.makeText(
-                this, "Transaction history will come from secure backend.",
-                Toast.LENGTH_SHORT).show());
-        c.addView(history);
     }
 
     private void showPaymentSettings() {
