@@ -614,6 +614,17 @@ public class MainActivity extends Activity {
             countryLabels.add(flagForCountry(countryCode) + "  " + countryName);
             if (countryCode.equalsIgnoreCase(deviceCountry)) suggestedCountry = countryCodes.size() - 1;
         }
+        // Restore the worker's previously saved country when reopening setup.
+        android.content.SharedPreferences savedPrefs = getSharedPreferences("ViyzoPrefs", MODE_PRIVATE);
+        String savedCountryCode = savedPrefs.getString("country_code", "");
+        if (!savedCountryCode.isEmpty()) {
+            for (int i = 0; i < countryCodes.size(); i++) {
+                if (countryCodes.get(i).equalsIgnoreCase(savedCountryCode)) {
+                    suggestedCountry = i;
+                    break;
+                }
+            }
+        }
         Spinner countrySpinner = new Spinner(this);
         ArrayAdapter<String> countryAdapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_item, countryLabels);
