@@ -15,7 +15,9 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
+        android:usesCleartextTraffic="false"
+        android:label="Viyzo Worker"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault.Light.DarkActionBar">
 
