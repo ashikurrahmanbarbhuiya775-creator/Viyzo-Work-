@@ -97,6 +97,22 @@ $('logoutButton').addEventListener('click',async()=>{
   showDashboard(false);
   message('loginMessage','Signed out successfully.','success');
 });
+
+// Restore a valid saved session after a page reload. The server still checks
+// the user's supervisor/admin role before returning any metrics.
+async function restoreSession() {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    if (session) {
+      showDashboard(true);
+      await loadMetrics();
+    }
+  } catch (err) {
+    message('loginMessage',err?.message || 'Could not restore the saved session. Please sign in again.','error');
+  }
+}
+void restoreSession();
 </script>
 </body>
 </html>
