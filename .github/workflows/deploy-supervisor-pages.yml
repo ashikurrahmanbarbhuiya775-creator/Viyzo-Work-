@@ -1,10 +1,11 @@
-name: Deploy Viyzo Supervisor Dashboard
+name: Deploy Viyzo Supervisor Dashboard and Company Payments
 
 on:
   push:
     branches: [main]
     paths:
       - 'supervisor-dashboard.html'
+      - 'company-payments.html'
       - '.github/workflows/deploy-supervisor-pages.yml'
   workflow_dispatch:
 
@@ -28,10 +29,11 @@ jobs:
         uses: actions/checkout@v4
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
-      - name: Prepare dashboard artifact
+      - name: Prepare dashboard and company payment pages
         run: |
           mkdir -p _site
           cp supervisor-dashboard.html _site/index.html
+          cp company-payments.html _site/company-payments.html
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
