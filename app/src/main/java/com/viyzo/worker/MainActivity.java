@@ -1635,41 +1635,38 @@ public class MainActivity extends Activity {
     // MY WORK / WORK POOL
     // ============================================================
     private void showMyJobs() {
+        if (accessToken.isEmpty() || userId.isEmpty()) { showLogin(); return; }
         startScreen(true);
         LinearLayout c = content();
-
         c.addView(heading("My Work"));
-        c.addView(small("Assignments, work pools and progress."));
-
-        LinearLayout active = card();
-        active.addView(wideInfo("💼", "Product Listing",
-                "Demo Assignment • In Progress"));
-
-        active.addView(tv("125 / 1000 products", 13, TEXT));
-        active.addView(tv("Worker payout is based on approved completed work.",
-                11, GRAY));
-        active.addView(tv("Deadline: 3 Days", 11, GRAY));
-
-        Button open = primary("Open Work");
-        open.setOnClickListener(v -> showWorkExecution());
-        active.addView(open);
-        c.addView(active);
-
-        LinearLayout queue = card();
-        queue.addView(tv("AI Work Queue", 16, WHITE));
-        queue.addView(tv(
-                "1 Active • 2 Ready • 3 Recommended • 0 Waiting",
-                12, GRAY));
-
-        Button pool = secondary("📦  Open Work Pool");
-        pool.setOnClickListener(v -> showWorkPool());
-        queue.addView(pool);
-        c.addView(queue);
-
-        c.addView(wideInfo("⚡", "Urgent Queue",
-                "Ready when eligible work is available"));
-        c.addView(wideInfo("🔁", "Recurring Queue",
-                "Repeat work can return automatically from backend"));
+        c.addView(small("Your live applications from the Viyzo database."));
+        TextView status = small("Loading applications…");
+        c.addView(status);
+        Button refresh = secondary("Refresh My Work");
+        refresh.setOnClickListener(v -> showMyJobs());
+        c.addView(refresh);
+        new Thread(() -> {
+            try {
+                JSONArray apps = apiArray("/rest/v1/job_applications?select=id,job_id,status,created_at,jobs(title,payment_amount,currency,status)&worker_id=eq." + userId + "&order=created_at.desc&limit=100");
+                runOnUiThread(() -> {
+                    status.setText(apps.length() == 0 ? "No applications yet." : "Applications: " + apps.length());
+                    for (int i=0;i<apps.length();i++) {
+                        JSONObject app=apps.optJSONObject(i);
+                        if(app==null) continue;
+                        JSONObject job=app.optJSONObject("jobs");
+                        LinearLayout item=card();
+                        item.addView(heading(job==null?"Viyzo work order":job.optString("title","Viyzo work order")));
+                        item.addView(small("Application status: "+app.optString("status","submitted")));
+                        if(job!=null) item.addView(tv("Worker payment per approved task: ₹"+formatNumber(job.optDouble("payment_amount",0)),13,GREEN));
+                        item.addView(small("Applied: "+app.optString("created_at","")));
+                        setMargins(item,0,8,0,8);
+                        c.addView(item);
+                    }
+                });
+            } catch(Exception ex) {
+                runOnUiThread(() -> status.setText("Could not load applications: "+ex.getMessage()));
+            }
+        }).start();
     }
 
     private void showWorkExecution() {
