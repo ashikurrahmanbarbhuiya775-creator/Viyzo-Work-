@@ -170,6 +170,7 @@ public class MainActivity extends Activity {
     private Locale aiLocale = Locale.getDefault();
     private TextView aiStatusView;
     private TextView aiBubbleView;
+    private boolean aiPanelCollapsed = false;
     private static final int AI_VOICE_REQUEST = 7401;
     private static final int AI_AUDIO_PERMISSION_REQUEST = 7402;
     private boolean aiWelcomeSpoken = false;
@@ -2664,6 +2665,22 @@ public class MainActivity extends Activity {
         titleColumn.addView(title);
         titleColumn.addView(tv("Tap panel for step-by-step voice help", 9, GRAY));
         top.addView(titleColumn, new LinearLayout.LayoutParams(0, dp(37), 1));
+        Button collapse = new Button(this);
+        collapse.setText("−");
+        collapse.setTextSize(18);
+        collapse.setAllCaps(false);
+        collapse.setTextColor(WHITE);
+        collapse.setPadding(0, 0, 0, 0);
+        collapse.setBackground(outlined(CARD2, BORDER, 14));
+        collapse.setContentDescription("Collapse or expand AI Master panel");
+        collapse.setOnClickListener(v -> {
+            aiPanelCollapsed = !aiPanelCollapsed;
+            if (aiStatusView != null) aiStatusView.setVisibility(aiPanelCollapsed ? View.GONE : View.VISIBLE);
+            if (aiBubbleView != null) aiBubbleView.setVisibility(aiPanelCollapsed ? View.GONE : View.VISIBLE);
+            collapse.setText(aiPanelCollapsed ? "+" : "−");
+            panel.setPadding(dp(10), dp(6), dp(10), dp(6));
+        });
+        top.addView(collapse, new LinearLayout.LayoutParams(dp(38), dp(43)));
         Button mic = new Button(this);
         mic.setText("🎙️");
         mic.setTextSize(17);
