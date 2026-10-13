@@ -2338,10 +2338,26 @@ public class MainActivity extends Activity {
     // AI MASTER VOICE EXPERIENCE
     // ============================================================
     private void initAIMasterVoice() {
-        aiTts = new TextToSpeech(this, status -> {
-            aiTtsInitializing = false;
-            if (status == TextToSpeech.SUCCESS) {
-                int result = aiTts.setLanguage(aiLocale);
+        aiTtsInitializing = true;
+        try {
+            aiTts = new TextToSpeech(getApplicationContext(), status -> runOnUiThread(() -> {
+                aiTtsInitializing = false;
+                if (status != TextToSpeech.SUCCESS || aiTts == null) {
+                    aiTtsReady = false;
+                    if (aiStatusView != null) aiStatusView.setText("Text-to-speech unavailable. Install/enable an Android TTS engine.");
+                    Toast.makeText(MainActivity.this, "AI voice engine unavailable. Enable Speech Services by Google or another TTS engine in Android settings.", Toast.LENGTH_LONG).show();
+                    return;
+                }
+
+                int result = aiTts.setLanguage(aiLocale == null ? Locale.getDefault() : aiLocale);
+                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                    Locale deviceLocale = Locale.getDefault();
+                    result = aiTts.setLanguage(deviceLocale);
+                    if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                        result = aiTts.setLanguage(Locale.US);
+                        if (aiStatusView != null) aiStatusView.setText("Selected language voice unavailable; trying English voice.");
+                    }
+                }
                 aiTtsReady = result != TextToSpeech.LANG_MISSING_DATA
                         && result != TextToSpeech.LANG_NOT_SUPPORTED;
                 aiTts.setSpeechRate(0.90f);
@@ -2358,19 +2374,24 @@ public class MainActivity extends Activity {
                     }
                     @Override public void onError(String utteranceId) {
                         runOnUiThread(() -> {
-                            if (aiStatusView != null) aiStatusView.setText("Voice unavailable • Tap to read/help");
+                            if (aiStatusView != null) aiStatusView.setText("Voice playback failed. Check phone media volume and TTS voice data.");
                         });
                     }
                 });
-                if (!pendingAISpeech.isEmpty()) {
+
+                if (aiTtsReady && !pendingAISpeech.isEmpty()) {
                     String queued = pendingAISpeech;
                     pendingAISpeech = "";
                     speakAI(queued);
+                } else if (!aiTtsReady && aiStatusView != null) {
+                    aiStatusView.setText("No supported voice installed. Install voice data in Android Text-to-Speech settings.");
                 }
-            } else {
-                aiTtsReady = false;
-            }
-        });
+            }));
+        } catch (Exception e) {
+            aiTtsInitializing = false;
+            aiTtsReady = false;
+            if (aiStatusView != null) aiStatusView.setText("Could not start Android text-to-speech.");
+        }
     }
 
     private void addAIMasterOverlay() {
@@ -2471,22 +2492,35 @@ public class MainActivity extends Activity {
     private void speakAI(String text) {
         if (text == null || text.trim().isEmpty()) return;
         if (aiBubbleView != null) aiBubbleView.setText(text);
-        // TTS initialization is asynchronous. Queue the first greeting instead of losing it.
+        // Keep speech until the asynchronous Android TTS engine has finished starting.
         if (aiTts == null || aiTtsInitializing) {
             pendingAISpeech = text;
             if (aiStatusView != null) aiStatusView.setText("AI Master is preparing voice…");
             return;
         }
         if (!aiTtsReady) {
-            pendingAISpeech = "";
-            if (aiStatusView != null) aiStatusView.setText("Voice not installed for this language. Choose another language or install voice data in Android settings.");
-            Toast.makeText(this, "इस भाषा की आवाज़ उपलब्ध नहीं है। भाषा बदलें या Android Text-to-Speech में voice data डाउनलोड करें।", Toast.LENGTH_LONG).show();
+            pendingAISpeech = text;
+            if (aiStatusView != null) aiStatusView.setText("Voice unavailable. Install/enable a TTS engine and voice data in Android settings.");
+            Toast.makeText(this, "AI voice is not ready. Please enable Speech Services by Google and install voice data in Android settings.", Toast.LENGTH_LONG).show();
             return;
         }
-        if (Build.VERSION.SDK_INT >= 21) {
-            aiTts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "viyzo_ai_" + System.currentTimeMillis());
-        } else {
-            aiTts.speak(text, TextToSpeech.QUEUE_FLUSH, null);
+        try {
+            aiTts.setAudioAttributes(new android.media.AudioAttributes.Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY)
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build());
+            int result;
+            if (Build.VERSION.SDK_INT >= 21) {
+                result = aiTts.speak(text, TextToSpeech.QUEUE_FLUSH, null,
+                        "viyzo_ai_" + System.currentTimeMillis());
+            } else {
+                result = aiTts.speak(text, TextToSpeech.QUEUE_FLUSH, null);
+            }
+            if (result == TextToSpeech.ERROR && aiStatusView != null) {
+                aiStatusView.setText("Could not play voice. Check media volume and Android TTS settings.");
+            }
+        } catch (Exception e) {
+            if (aiStatusView != null) aiStatusView.setText("Voice playback error. Check Android TTS settings.");
         }
     }
 
