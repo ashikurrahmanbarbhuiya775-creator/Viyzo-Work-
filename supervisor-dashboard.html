@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Viyzo Supervisor</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1220;--panel:#121d30;--line:#26354d;--text:#eef4ff;--muted:#9fb0ca;--accent:#79a9ff;--bad:#ff8d8d;--good:#8ce0b1}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(150deg,#0b1220,#101b2d);color:var(--text);font:16px system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
+main{max-width:980px;margin:auto;padding:28px 18px 60px}.brand{display:flex;align-items:center;gap:12px;margin-bottom:24px}.logo{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:#203b66;color:#bcd5ff;font-weight:800;font-size:22px}.brand h1{font-size:22px;margin:0}.brand p{margin:3px 0 0;color:var(--muted);font-size:13px}
+.panel{background:rgba(18,29,48,.94);border:1px solid var(--line);border-radius:18px;padding:22px;margin:14px 0;box-shadow:0 12px 34px #0002}.panel h2{font-size:18px;margin:0 0 8px}.muted{color:var(--muted);font-size:14px;line-height:1.5}
+form{display:grid;gap:12px;max-width:440px}label{display:grid;gap:6px;color:var(--muted);font-size:13px}input{width:100%;padding:13px 14px;border:1px solid #354765;border-radius:10px;background:#0c1525;color:var(--text);font:inherit}button{border:0;border-radius:10px;padding:12px 16px;font:600 15px system-ui;cursor:pointer;background:var(--accent);color:#071426}button.secondary{background:#263750;color:var(--text)}button:disabled{opacity:.6;cursor:wait}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.message{margin-top:14px;white-space:pre-wrap;font-size:14px;color:var(--muted)}.message.error{color:var(--bad)}.message.success{color:var(--good)}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:18px}.metric{padding:18px;border:1px solid var(--line);background:#0c1627;border-radius:14px}.metric span{display:block;color:var(--muted);font-size:13px}.metric strong{display:block;font-size:30px;margin-top:8px;overflow-wrap:anywhere}.hidden{display:none!important}.topline{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.pill{font-size:12px;border:1px solid var(--line);border-radius:99px;padding:6px 10px;color:var(--muted)}footer{padding:16px 4px;color:var(--muted);font-size:12px}
+@media(max-width:650px){main{padding:20px 12px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.panel{padding:17px}.metric strong{font-size:26px}}
+</style>
+</head>
+<body>
+<main>
+  <header class="brand"><div class="logo">V</div><div><h1>Viyzo Supervisor</h1><p>Secure operations overview · Live database metrics</p></div></header>
+  <section id="loginPanel" class="panel">
+    <h2>Supervisor sign in</h2>
+    <p class="muted">Sign in with an existing Viyzo Supabase account that has the server-managed supervisor or admin role. This page never creates or grants privileged accounts.</p>
+    <form id="loginForm">
+      <label>Email address<input id="email" type="email" autocomplete="username" required placeholder="Supervisor email"></label>
+      <label>Password<input id="password" type="password" autocomplete="current-password" required placeholder="Password"></label>
+      <button id="loginButton" type="submit">Sign in securely</button>
+    </form>
+    <div id="loginMessage" class="message" role="status" aria-live="polite"></div>
+  </section>
+  <section id="dashboardPanel" class="panel hidden">
+    <div class="topline"><div><h2>Operations overview</h2><p class="muted">Counts are fetched from the protected Supabase Edge Function.</p></div><span id="rolePill" class="pill">Verified session</span></div>
+    <div class="metrics">
+      <div class="metric"><span>Total jobs</span><strong id="jobsCount">—</strong></div>
+      <div class="metric"><span>Applications</span><strong id="applicationsCount">—</strong></div>
+      <div class="metric"><span>Verifications</span><strong id="verificationsCount">—</strong></div>
+      <div class="metric"><span>Earnings records</span><strong id="earningsCount">—</strong></div>
+    </div>
+    <div class="actions"><button id="refreshButton" type="button">Refresh metrics</button><button id="logoutButton" class="secondary" type="button">Sign out</button></div>
+    <div id="dashboardMessage" class="message" role="status" aria-live="polite"></div>
+  </section>
+  <footer>Viyzo Worker · Supervisor access is verified on the server. Never share your password or OTP. No service-role key is stored in this page.</footer>
+</main>
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.0';
+const SUPABASE_URL = 'https://jxnfsqxyrakkblizziel.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_skl_ZZCN1w0m6AaKYzBucQ_8AmS6Wvx';
+const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: false }
+});
+const $ = (id) => document.getElementById(id);
+const loginPanel = $('loginPanel'), dashboardPanel = $('dashboardPanel');
+function message(id, text, kind='') { const el=$(id); el.textContent=text; el.className='message'+(kind?' '+kind:''); }
+function showDashboard(show) { loginPanel.classList.toggle('hidden',show); dashboardPanel.classList.toggle('hidden',!show); }
+async function loadMetrics() {
+  $('refreshButton').disabled = true;
+  message('dashboardMessage','Loading live metrics…');
+  try {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session) throw new Error('Your session has expired. Please sign in again.');
+    const response = await fetch(SUPABASE_URL + '/functions/v1/supervisor-dashboard', {
+      method:'GET', headers:{ Authorization:'Bearer '+session.access_token, apikey:SUPABASE_PUBLISHABLE_KEY }
+    });
+    const data = await response.json().catch(()=>({}));
+    if (!response.ok) {
+      if (response.status===403) throw new Error('Access denied: this account does not have the supervisor/admin role.');
+      if (response.status===401) throw new Error('Session not accepted. Please sign in again.');
+      throw new Error(data.error || 'Dashboard request failed ('+response.status+').');
+    }
+    if (!data.ok || !data.metrics) throw new Error('The server returned an unexpected dashboard response.');
+    $('jobsCount').textContent = data.metrics.jobs ?? 0;
+    $('applicationsCount').textContent = data.metrics.applications ?? 0;
+    $('verificationsCount').textContent = data.metrics.verifications ?? 0;
+    $('earningsCount').textContent = data.metrics.earnings_records ?? 0;
+    $('rolePill').textContent = 'Role: '+data.role;
+    message('dashboardMessage','Live data refreshed successfully.','success');
+  } catch (err) {
+    message('dashboardMessage',err?.message || 'Unable to load metrics.','error');
+  } finally { $('refreshButton').disabled = false; }
+}
+$('loginForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  $('loginButton').disabled = true;
+  message('loginMessage','Signing in…');
+  try {
+    const { error } = await supabase.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
+    if (error) throw error;
+    showDashboard(true);
+    await loadMetrics();
+  } catch (err) {
+    message('loginMessage',err?.message || 'Sign-in failed. Check the email and password.','error');
+  } finally { $('loginButton').disabled = false; }
+});
+$('refreshButton').addEventListener('click',loadMetrics);
+$('logoutButton').addEventListener('click',async()=>{
+  await supabase.auth.signOut();
+  $('password').value='';
+  showDashboard(false);
+  message('loginMessage','Signed out successfully.','success');
+});
+</script>
+</body>
+</html>
