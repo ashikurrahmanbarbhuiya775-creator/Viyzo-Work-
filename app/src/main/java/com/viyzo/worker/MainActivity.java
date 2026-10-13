@@ -1095,6 +1095,18 @@ public class MainActivity extends Activity {
 
         c.addView(brandHeader());
 
+        // Clearly disclose demo-only behavior so workers do not mistake sample UI for live services.
+        LinearLayout demoNotice = card();
+        demoNotice.setBackground(outlined(Color.rgb(54, 42, 18), GOLD, 16));
+        TextView demoTitle = tv("⚠  DEMO PREVIEW — NOT LIVE", 14, GOLD);
+        demoTitle.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        demoNotice.addView(demoTitle);
+        demoNotice.addView(tv(
+                "Real worker accounts, company jobs, verification, and payouts are not connected yet. Do not enter a real password or rely on displayed demo work or balances.",
+                11, TEXT));
+        c.addView(demoNotice);
+        setMargins(demoNotice, 0, 4, 0, 13);
+
         LinearLayout welcome = card();
         LinearLayout wr = row();
 
