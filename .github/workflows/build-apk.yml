@@ -1,5 +1,10 @@
 name: Build Viyzo APK
 
+# Keep only the newest APK build running for this branch.
+concurrency:
+  group: viyzo-apk-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
