@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Viyzo Company Payments</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1220;--panel:#121d30;--line:#26354d;--text:#eef4ff;--muted:#9fb0ca;--accent:#79a9ff;--bad:#ff8d8d;--good:#8ce0b1}*{box-sizing:border-box}body{margin:0;background:linear-gradient(150deg,#0b1220,#101b2d);color:var(--text);font:16px system-ui,sans-serif;min-height:100vh}main{max-width:760px;margin:auto;padding:24px 16px 60px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px;margin:14px 0}.muted{color:var(--muted);font-size:14px;line-height:1.5}label{display:grid;gap:7px;color:var(--muted);font-size:13px;margin:12px 0}input{padding:13px;border:1px solid #354765;border-radius:10px;background:#0c1525;color:var(--text);font:inherit;width:100%}button{border:0;border-radius:10px;padding:13px 16px;font:600 15px system-ui;cursor:pointer;background:var(--accent);color:#071426}button:disabled{opacity:.6}.hidden{display:none!important}.message{white-space:pre-wrap;font-size:14px;margin-top:14px;color:var(--muted)}.error{color:var(--bad)}.success{color:var(--good)}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.pill{border:1px solid var(--line);border-radius:99px;padding:5px 9px;color:var(--muted);font-size:12px}small{color:var(--muted)}
+</style><script src="https://checkout.razorpay.com/v1/checkout.js"></script></head>
+<body><main><h1>Viyzo Company Payments</h1><p class="muted">Deposit funds into Viyzo's merchant account for approved work orders. Payments are confirmed by the server's Razorpay webhook—not by the browser checkout result.</p>
+<section class="panel" id="loginPanel"><h2>Company sign in</h2><p class="muted">Use a company account already registered with Viyzo. Company verification is required before creating a deposit order.</p>
+<form id="loginForm"><label>Email<input id="email" type="email" autocomplete="username" required></label><label>Password<input id="password" type="password" autocomplete="current-password" required></label><button id="loginBtn">Sign in securely</button></form><div id="loginMsg" class="message"></div></section>
+<section class="panel hidden" id="paymentPanel"><div class="row"><h2 style="margin-right:auto">Add funds</h2><span id="companyStatus" class="pill">Company account</span></div><p class="muted">Enter the amount in INR. This creates a server-side payment order; your account is credited only after a verified payment webhook.</p>
+<label>Deposit amount (₹)<input id="amount" type="number" min="100" max="1000000" step="1" value="1000" required></label><button id="payBtn">Continue to secure payment</button><div id="payMsg" class="message"></div><h3>Recent deposits</h3><div id="deposits" class="muted">Loading…</div><div class="row" style="margin-top:18px"><button id="refreshBtn" type="button">Refresh deposits</button><button id="logoutBtn" type="button" style="background:#263750;color:var(--text)">Sign out</button></div></section>
+<section class="panel"><h3>Important</h3><p class="muted">A live payment requires Viyzo's approved Razorpay merchant account and server-side secrets. Never enter bank passwords, card PINs or OTPs on this page. This page does not collect them.</p></section>
+<script type="module">
+import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.57.0';
+const URL='https://jxnfsqxyrakkblizziel.supabase.co';
+const KEY='sb_publishable_skl_ZZCN1w0m6AaKYzBucQ_8AmS6Wvx';
+const supabase=createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+const $=id=>document.getElementById(id);
+function msg(id,t,k=''){ $(id).textContent=t; $(id).className='message '+k; }
+function show(on){$('loginPanel').classList.toggle('hidden',on);$('paymentPanel').classList.toggle('hidden',!on);}
+async function deposits(){const {data:{session}}=await supabase.auth.getSession();if(!session)return;
+ const {data,error}=await supabase.from('company_deposits').select('id,amount,currency,status,provider_reference,created_at').eq('company_id',session.user.id).order('created_at',{ascending:false}).limit(10);
+ if(error){$('deposits').textContent='Unable to load deposits. Check company account access.';return;}
+ $('deposits').innerHTML=data.length?data.map(d=>'<div style="padding:10px 0;border-bottom:1px solid var(--line)">₹'+Number(d.amount).toLocaleString('en-IN')+' · '+d.status+' · '+new Date(d.created_at).toLocaleString()+'</div>').join(''):'No deposits yet.';
+}
+async function restore(){const {data:{session}}=await supabase.auth.getSession();if(session){show(true);await deposits();}}
+$('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginBtn').disabled=true;msg('loginMsg','Signing in…');try{const {error}=await supabase.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error)throw error;show(true);msg('payMsg','Signed in. Creating deposits requires a verified company profile.');await deposits();}catch(e){msg('loginMsg',e.message||'Sign-in failed.','error')}finally{$('loginBtn').disabled=false}});
+$('payBtn').addEventListener('click',async()=>{const amount=Number($('amount').value);if(!Number.isFinite(amount)||amount<100||amount>1000000){msg('payMsg','Enter an amount from ₹100 to ₹10,00,000.','error');return}
+ $('payBtn').disabled=true;msg('payMsg','Requesting a secure payment order…');try{const {data:{session}}=await supabase.auth.getSession();if(!session)throw new Error('Please sign in again.');
+ const r=await fetch(URL+'/functions/v1/company-payments',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token,'apikey':KEY},body:JSON.stringify({action:'create_order',amount})});
+ const d=await r.json();if(!r.ok)throw new Error(d.message||d.error||'Payment order could not be created.');
+ if(!window.Razorpay)throw new Error('Secure checkout library did not load. Please retry.');
+ const checkout=new Razorpay({key:d.key_id,amount:d.amount_paise,currency:'INR',name:'Viyzo',description:'Company work-fund deposit',order_id:d.order_id,prefill:{email:session.user.email},theme:{color:'#79a9ff'},handler:()=>{msg('payMsg','Payment submitted. Waiting for server confirmation; refresh deposits shortly.','success');setTimeout(deposits,2500)}});
+ checkout.on('payment.failed',x=>msg('payMsg','Payment failed: '+(x.error?.description||'Please retry.'),'error'));checkout.open();
+ }catch(e){msg('payMsg',e.message||'Payment setup is not ready.','error')}finally{$('payBtn').disabled=false}});
+$('refreshBtn').addEventListener('click',deposits);$('logoutBtn').addEventListener('click',async()=>{await supabase.auth.signOut();show(false);$('password').value='';msg('loginMsg','Signed out.')});
+void restore();
+</script></main></body></html>
