@@ -29,6 +29,15 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.FrameLayout;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 /**
@@ -77,6 +86,83 @@ public class MainActivity extends Activity {
 
     private LinearLayout root;
     private FrameLayout frame;
+
+    private static final String SUPABASE_URL = "https://jxnfsqxyrakkblizziel.supabase.co";
+    private static final String SUPABASE_PUBLISHABLE_KEY = "sb_publishable_skl_ZZCN1w0m6AaKYzBucQ_8AmS6Wvx";
+    private static final String SESSION_PREFS = "viyzo_live_session";
+    private volatile String accessToken = "";
+    private volatile String userId = "";
+    private volatile String userEmail = "";
+    private volatile String workerName = "";
+
+    private JSONObject apiRequest(String path, String method, JSONObject body, boolean authenticated, String prefer) throws Exception {
+        HttpURLConnection connection = (HttpURLConnection) new URL(SUPABASE_URL + path).openConnection();
+        connection.setRequestMethod(method);
+        connection.setConnectTimeout(15000);
+        connection.setReadTimeout(20000);
+        connection.setRequestProperty("apikey", SUPABASE_PUBLISHABLE_KEY);
+        connection.setRequestProperty("Accept", "application/json");
+        connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+        if (authenticated && !accessToken.isEmpty()) connection.setRequestProperty("Authorization", "Bearer " + accessToken);
+        if (prefer != null && !prefer.isEmpty()) connection.setRequestProperty("Prefer", prefer);
+        if (body != null) {
+            connection.setDoOutput(true);
+            try (OutputStream os = connection.getOutputStream()) { os.write(body.toString().getBytes(StandardCharsets.UTF_8)); }
+        }
+        int code = connection.getResponseCode();
+        InputStream stream = code >= 200 && code < 400 ? connection.getInputStream() : connection.getErrorStream();
+        StringBuilder text = new StringBuilder();
+        if (stream != null) try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+            String line; while ((line = reader.readLine()) != null) text.append(line);
+        }
+        connection.disconnect();
+        String raw = text.toString().trim();
+        JSONObject result = raw.startsWith("{") ? new JSONObject(raw) : new JSONObject().put("_raw", raw);
+        if (code < 200 || code >= 300) throw new Exception(result.optString("msg", result.optString("message", result.optString("error_description", result.optString("error", "Request failed"))) + " (HTTP " + code + ")"));
+        return result;
+    }
+
+    private JSONArray apiArray(String path) throws Exception {
+        HttpURLConnection connection = (HttpURLConnection) new URL(SUPABASE_URL + path).openConnection();
+        connection.setRequestMethod("GET"); connection.setConnectTimeout(15000); connection.setReadTimeout(20000);
+        connection.setRequestProperty("apikey", SUPABASE_PUBLISHABLE_KEY);
+        connection.setRequestProperty("Authorization", "Bearer " + accessToken);
+        connection.setRequestProperty("Accept", "application/json");
+        int code = connection.getResponseCode();
+        InputStream stream = code >= 200 && code < 300 ? connection.getInputStream() : connection.getErrorStream();
+        StringBuilder text = new StringBuilder();
+        if (stream != null) try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+            String line; while ((line = reader.readLine()) != null) text.append(line);
+        }
+        connection.disconnect();
+        if (code < 200 || code >= 300) throw new Exception("Could not load Viyzo data (HTTP " + code + "): " + text);
+        return new JSONArray(text.toString());
+    }
+
+    private void saveSession(JSONObject auth) throws Exception {
+        JSONObject user = auth.optJSONObject("user");
+        if (user == null || auth.optString("access_token", "").isEmpty()) throw new Exception("Account needs email confirmation before login.");
+        accessToken = auth.optString("access_token");
+        userId = user.optString("id", "");
+        userEmail = user.optString("email", "");
+        JSONObject metadata = user.optJSONObject("user_metadata");
+        workerName = metadata == null ? "" : metadata.optString("full_name", "");
+        getSharedPreferences(SESSION_PREFS, MODE_PRIVATE).edit().putString("access_token", accessToken)
+                .putString("user_id", userId).putString("email", userEmail).putString("worker_name", workerName).apply();
+    }
+
+    private void restoreLiveSession() {
+        SharedPreferences p = getSharedPreferences(SESSION_PREFS, MODE_PRIVATE);
+        accessToken = p.getString("access_token", "");
+        userId = p.getString("user_id", "");
+        userEmail = p.getString("email", "");
+        workerName = p.getString("worker_name", "");
+    }
+
+    private void clearLiveSession() {
+        accessToken = ""; userId = ""; userEmail = ""; workerName = "";
+        getSharedPreferences(SESSION_PREFS, MODE_PRIVATE).edit().clear().apply();
+    }
 
     // AI Master voice assistant (on-device speech; real LLM answers need backend).
     private TextToSpeech aiTts;
@@ -164,6 +250,7 @@ public class MainActivity extends Activity {
             aiLocale = Locale.forLanguageTag(selectedLanguageTag);
         }
         initAIMasterVoice();
+        restoreLiveSession();
         if (selectedCountryCode.isEmpty() || selectedLanguageTag.isEmpty()) {
             showCountryLanguageSetup();
         } else {
