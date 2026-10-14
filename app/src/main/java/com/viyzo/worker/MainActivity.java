@@ -1632,8 +1632,18 @@ public class MainActivity extends Activity {
                         String lower = error.toLowerCase(Locale.ROOT);
                         if (lower.contains("23505") || lower.contains("duplicate key") || lower.contains("unique constraint")) {
                             status.setText("You have already applied for this work. Open My Work to check your application status.");
+                        } else if (lower.contains("row-level security") || lower.contains("42501") || lower.contains("permission denied") || lower.contains("not allowed")) {
+                            status.setText("Your application could not be accepted. This work may not be funded or you may not have permission to apply. Refresh Available Work and try again.");
+                        } else if (lower.contains("job_not_funded") || lower.contains("not funded") || lower.contains("funding")) {
+                            status.setText("This work is not ready for applications yet because its worker payment reserve is not confirmed. Please choose another funded job.");
+                        } else if (lower.contains("job_not_open") || lower.contains("409")) {
+                            status.setText("This work is no longer accepting applications. Refresh Available Work to see current jobs.");
+                        } else if (lower.contains("401") || lower.contains("unauthorized") || lower.contains("jwt")) {
+                            status.setText("Your login session may have expired. Please sign in again, then retry your application.");
+                        } else if (lower.contains("network") || lower.contains("timeout") || lower.contains("unable to resolve host")) {
+                            status.setText("Network connection problem. Check your internet and try again.");
                         } else {
-                            status.setText("Application failed: " + error);
+                            status.setText("Application could not be submitted right now. Please refresh Available Work and try again. Details: " + error);
                         }
                     });
                 }
