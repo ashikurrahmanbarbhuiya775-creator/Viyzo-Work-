@@ -1586,7 +1586,7 @@ public class MainActivity extends Activity {
         int slots = job.optInt("task_limit", 1);
         c.addView(heading(title));
         c.addView(small(category + " • " + job.optString("currency", "INR")));
-        c.addView(tv("Worker payment per approved task: ₹" + formatNumber(amount), 15, GREEN));
+        c.addView(tv("Worker payment per approved task: " + formatNumber(amount) + " " + job.optString("currency", "INR"), 15, GREEN));
         c.addView(tv("Task slots: " + slots, 12, TEXT));
         String description = job.optString("description", "");
         if (!description.isEmpty()) c.addView(tv(description, 12, GRAY));
@@ -1604,8 +1604,8 @@ public class MainActivity extends Activity {
         String title = job.optString("title", "Viyzo work order");
         double amount = job.optDouble("payment_amount", 0);
         c.addView(heading(title));
-        c.addView(small("Live Viyzo work order • INR"));
-        c.addView(wideInfo("💰", "Worker payment per approved task", "₹" + formatNumber(amount)));
+        c.addView(small("Live Viyzo work order • " + job.optString("currency", "INR")));
+        c.addView(wideInfo("💰", "Worker payment per approved task", formatNumber(amount) + " " + job.optString("currency", "INR")));
         c.addView(wideInfo("📦", "Task slots", String.valueOf(job.optInt("task_limit", 1))));
         c.addView(tv(job.optString("description", "No additional description provided."), 13, TEXT));
         c.addView(small("Payment is pending until the work is completed and reviewed. Applying does not guarantee selection or income."));
