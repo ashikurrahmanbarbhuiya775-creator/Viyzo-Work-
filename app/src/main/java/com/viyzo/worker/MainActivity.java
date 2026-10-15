@@ -2329,109 +2329,134 @@ public class MainActivity extends Activity {
     private void showPostWork() {
         startScreen(false);
         LinearLayout c = content();
-
         c.addView(heading("Post New Work"));
-        c.addView(small(
-                "This is the intake form. Submission becomes a real company job only after backend onboarding, payment and review."
-        ));
+        c.addView(small("Real company jobs are saved securely. New company profiles require verification before a job can be funded or shown to workers."));
 
-        c.addView(input("Company Name"));
-        c.addView(input("Job Title / Work Name"));
-        c.addView(input("Job Description"));
+        EditText companyName = input("Company / Business Legal Name");
+        EditText titleField = input("Job Title / Work Name");
+        EditText descriptionField = input("Job Description");
+        c.addView(companyName);
+        c.addView(titleField);
+        c.addView(descriptionField);
 
-        c.addView(spinner(new String[]{
-                "Select Category",
-                "Product Listing",
-                "Data Entry",
-                "Content Review",
-                "Translation",
-                "Research",
-                "Image / Media Work",
-                "Customer Support",
-                "AI Data / Annotation",
-                "Other"
-        }));
+        Spinner categoryField = spinner(new String[]{"Select Category","Product Listing","Data Entry","Content Review","Translation","Research","Image / Media Work","Customer Support","AI Data / Annotation","Other"});
+        c.addView(categoryField);
+        Spinner locationField = spinner(new String[]{"Worker Location","Worldwide","India","United States","United Kingdom","Europe","Middle East","Asia","Africa","Other / Multiple Countries"});
+        c.addView(locationField);
+        Spinner currencyField = spinner(new String[]{"Currency","INR"});
+        c.addView(currencyField);
 
-        c.addView(spinner(new String[]{
-                "Company Size",
-                "Small Business",
-                "Startup",
-                "Medium Business",
-                "Enterprise",
-                "Agency / Other"
-        }));
-
-        c.addView(spinner(new String[]{
-                "Worker Location",
-                "Worldwide",
-                "India",
-                "United States",
-                "United Kingdom",
-                "Europe",
-                "Middle East",
-                "Asia",
-                "Africa",
-                "Other / Multiple Countries"
-        }));
-
-        c.addView(spinner(new String[]{
-                "Currency",
-                "USD", "EUR", "GBP", "INR", "AED", "BDT", "Other"
-        }));
-
-        c.addView(input("Company Budget"));
-        c.addView(input("Number of Workers Needed"));
-        c.addView(input("Workload / Quantity"));
-        c.addView(input("Deadline"));
-
-        c.addView(spinner(new String[]{
-                "Urgency",
-                "Normal",
-                "High",
-                "Urgent"
-        }));
-
-        c.addView(spinner(new String[]{
-                "Work Type",
-                "Quick Task",
-                "Bulk",
-                "Project",
-                "Recurring"
-        }));
-
-        c.addView(input("Required Skills"));
-        c.addView(input("Required Language"));
+        EditText budgetField = input("Total Company Budget (INR)");
+        EditText workersField = input("Number of Work Slots (1–1000000)");
+        c.addView(budgetField);
+        c.addView(workersField);
+        EditText deadlineField = input("Deadline (optional, describe date/time)");
+        EditText skillsField = input("Required Skills (optional)");
+        EditText languageField = input("Required Language (optional)");
+        c.addView(deadlineField);
+        c.addView(skillsField);
+        c.addView(languageField);
 
         CheckBox remote = new CheckBox(this);
         remote.setText("Remote / Online Work");
         remote.setChecked(true);
         remote.setTextColor(TEXT);
         c.addView(remote);
-
         CheckBox agree = new CheckBox(this);
-        agree.setText(
-                "I confirm that the work, budget and payment information is accurate."
-        );
+        agree.setText("I confirm the work is lawful, genuine, and the budget is accurate.");
         agree.setTextColor(TEXT);
         c.addView(agree);
 
-        Button preview = secondary("🧠  Preview AI Allocation");
+        Button preview = secondary("🧠 Preview Budget Split");
         preview.setOnClickListener(v -> showAllocationPreview());
         c.addView(preview);
 
-        Button post = primary("🌍  Submit Work to Viyzo");
+        Button post = primary("🌍 Save Company Profile / Submit Job");
         post.setOnClickListener(v -> {
-            if (!agree.isChecked()) {
-                Toast.makeText(this,
-                        "Please confirm the work information.",
-                        Toast.LENGTH_SHORT).show();
+            if (accessToken == null || accessToken.isEmpty() || userId == null || userId.isEmpty()) {
+                Toast.makeText(this, "Please sign in to your Viyzo account first.", Toast.LENGTH_LONG).show();
+                showLogin();
                 return;
             }
-
-            Toast.makeText(this,
-                    "Demo intake saved locally. Real posting requires secure backend/payment onboarding.",
-                    Toast.LENGTH_LONG).show();
-            showCompanyDashboard();
+            String company = companyName.getText().toString().trim();
+            String title = titleField.getText().toString().trim();
+            String description = descriptionField.getText().toString().trim();
+            String budgetText = budgetField.getText().toString().trim().replace(",", "");
+            String workersText = workersField.getText().toString().trim().replace(",", "");
+            if (company.isEmpty() || title.isEmpty() || description.isEmpty() || budgetText.isEmpty() || workersText.isEmpty()) {
+                Toast.makeText(this, "Enter company name, job title, description, total budget and work slots.", Toast.LENGTH_LONG).show();
+                return;
+            }
+            if (!agree.isChecked()) {
+                Toast.makeText(this, "Please confirm the work and budget are genuine.", Toast.LENGTH_LONG).show();
+                return;
+            }
+            final double totalBudget;
+            final int slots;
+            try {
+                totalBudget = Double.parseDouble(budgetText);
+                slots = Integer.parseInt(workersText);
+                if (!Double.isFinite(totalBudget) || totalBudget < 100 || totalBudget > 1000000 || slots < 1 || slots > 1000000) {
+                    throw new NumberFormatException();
+                }
+            } catch (Exception ex) {
+                Toast.makeText(this, "For this INR payment flow, budget must be ₹100–₹10,00,000 and work slots 1–1,000,000.", Toast.LENGTH_LONG).show();
+                return;
+            }
+            final String selectedCategory = categoryField.getSelectedItemPosition() == 0 ? "Other" : String.valueOf(categoryField.getSelectedItem());
+            final String selectedLocation = locationField.getSelectedItemPosition() == 0 ? "India" : String.valueOf(locationField.getSelectedItem());
+            final String selectedTitle = title;
+            final String selectedDescription = description
+                    + "\\nSkills: " + (skillsField.getText().toString().trim().isEmpty() ? "Not specified" : skillsField.getText().toString().trim())
+                    + "\\nLanguage: " + (languageField.getText().toString().trim().isEmpty() ? "Not specified" : languageField.getText().toString().trim())
+                    + "\\nDeadline: " + (deadlineField.getText().toString().trim().isEmpty() ? "Not specified" : deadlineField.getText().toString().trim())
+                    + "\\nRemote: " + (remote.isChecked() ? "Yes" : "No");
+            post.setEnabled(false);
+            post.setText("Saving securely…");
+            new Thread(() -> {
+                String outcome;
+                try {
+                    JSONArray profiles = apiArray("/rest/v1/company_profiles?select=id,legal_name,verification_status&id=eq." + userId + "&limit=1");
+                    JSONObject profile = profiles.length() > 0 ? profiles.getJSONObject(0) : null;
+                    if (profile == null) {
+                        JSONObject newProfile = new JSONObject();
+                        newProfile.put("id", userId);
+                        newProfile.put("legal_name", company);
+                        newProfile.put("display_name", company);
+                        newProfile.put("country", "IN");
+                        newProfile.put("contact_email", userEmail);
+                        newProfile.put("verification_status", "pending");
+                        apiRequest("/rest/v1/company_profiles", "POST", newProfile, true, "return=minimal");
+                        outcome = "Company profile submitted for review. Job posting and payments will unlock after company verification. No job or payment was created yet.";
+                    } else if (!"verified".equalsIgnoreCase(profile.optString("verification_status", "pending"))) {
+                        outcome = "Company profile status: " + profile.optString("verification_status", "pending") + ". Company verification is required before a real job can be posted or funded.";
+                    } else {
+                        double perTask = totalBudget / (slots * 2.0);
+                        if (perTask <= 0 || !Double.isFinite(perTask)) throw new Exception("Budget is too small for the selected number of work slots.");
+                        JSONObject job = new JSONObject();
+                        job.put("company_id", userId);
+                        job.put("title", selectedTitle);
+                        job.put("description", selectedDescription);
+                        job.put("category", selectedCategory);
+                        job.put("country", selectedLocation);
+                        job.put("payment_amount", Math.round(perTask * 100.0) / 100.0);
+                        job.put("currency", "INR");
+                        job.put("task_limit", slots);
+                        job.put("status", "pending_funding");
+                        apiRequest("/rest/v1/jobs", "POST", job, true, "return=minimal");
+                        outcome = "Job saved securely as pending funding. It will not appear to workers until the verified company funds it and backend review allows it.";
+                    }
+                } catch (Exception ex) {
+                    outcome = "Could not save company/job: " + ex.getMessage();
+                }
+                final String message = outcome;
+                runOnUiThread(() -> {
+                    post.setEnabled(true);
+                    post.setText("🌍 Save Company Profile / Submit Job");
+                    Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+                    showCompanyDashboard();
+                });
+            }).start();
         });
         c.addView(post);
 
