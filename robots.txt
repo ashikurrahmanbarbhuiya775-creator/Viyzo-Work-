@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://ashikurrahmanbarbhuiya775-creator.github.io/Viyzo-Work-/sitemap.xml
