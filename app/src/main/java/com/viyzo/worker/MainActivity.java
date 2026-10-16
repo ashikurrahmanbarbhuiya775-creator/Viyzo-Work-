@@ -2295,35 +2295,75 @@ public class MainActivity extends Activity {
     }
 
     private void showCompanyDashboard() {
+        if (accessToken == null || accessToken.isEmpty() || userId == null || userId.isEmpty()) {
+            Toast.makeText(this, "Sign in first to open the company dashboard.", Toast.LENGTH_LONG).show();
+            showLogin();
+            return;
+        }
         startScreen(false);
         LinearLayout c = content();
 
         c.addView(heading("Company Dashboard"));
-        c.addView(small("Manage global work and view job status."));
+        c.addView(small("Live company records from Viyzo. Only your own jobs and status are shown."));
 
-        LinearLayout r1 = row();
-        r1.addView(statCard("📋", "Open Jobs", "0"),
-                new LinearLayout.LayoutParams(0, dp(120), 1));
-
-        LinearLayout.LayoutParams p =
-                new LinearLayout.LayoutParams(0, dp(120), 1);
-        p.setMargins(dp(8), 0, 0, 0);
-        r1.addView(statCard("👥", "Workers", "0"), p);
-        c.addView(r1);
-
-        c.addView(wideInfo("💵", "Company Spending", "₹0.00 / $0.00"));
-        c.addView(wideInfo("🌍", "Global Reach",
-                "Countries/languages can be configured"));
-        c.addView(wideInfo("🤖", "AI Manager",
-                "Ready to recommend worker allocation"));
+        TextView profileStatus = small("Company verification: checking…");
+        TextView jobsStatus = small("Your jobs: loading…");
+        TextView spendingStatus = small("Company-funded budget: loading…");
+        c.addView(profileStatus);
+        c.addView(jobsStatus);
+        c.addView(spendingStatus);
 
         Button post = primary("＋  Post New Work");
         post.setOnClickListener(v -> showPostWork());
         c.addView(post);
 
+        Button refresh = secondary("↻  Refresh Company Status");
+        refresh.setOnClickListener(v -> showCompanyDashboard());
+        c.addView(refresh);
+
         Button back = secondary("← Back");
         back.setOnClickListener(v -> showCompanyPortal());
         c.addView(back);
+
+        new Thread(() -> {
+            String profileMessage;
+            String jobsMessage;
+            String spendingMessage;
+            try {
+                JSONArray profiles = apiArray("/rest/v1/company_profiles?select=id,legal_name,verification_status&id=eq." + userId + "&limit=1");
+                if (profiles.length() == 0) {
+                    profileMessage = "Company profile: not submitted yet. Use Post New Work to submit it for review.";
+                } else {
+                    JSONObject profile = profiles.getJSONObject(0);
+                    profileMessage = "Company: " + profile.optString("legal_name", "Company")
+                            + " • Verification: " + profile.optString("verification_status", "pending");
+                }
+                JSONArray jobs = apiArray("/rest/v1/jobs?select=id,status,payment_amount,task_limit,currency&company_id=eq." + userId + "&limit=1000");
+                int openCount = 0;
+                int totalCount = jobs.length();
+                double totalBudget = 0.0;
+                for (int i = 0; i < jobs.length(); i++) {
+                    JSONObject job = jobs.getJSONObject(i);
+                    if ("open".equalsIgnoreCase(job.optString("status", ""))) openCount++;
+                    totalBudget += job.optDouble("payment_amount", 0.0) * job.optInt("task_limit", 1) * 2.0;
+                }
+                jobsMessage = "Your jobs: " + totalCount + " total • " + openCount + " currently open to workers";
+                spendingMessage = "Recorded job budget: ₹" + String.format(Locale.ROOT, "%.2f", totalBudget)
+                        + " (includes worker pool + platform share; not a payment receipt)";
+            } catch (Exception ex) {
+                profileMessage = "Company status unavailable: " + (ex.getMessage() == null ? "Please refresh." : ex.getMessage());
+                jobsMessage = "Your jobs could not be loaded. Check sign-in and access permissions.";
+                spendingMessage = "Budget total unavailable until company records load.";
+            }
+            final String pMessage = profileMessage;
+            final String jMessage = jobsMessage;
+            final String sMessage = spendingMessage;
+            runOnUiThread(() -> {
+                profileStatus.setText(pMessage);
+                jobsStatus.setText(jMessage);
+                spendingStatus.setText(sMessage);
+            });
+        }).start();
     }
 
     private void showPostWork() {
