@@ -1619,7 +1619,7 @@ public class MainActivity extends Activity {
             new Thread(() -> {
                 try {
                     JSONObject body = new JSONObject().put("job_id", jobId).put("worker_id", userId)
-                            .put("message", "Applied from Viyzo Worker Android app").put("status", "submitted");
+                            .put("message", "Applied from Viyzo Worker Android app");
                     apiRequest("/rest/v1/job_applications", "POST", body, true, "return=minimal");
                     runOnUiThread(() -> {
                         status.setText("Application submitted successfully.");
