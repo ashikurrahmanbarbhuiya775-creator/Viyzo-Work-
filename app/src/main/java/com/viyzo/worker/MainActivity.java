@@ -1281,7 +1281,7 @@ public class MainActivity extends Activity {
         demoTitle.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         demoNotice.addView(demoTitle);
         demoNotice.addView(tv(
-                "Worker login, live job listings, applications, and earnings records connect to Viyzo. Identity verification and real bank payouts are not connected yet. Only apply to jobs shown in Available Work; demo examples elsewhere are not live jobs.",
+                "Live login and Available Work are connected to Viyzo. Identity verification and real bank payouts are not active yet. Apply only to jobs listed in Available Work; sample cards elsewhere are not real jobs or guaranteed earnings.",
                 11, TEXT));
         c.addView(demoNotice);
         setMargins(demoNotice, 0, 4, 0, 13);
