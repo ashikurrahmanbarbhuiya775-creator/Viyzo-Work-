@@ -2013,22 +2013,25 @@ public class MainActivity extends Activity {
         LinearLayout c = content();
 
         c.addView(heading("Payment Settings"));
-        c.addView(small(
-                "Payment methods and payout rules should be country/provider specific."
-        ));
+        c.addView(small("Honest status for your account. This screen does not collect bank details or claim a transfer has been set up."));
 
-        c.addView(wideInfo("🌍", "Country",
-                "Country-specific payout options"));
-        c.addView(wideInfo("🏦", "Bank / Wallet",
-                "Connect supported provider later"));
-        c.addView(wideInfo("🛡", "Payment Verification",
-                "Separate from worker identity verification"));
+        c.addView(wideInfo("🌍", "Payout country",
+                getSharedPreferences("ViyzoPrefs", MODE_PRIVATE).getString("country_code", "IN")));
+        c.addView(wideInfo("🏦", "Bank / payout account",
+                "Not connected. No bank transfer can be initiated from this app yet."));
+        c.addView(wideInfo("🛡", "Verification",
+                "Payout eligibility must be checked separately from worker login and job approval."));
+        c.addView(wideInfo("💳", "Payment provider",
+                "Worker payout provider and merchant payout configuration are not confirmed as live."));
+        c.addView(wideInfo("🔒", "Safety",
+                "Do not enter bank passwords, card PINs, OTPs, or full account credentials in this screen."));
 
-        c.addView(secondary("＋ Add Payment Method"));
-        c.addView(secondary("📋 Payout Requirements"));
+        Button earnings = primary("View Live Earnings & Payout Records");
+        earnings.setOnClickListener(v -> showEarnings());
+        c.addView(earnings);
 
-        Button back = secondary("← Back to Earnings");
-        back.setOnClickListener(v -> showEarnings());
+        Button back = secondary("← Back");
+        back.setOnClickListener(v -> showProfile());
         c.addView(back);
     }
 
