@@ -1622,8 +1622,10 @@ public class MainActivity extends Activity {
                             .put("message", "Applied from Viyzo Worker Android app");
                     apiRequest("/rest/v1/job_applications", "POST", body, true, "return=minimal");
                     runOnUiThread(() -> {
-                        status.setText("Application submitted successfully.");
+                        status.setText("Application submitted successfully. Open My Work to track its status.");
                         Toast.makeText(this, "Application submitted.", Toast.LENGTH_SHORT).show();
+                        apply.setText("Application Submitted");
+                        apply.setEnabled(false);
                     });
                 } catch (Exception ex) {
                     runOnUiThread(() -> {
