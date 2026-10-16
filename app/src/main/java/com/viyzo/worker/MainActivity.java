@@ -2338,7 +2338,7 @@ public class MainActivity extends Activity {
                     profileMessage = "Company: " + profile.optString("legal_name", "Company")
                             + " • Verification: " + profile.optString("verification_status", "pending");
                 }
-                JSONArray jobs = apiArray("/rest/v1/jobs?select=id,status,payment_amount,task_limit,currency&company_id=eq." + userId + "&limit=1000");
+                JSONArray jobs = apiArray("/rest/v1/jobs?select=id,title,status,payment_amount,task_limit,currency,created_at&company_id=eq." + userId + "&order=created_at.desc&limit=1000");
                 int openCount = 0;
                 int totalCount = jobs.length();
                 double totalBudget = 0.0;
@@ -2350,6 +2350,30 @@ public class MainActivity extends Activity {
                 jobsMessage = "Your jobs: " + totalCount + " total • " + openCount + " currently open to workers";
                 spendingMessage = "Recorded job budget: ₹" + String.format(Locale.ROOT, "%.2f", totalBudget)
                         + " (includes worker pool + platform share; not a payment receipt)";
+                final JSONArray companyJobs = jobs;
+                runOnUiThread(() -> {
+                    c.addView(heading("Your Job History"));
+                    if (companyJobs.length() == 0) {
+                        c.addView(small("No company jobs saved yet. Submit a company profile first; verified companies can then create jobs."));
+                    } else {
+                        for (int i = 0; i < companyJobs.length(); i++) {
+                            JSONObject job = companyJobs.optJSONObject(i);
+                            if (job == null) continue;
+                            LinearLayout item = card();
+                            item.addView(tv(job.optString("title", "Untitled job"), 16, WHITE));
+                            item.addView(small("Status: " + job.optString("status", "unknown")));
+                            double taskPay = job.optDouble("payment_amount", 0.0);
+                            int taskLimit = job.optInt("task_limit", 1);
+                            item.addView(small("Worker payment per task: " + job.optString("currency", "INR") + " " 
+                                    + String.format(Locale.ROOT, "%.2f", taskPay) + " • Work slots: " + taskLimit));
+                            item.addView(small("Estimated total funding: " + job.optString("currency", "INR") + " "
+                                    + String.format(Locale.ROOT, "%.2f", taskPay * taskLimit * 2.0)
+                                    + " • This is not proof of payment."));
+                            c.addView(item);
+                            setMargins(item, 0, 6, 0, 6);
+                        }
+                    }
+                });
             } catch (Exception ex) {
                 profileMessage = "Company status unavailable: " + (ex.getMessage() == null ? "Please refresh." : ex.getMessage());
                 jobsMessage = "Your jobs could not be loaded. Check sign-in and access permissions.";
