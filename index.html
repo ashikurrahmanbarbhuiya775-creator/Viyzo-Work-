@@ -1,3 +1,63 @@
-package com.viyzo.worker;
-import android.app.Activity; import android.os.Bundle; import android.graphics.Color; import android.view.Gravity; import android.widget.*;
-public class MainActivity extends Activity { public void onCreate(Bundle b){super.onCreate(b); LinearLayout r=new LinearLayout(this); r.setOrientation(LinearLayout.VERTICAL); r.setGravity(Gravity.CENTER); r.setPadding(30,30,30,30); r.setBackgroundColor(Color.rgb(16,16,20)); TextView t=new TextView(this); t.setText("🤖 Viyzo Worker"); t.setTextColor(Color.WHITE); t.setTextSize(30); t.setGravity(Gravity.CENTER); TextView s=new TextView(this); s.setText("AI Managed Global Work Platform"); s.setTextColor(Color.LTGRAY); s.setTextSize(16); s.setGravity(Gravity.CENTER); s.setPadding(0,20,0,20); Button j=new Button(this); j.setText("🔎 Available Jobs"); j.setOnClickListener(v->Toast.makeText(this,"Worker Jobs coming next",Toast.LENGTH_SHORT).show()); r.addView(t);r.addView(s);r.addView(j);setContentView(r); } }
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101014">
+  <meta name="description" content="Viyzo is building a clearer, more trusted way for companies to share work opportunities and for workers to discover them.">
+  <title>Viyzo — Work with trust. Grow without borders.</title>
+  <style>
+    :root{color-scheme:dark;--bg:#101014;--panel:#171923;--text:#f7f8ff;--muted:#b7bdd0;--blue:#6f91ff;--cyan:#74e0d1;--line:#303548}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(ellipse at 85% 0%,#1b2850 0,transparent 38%),var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.6}
+    a{color:inherit}.wrap{width:min(1120px,calc(100% - 40px));margin:auto}.nav{display:flex;align-items:center;justify-content:space-between;padding:22px 0;border-bottom:1px solid #ffffff16}.brand{display:flex;align-items:center;gap:11px;font-size:1.15rem;font-weight:800;letter-spacing:.02em;text-decoration:none}.mark{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(145deg,#80a0ff,#4368e8);color:white;font-weight:950;font-size:1.2rem;box-shadow:0 8px 24px #4267e866}.navlinks{display:flex;gap:24px;color:var(--muted);font-size:.94rem}.navlinks a{text-decoration:none}.navlinks a:hover{color:white}
+    .hero{padding:92px 0 76px;display:grid;grid-template-columns:1.12fr .88fr;gap:52px;align-items:center}.eyebrow{display:inline-flex;gap:9px;align-items:center;border:1px solid #6f91ff66;border-radius:999px;padding:6px 12px;color:#cbd6ff;font-size:.83rem;background:#6f91ff12}.dot{width:7px;height:7px;background:var(--cyan);border-radius:50%}h1{font-size:clamp(2.7rem,6vw,5rem);line-height:1.03;letter-spacing:-.055em;margin:22px 0}h1 span{background:linear-gradient(100deg,#fff,#9bb3ff 65%,#74e0d1);-webkit-background-clip:text;background-clip:text;color:transparent}.lead{font-size:1.15rem;color:var(--muted);max-width:600px}.actions{display:flex;gap:13px;flex-wrap:wrap;margin-top:30px}.btn{display:inline-flex;align-items:center;justify-content:center;border-radius:12px;padding:12px 18px;text-decoration:none;font-weight:750;border:1px solid var(--line)}.primary{background:linear-gradient(120deg,#7896ff,#4f6fe5);border-color:transparent;color:white;box-shadow:0 12px 30px #4f6fe533}.secondary{background:#ffffff08}.note{font-size:.85rem;color:#939bb2;margin-top:16px}
+    .visual{position:relative;min-height:370px;display:grid;place-items:center}.orb{position:absolute;width:290px;height:290px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#8aa6ff,#445ed0 42%,#1c2145 72%);filter:drop-shadow(0 25px 70px #4f6fe544);opacity:.88}.orbit{position:absolute;width:355px;height:190px;border:1px solid #8ba2ff70;border-radius:50%;transform:rotate(-28deg)}.orbit.two{transform:rotate(48deg);width:340px;height:205px;border-color:#74e0d166}.vmark{position:relative;font-size:9rem;font-weight:950;letter-spacing:-.12em;color:#fff;text-shadow:0 12px 50px #101014aa;transform:translateX(-7px)}.float{position:absolute;padding:13px 16px;background:#171b2be8;border:1px solid #ffffff20;border-radius:14px;backdrop-filter:blur(12px);box-shadow:0 16px 45px #0004;font-size:.9rem}.float b{display:block;font-size:1rem}.float small{color:var(--muted)}.f1{top:28px;left:0}.f2{right:-5px;bottom:30px}
+    .section{padding:62px 0}.sectionhead{max-width:720px;margin-bottom:28px}.kicker{color:var(--cyan);font-weight:800;text-transform:uppercase;letter-spacing:.12em;font-size:.76rem}h2{font-size:clamp(1.8rem,3vw,2.7rem);line-height:1.15;letter-spacing:-.035em;margin:9px 0 14px}.muted{color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.card{padding:24px;border:1px solid var(--line);border-radius:20px;background:linear-gradient(150deg,#ffffff08,#ffffff03)}.card .symbol{width:42px;height:42px;display:grid;place-items:center;border-radius:13px;background:#6f91ff1d;color:#a8bcff;font-size:1.2rem}.card h3{margin:17px 0 8px;font-size:1.12rem}.card p{margin:0;color:var(--muted);font-size:.96rem}.trust{display:grid;grid-template-columns:.8fr 1.2fr;gap:30px;align-items:start;background:linear-gradient(135deg,#171b2a,#13151e);border:1px solid var(--line);border-radius:24px;padding:32px}.trustlist{display:grid;gap:13px}.trustitem{display:flex;gap:12px;color:var(--muted)}.check{color:var(--cyan);font-weight:900}.status{font-size:.9rem;color:#d9e0ff;border-left:3px solid var(--blue);padding:12px 15px;background:#6f91ff10;border-radius:0 10px 10px 0;margin-top:18px}.cta{padding:40px;border-radius:24px;background:linear-gradient(115deg,#273b83,#1a254d 60%,#173b43);border:1px solid #809bff44;display:flex;align-items:center;justify-content:space-between;gap:22px}.cta p{color:#d4ddff;margin:0;max-width:610px}.footer{border-top:1px solid #ffffff18;margin-top:60px;padding:28px 0 36px;color:#9ea6bd;font-size:.9rem}.footrow{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}.footlinks{display:flex;gap:18px}.footlinks a{color:#cbd1e2;text-decoration:none}
+    @media(max-width:780px){.hero{grid-template-columns:1fr;padding:62px 0 36px;gap:10px}.visual{min-height:300px;transform:scale(.9)}.grid{grid-template-columns:1fr}.trust{grid-template-columns:1fr;padding:24px}.cta{padding:26px;display:block}.cta .btn{margin-top:20px}.navlinks{gap:13px;font-size:.85rem}.navlinks a:nth-child(2){display:none}}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  </style>
+</head>
+<body>
+<header class="wrap">
+  <nav class="nav" aria-label="Main navigation">
+    <a class="brand" href="#top" aria-label="Viyzo home"><span class="mark" aria-hidden="true">V</span><span>VIYZO</span></a>
+    <div class="navlinks"><a href="#how">Our approach</a><a href="#trust">Trust</a><a href="#contact">Contact</a></div>
+  </nav>
+</header>
+<main id="top" class="wrap">
+  <section class="hero">
+    <div>
+      <div class="eyebrow"><span class="dot"></span> Building a better way to connect with work</div>
+      <h1>Work with trust.<br><span>Grow without borders.</span></h1>
+      <p class="lead">Viyzo is building a clearer connection between companies with real work and people ready to do it—grounded in transparency, safety, and opportunity.</p>
+      <div class="actions"><a class="btn primary" href="#how">Discover Viyzo <span aria-hidden="true">&nbsp;→</span></a><a class="btn secondary" href="mailto:ashikurrahmanbarbhuiya775@gmail.com?subject=Viyzo%20inquiry">Contact the team</a></div>
+      <p class="note">We’re building carefully. Availability of jobs, payments, and other features depends on verification and release status.</p>
+    </div>
+    <div class="visual" aria-label="Viyzo V brand mark illustration" role="img"><div class="orb"></div><div class="orbit"></div><div class="orbit two"></div><div class="vmark">V</div><div class="float f1"><b>Built around trust</b><small>Clear information first</small></div><div class="float f2"><b>Opportunity for people</b><small>Work with purpose</small></div></div>
+  </section>
+  <section id="how" class="section">
+    <div class="sectionhead"><div class="kicker">What we’re building</div><h2>A work platform where clarity comes first.</h2><p class="muted">Viyzo’s long-term ambition is global. We’ll earn the right to grow by making the experience useful and dependable for every company and worker who joins.</p></div>
+    <div class="grid">
+      <article class="card"><div class="symbol" aria-hidden="true">↗</div><h3>For companies</h3><p>A structured way to share work requirements, describe expectations, and move through a clear review and funding process.</p></article>
+      <article class="card"><div class="symbol" aria-hidden="true">◎</div><h3>For workers</h3><p>A simpler path toward discovering relevant opportunities, understanding requirements, and tracking progress.</p></article>
+      <article class="card"><div class="symbol" aria-hidden="true">◇</div><h3>Designed for trust</h3><p>Honest status updates, transparent processes, and safety checks before features are presented as ready.</p></article>
+    </div>
+  </section>
+  <section id="trust" class="section">
+    <div class="trust">
+      <div><div class="kicker">Our commitment</div><h2>Trust is earned, never claimed.</h2><p class="muted">A strong brand is built by doing what we say, protecting people’s information, and being clear when something isn’t ready yet.</p></div>
+      <div class="trustlist">
+        <div class="trustitem"><span class="check">✓</span><span>Clear communication about features and availability.</span></div>
+        <div class="trustitem"><span class="check">✓</span><span>No guaranteed-income promises or invented success numbers.</span></div>
+        <div class="trustitem"><span class="check">✓</span><span>Careful review of company, job, and payment flows before wider launch.</span></div>
+        <div class="trustitem"><span class="check">✓</span><span>Respect for privacy and responsible handling of account information.</span></div>
+      </div>
+    </div>
+    <p class="status"><strong>Current status:</strong> Viyzo is under active development. This page describes our direction; it does not mean every service or payment feature is currently live.</p>
+  </section>
+  <section id="contact" class="section">
+    <div class="cta"><div><div class="kicker">Stay connected</div><h2>Help shape what Viyzo becomes.</h2><p>Companies, workers, and early supporters can contact us with questions, feedback, and partnership interest.</p></div><a class="btn primary" href="mailto:ashikurrahmanbarbhuiya775@gmail.com?subject=Hello%20Viyzo">Email Viyzo <span aria-hidden="true">&nbsp;→</span></a></div>
+  </section>
+</main>
+<footer class="footer"><div class="wrap footrow"><div>© <span id="year">2026</span> Viyzo. Built with trust in mind.</div><div class="footlinks"><a href="privacy.html">Privacy</a><a href="company-payments.html">Company payments information</a><a href="mailto:ashikurrahmanbarbhuiya775@gmail.com">Support</a></div></div></footer>
+</body>
+</html>
