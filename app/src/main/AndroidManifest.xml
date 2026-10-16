@@ -18,8 +18,10 @@
         android:allowBackup="false"
         android:usesCleartextTraffic="false"
         android:label="Viyzo Worker"
+        android:icon="@drawable/ic_viyzo"
+        android:roundIcon="@drawable/ic_viyzo"
         android:supportsRtl="true"
-        android:theme="@android:style/Theme.DeviceDefault.Light.DarkActionBar">
+        android:theme="@style/AppTheme">
 
         <activity
             android:name=".MainActivity"
