@@ -1752,11 +1752,14 @@ public class MainActivity extends Activity {
         c.addView(wideInfo("✓", "Verification",
                 "Job-specific verification may apply"));
 
-        Button apply = primary("🚀  Apply / Join Work Pool");
-        apply.setOnClickListener(v -> Toast.makeText(
-                this,
-                "Demo application saved. Real assignment requires backend matching.",
-                Toast.LENGTH_SHORT).show());
+        TextView exampleOnly = tv(
+                "EXAMPLE ONLY — This is a sample opportunity, not a verified company job. No application or earning is created here. Open Available Work to apply to live, funded jobs.",
+                12, GOLD);
+        exampleOnly.setPadding(dp(12), dp(10), dp(12), dp(10));
+        c.addView(exampleOnly);
+
+        Button apply = secondary("Open Live Available Work");
+        apply.setOnClickListener(v -> showJobs());
         c.addView(apply);
 
         Button back = secondary("← Back to Work Feed");
