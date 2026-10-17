@@ -28,6 +28,16 @@ This checklist is the source of truth for checking the current product before pu
 - [ ] Verify worker payout provider, KYC/compliance requirements, failure handling, and reconciliation before promising payouts.
 - [ ] Never display demo balances or estimated earnings as guaranteed income.
 
+## Free-tier portability plan (do not connect duplicate production backends blindly)
+- [ ] Keep Supabase as the single source of truth for live users, jobs, applications, and money records until a tested migration is approved.
+- [ ] Keep provider-specific calls behind a small backend/data-access boundary; document environment variables and deployment steps without committing secrets.
+- [ ] Create a staging-only portability proof of concept before adding another provider. Never dual-write production payments or worker balances to separate databases.
+- [ ] Choose Cloudflare Workers/Pages for suitable edge API/static delivery only after checking daily request and CPU quotas; its free plan is not a replacement for Supabase Auth/Postgres.
+- [ ] Evaluate Neon as a possible PostgreSQL migration/test target, not an automatic second live database. Test schema, RLS/auth replacement, migrations, backups/restore, latency, and data reconciliation first.
+- [ ] Do not use Render Free Postgres for authoritative production data: the free database expires after 30 days and has no backups; free web services can sleep and do not scale horizontally.
+- [ ] Add usage alerts/checks and a documented migration/rollback plan before any quota is approached. Free-tier limits can change and providers may pause or suspend services at their limits.
+- [ ] No provider credentials or payment secrets may be stored in Android source code or committed to GitHub.
+
 ## Performance and scale readiness (must be completed in stages)
 - [ ] Keep Android network work off the main/UI thread; use explicit connect/read timeouts, bounded retries with backoff, and cancel requests when screens are no longer active.
 - [ ] Paginate and limit every growing list (jobs, applications, earnings, task submissions); avoid fetching whole tables or refreshing repeatedly on each screen redraw.
