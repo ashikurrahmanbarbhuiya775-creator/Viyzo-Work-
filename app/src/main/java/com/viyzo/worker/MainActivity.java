@@ -2518,13 +2518,17 @@ public class MainActivity extends Activity {
                     } else {
                         double perTask = totalBudget / (slots * 2.0);
                         if (perTask <= 0 || !Double.isFinite(perTask)) throw new Exception("Budget is too small for the selected number of work slots.");
+                        perTask = Math.round(perTask * 100.0) / 100.0;
+                        if (perTask < 0.01) {
+                            throw new Exception("The budget is too small for this many work slots. Increase the budget or reduce the number of slots so each slot has at least ₹0.01 for the worker and ₹0.01 for Viyzo.");
+                        }
                         JSONObject job = new JSONObject();
                         job.put("company_id", userId);
                         job.put("title", selectedTitle);
                         job.put("description", selectedDescription);
                         job.put("category", selectedCategory);
                         job.put("country", selectedLocation);
-                        job.put("payment_amount", Math.round(perTask * 100.0) / 100.0);
+                        job.put("payment_amount", perTask);
                         job.put("currency", "INR");
                         job.put("task_limit", slots);
                         job.put("status", "pending_funding");
