@@ -41,8 +41,11 @@ This checklist is the source of truth for checking the current product before pu
 - [ ] A successful CI build is not the same as a device test; mark device checks complete only after testing.
 - [ ] After any code change, review the diff and preserve existing behavior unless the change specifically requires otherwise.
 
-## Current known status (16 October 2026)
-- Latest observed APK workflow run: 38914495786, successful; artifact name: Viyzo-APK.
-- Latest observed website Pages deployment run: 38914495235, successful.
-- Supabase security advisor reported leaked-password protection disabled; enable it at the final security pass as requested.
-- Real payment/payout flows still require end-to-end provider setup and verification before being described as live.
+## Current known status (17 October 2026)
+- [x] Latest observed APK workflow run #110: 38998200041, successful; commit `06ef46ff`. Download the `Viyzo-APK` artifact from that exact run: https://github.com/ashikurrahmanbarbhuiya775-creator/Viyzo-Work-/actions/runs/38998200041
+- [x] Latest observed website Pages deployment run #112: 38998199380, successful: https://github.com/ashikurrahmanbarbhuiya775-creator/Viyzo-Work-/actions/runs/38998199380
+- [x] Added a company-job validation guard so a rounded per-task amount cannot be zero; the APK workflow completed successfully for this commit.
+- [ ] Install and test this exact APK on a real Android device. CI success does not establish phone testing.
+- [ ] Live data verification remains blocked for end-to-end proof: current counts were 0 company_profiles, 0 jobs, 0 company_deposits, 0 job_funding_allocations, and 0 job_applications.
+- [ ] Real payment/payout flows are not confirmed live; provider onboarding, server-side secrets, signed webhook, ledger reconciliation, and payout setup must be verified before launch.
+- [ ] Supabase security advisor previously reported leaked-password protection disabled; enable it at the final security pass as requested.
