@@ -28,6 +28,19 @@ This checklist is the source of truth for checking the current product before pu
 - [ ] Verify worker payout provider, KYC/compliance requirements, failure handling, and reconciliation before promising payouts.
 - [ ] Never display demo balances or estimated earnings as guaranteed income.
 
+## Performance and scale readiness (must be completed in stages)
+- [ ] Keep Android network work off the main/UI thread; use explicit connect/read timeouts, bounded retries with backoff, and cancel requests when screens are no longer active.
+- [ ] Paginate and limit every growing list (jobs, applications, earnings, task submissions); avoid fetching whole tables or refreshing repeatedly on each screen redraw.
+- [ ] Review Supabase query plans and indexes against real, representative queries and data volume; do not remove indexes solely because the advisor currently labels them unused on this nearly empty project.
+- [ ] Confirm row-level security policies and indexes for every user-scoped query; test with separate worker/company accounts.
+- [ ] Add operational monitoring for API latency, error rate, database connections, slow queries, edge-function failures, and crash reports; document alerts and rollback steps.
+- [ ] Run repeatable load tests for login, job browsing, applications, and company flows in a staging/test environment before increasing traffic.
+- [ ] Define capacity gates and upgrade/migration plans before each growth step; the current free-tier setup is a starting point, not a proven platform for millions or tens of millions of concurrent users.
+- [ ] Verify recovery from timeouts, rate limits, temporary backend outages, duplicate submissions, and interrupted payment callbacks.
+- [ ] Record measured results (concurrent users, requests/second, p95/p99 latency, error rate, database load, and test duration); never label scale as proven without test evidence.
+
+Current scalability note: Supabase performance advisor currently reports informational unused-index findings. With almost no production rows, this is not evidence that the database is ready for high traffic and is not a reason to delete indexes. Measure real query patterns first. A target of 10–20 crore registered users is different from 10–20 crore simultaneous active users; capacity planning and cost differ substantially.
+
 ## Security and release
 - [ ] Review Supabase security and performance advisors.
 - [ ] Enable leaked-password protection in Supabase Auth before public release (manual dashboard setting).
