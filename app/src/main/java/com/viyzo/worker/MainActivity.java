@@ -1772,6 +1772,19 @@ public class MainActivity extends Activity {
     // ============================================================
     // MY WORK / WORK POOL
     // ============================================================
+    private String friendlyApplicationStatus(String status) {
+        if (status == null || status.trim().isEmpty()) return "Awaiting update";
+        switch (status.toLowerCase(Locale.ROOT)) {
+            case "submitted": return "Submitted — waiting for company review";
+            case "pending": return "Pending review";
+            case "accepted": return "Accepted";
+            case "approved": return "Approved";
+            case "rejected": return "Not accepted";
+            case "cancelled": return "Cancelled";
+            case "completed": return "Completed";
+            default: return status.replace("_", " ");
+        }
+    }
     private void showMyJobs() {
         if (accessToken.isEmpty() || userId.isEmpty()) { showLogin(); return; }
         startScreen(true);
@@ -1814,7 +1827,7 @@ public class MainActivity extends Activity {
                         }
                         LinearLayout item=card();
                         item.addView(heading(job==null?"Viyzo work order":job.optString("title","Viyzo work order")));
-                        item.addView(small("Application status: "+app.optString("status","submitted")));
+                        item.addView(small("Application status: "+friendlyApplicationStatus(app.optString("status","submitted"))));
                         if(job!=null) item.addView(tv("Worker payment per approved task: ₹"+formatNumber(job.optDouble("payment_amount",0)),13,GREEN));
                         if (submission != null) {
                             String reviewStatus = submission.optString("status","submitted");
