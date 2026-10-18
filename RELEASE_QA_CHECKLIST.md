@@ -72,3 +72,14 @@ Current scalability note: Supabase performance advisor currently reports informa
 - [ ] Live data verification remains blocked for end-to-end proof: current counts were 0 company_profiles, 0 jobs, 0 company_deposits, 0 job_funding_allocations, and 0 job_applications.
 - [ ] Real payment/payout flows are not confirmed live; provider onboarding, server-side secrets, signed webhook, ledger reconciliation, and payout setup must be verified before launch.
 - [ ] Supabase security advisor previously reported leaked-password protection disabled; enable it at the final security pass as requested.
+
+
+## International payments foundation (18 October 2026)
+- [x] Added a server-managed `country_payment_options` registry with country/currency/provider/method, collection and payout capability flags, and disabled-by-default status.
+- [x] Relaxed INR-only currency checks on company deposits, platform ledger, and job funding allocations to accept standard three-letter currency codes; kept INR as the default.
+- [x] Verified the new registry exists with RLS enabled and currency-format constraints are present.
+- [ ] Integrate country/currency selection into the Android and company web flows, preserving existing login/job behavior.
+- [ ] Confirm each provider's country availability, merchant eligibility, supported methods, fees, settlement currency, refunds and payout coverage before enabling any country/provider row.
+- [ ] Implement server-side provider checkout, signed webhooks, idempotency, ledger reconciliation and refund handling; never trust client-reported payment success.
+- [ ] Test worker payout routes and compliance/KYC requirements country by country. No real payment provider is configured or active yet.
+- [ ] Teach AI Master Manager to explain only the actual configured options and current payment status; do not claim unavailable methods are supported.
