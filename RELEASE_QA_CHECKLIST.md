@@ -83,3 +83,15 @@ Current scalability note: Supabase performance advisor currently reports informa
 - [ ] Implement server-side provider checkout, signed webhooks, idempotency, ledger reconciliation and refund handling; never trust client-reported payment success.
 - [ ] Test worker payout routes and compliance/KYC requirements country by country. No real payment provider is configured or active yet.
 - [ ] Teach AI Master Manager to explain only the actual configured options and current payment status; do not claim unavailable methods are supported.
+
+
+## WhatsApp job notifications foundation (18 October 2026)
+- [x] Added a worker contact-preferences table for E.164 phone numbers, verification timestamp, country code, preferred channel and explicit WhatsApp opt-in; RLS enabled and own-row policy added.
+- [x] Added a server-only durable job notification queue with retry scheduling, attempt limits, provider message IDs, and queued/sent/delivered/failed states; RLS enabled and client roles denied access.
+- [x] Verified both new tables exist with RLS enabled.
+- [ ] Add phone-number collection and OTP verification UI; never send WhatsApp messages to unverified numbers.
+- [ ] Add clear WhatsApp opt-in and opt-out, privacy notice and applicable template/consent handling.
+- [ ] Integrate WhatsApp Business Platform or an approved provider using server-side secrets; no WhatsApp messages are sent by the database migration alone.
+- [ ] Notify only eligible workers after job funding and eligibility checks; avoid duplicate notifications and apply rate limits.
+- [ ] Implement retry/backoff, dead-letter/manual review, delivery callbacks and alternate in-app/email/SMS fallback. Delivery cannot be guaranteed; keep job status visible in the app so missed messages do not silently strand work.
+- [ ] AI Master Manager should explain the real notification status and available next steps; it must not promise a message was sent or delivered without provider confirmation.
