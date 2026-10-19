@@ -2899,12 +2899,71 @@ public class MainActivity extends Activity {
             java.util.ArrayList<String> results = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
             if (results != null && !results.isEmpty()) {
                 String question = results.get(0);
-                if (aiBubbleView != null) aiBubbleView.setText("You: " + question);
-                String answer = answerAIQuestion(question);
-                if (aiBubbleView != null) aiBubbleView.setText("You: " + question + "\n\nAI Master: " + answer);
-                speakAI(answer);
+                if (aiBubbleView != null) aiBubbleView.setText("You: " + question + "\\n\\nAI Master: Connecting securely…");
+                if (aiStatusView != null) aiStatusView.setText("🤖 AI Master is preparing your answer…");
+                askAIMasterBackend(question);
             }
         }
+    }
+
+
+    // Calls the secured server-side AI endpoint; local help remains as a fallback.
+    private void askAIMasterBackend(String question) {
+        final String token = accessToken;
+        if (token == null || token.trim().isEmpty()) {
+            String answer = answerAIQuestion(question);
+            if (aiBubbleView != null) aiBubbleView.setText("You: " + question + "\\n\\nAI Master: " + answer);
+            speakAI(answer);
+            return;
+        }
+        new Thread(() -> {
+            HttpURLConnection connection = null;
+            try {
+                connection = (HttpURLConnection) new URL(SUPABASE_URL + "/functions/v1/ai-master").openConnection();
+                connection.setRequestMethod("POST");
+                connection.setConnectTimeout(10000);
+                connection.setReadTimeout(25000);
+                connection.setRequestProperty("apikey", SUPABASE_PUBLISHABLE_KEY);
+                connection.setRequestProperty("Authorization", "Bearer " + token);
+                connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                connection.setDoOutput(true);
+                JSONObject payload = new JSONObject();
+                payload.put("question", question);
+                payload.put("language", aiLocale == null ? "en" : aiLocale.toLanguageTag());
+                try (OutputStream os = connection.getOutputStream()) {
+                    os.write(payload.toString().getBytes(StandardCharsets.UTF_8));
+                }
+                int code = connection.getResponseCode();
+                InputStream stream = code >= 200 && code < 300 ? connection.getInputStream() : connection.getErrorStream();
+                StringBuilder raw = new StringBuilder();
+                if (stream != null) try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) raw.append(line);
+                }
+                JSONObject result = raw.length() > 0 ? new JSONObject(raw.toString()) : new JSONObject();
+                String answer = code >= 200 && code < 300 && result.optBoolean("ok")
+                        ? result.optString("answer", "").trim() : "";
+                boolean liveAnswer = !answer.isEmpty();
+                if (!liveAnswer) answer = answerAIQuestion(question);
+                final String finalAnswer = answer;
+                final String status = liveAnswer ? "🟢 AI Master • Secure AI response" :
+                        (code == 503 ? "Built-in help active • AI provider setup pending" : "Built-in help active • AI service unavailable");
+                runOnUiThread(() -> {
+                    if (aiBubbleView != null) aiBubbleView.setText("You: " + question + "\\n\\nAI Master: " + finalAnswer);
+                    if (aiStatusView != null) aiStatusView.setText(status);
+                    speakAI(finalAnswer);
+                });
+            } catch (Exception e) {
+                String answer = answerAIQuestion(question);
+                runOnUiThread(() -> {
+                    if (aiBubbleView != null) aiBubbleView.setText("You: " + question + "\\n\\nAI Master: " + answer);
+                    if (aiStatusView != null) aiStatusView.setText("Built-in help active • Check connection");
+                    speakAI(answer);
+                });
+            } finally {
+                if (connection != null) connection.disconnect();
+            }
+        }, "Viyzo-AI-Master").start();
     }
 
     @Override
