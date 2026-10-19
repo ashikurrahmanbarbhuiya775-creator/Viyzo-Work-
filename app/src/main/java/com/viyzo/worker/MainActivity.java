@@ -2912,7 +2912,7 @@ public class MainActivity extends Activity {
         final String token = accessToken;
         if (token == null || token.trim().isEmpty()) {
             String answer = answerAIQuestion(question);
-            if (aiBubbleView != null) aiBubbleView.setText("You: " + question + "\\n\\nAI Master: " + answer);
+            if (aiBubbleView != null) aiBubbleView.setText("You: " + question + "\n\nAI Master: " + answer);
             speakAI(answer);
             return;
         }
@@ -2949,14 +2949,14 @@ public class MainActivity extends Activity {
                 final String status = liveAnswer ? "🟢 AI Master • Secure AI response" :
                         (code == 503 ? "Built-in help active • AI provider setup pending" : "Built-in help active • AI service unavailable");
                 runOnUiThread(() -> {
-                    if (aiBubbleView != null) aiBubbleView.setText("You: " + question + "\\n\\nAI Master: " + finalAnswer);
+                    if (aiBubbleView != null) aiBubbleView.setText("You: " + question + "\n\nAI Master: " + finalAnswer);
                     if (aiStatusView != null) aiStatusView.setText(status);
                     speakAI(finalAnswer);
                 });
             } catch (Exception e) {
                 String answer = answerAIQuestion(question);
                 runOnUiThread(() -> {
-                    if (aiBubbleView != null) aiBubbleView.setText("You: " + question + "\\n\\nAI Master: " + answer);
+                    if (aiBubbleView != null) aiBubbleView.setText("You: " + question + "\n\nAI Master: " + answer);
                     if (aiStatusView != null) aiStatusView.setText("Built-in help active • Check connection");
                     speakAI(answer);
                 });
