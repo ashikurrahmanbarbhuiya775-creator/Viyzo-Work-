@@ -70,3 +70,11 @@ This is a progress note, not a claim that the product is launch-ready. Existing 
 - Preserve existing app code unless a specific defect is confirmed; use minimal changes and build after app-code edits.
 - Keep initial deployment on free tiers where practical; verify provider quotas and fees before enabling paid services.
 - Do not claim global scalability or launch readiness without measured tests.
+
+
+## Additional application authorization hardening (20 October 2026)
+- [x] Re-reviewed the INSERT policy for `job_applications`. It already restricted the row to the signed-in worker, an open job, and a positive funded reserve, but did not constrain the initial application status.
+- [x] Applied a tracked Supabase migration `secure_worker_application_initial_status`: the insert policy now also requires `status = 'submitted'`, preventing clients from creating an application already marked `approved`, `completed`, or `rejected`.
+- [x] Queried `pg_policies` after migration and verified the deployed policy includes the initial-status check.
+- [ ] End-to-end negative tests using a real authenticated staging worker and test job are still pending; no production job/payment records were created.
+- [ ] Security advisor still reports leaked-password protection disabled. Remediation: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
