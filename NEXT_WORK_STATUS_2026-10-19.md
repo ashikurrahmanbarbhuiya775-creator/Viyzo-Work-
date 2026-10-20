@@ -105,3 +105,5 @@ This is a progress note, not a claim that the product is launch-ready. Existing 
 - [ ] Before this workflow can succeed, configure GitHub Actions secrets: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`. The keystore must be backed up securely; losing it can prevent future updates under the same signing identity.
 - [ ] Workflow has not yet been run; no signed AAB exists yet. A successful build is still not a Play Store publication; store listing, privacy/data-safety declarations, content rating, testing requirements, and Play Console account checks remain.
 - [ ] Existing debug APK workflow remains separate for phone QA. After the Gradle change, verify its next GitHub Actions run before installing a fresh APK.
+
+- [x] Updated the debug APK workflow to fail if the APK is missing/empty and to upload a SHA-256 checksum beside the APK, with 14-day artifact retention. The next workflow run must be checked for success; this configuration change is not itself proof of a successful build.
