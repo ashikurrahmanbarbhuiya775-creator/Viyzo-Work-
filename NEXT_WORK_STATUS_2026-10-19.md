@@ -26,6 +26,14 @@ This is a progress note, not a claim that the product is launch-ready. Existing 
 - [ ] Supabase Auth leaked-password protection is still reported disabled. Keep it for the final security pass as requested; enable before public launch.
 - [ ] Performance advisor reports unused indexes on a near-empty database. Do not delete them just because they are currently unused; review with representative query plans and real traffic.
 
+## Worker payout readiness review (20 October 2026)
+- [x] Inspected `worker_payouts` table constraints and RLS policies.
+- [x] Workers can only read their own payout records; no client INSERT/UPDATE policy is present, which prevents workers from marking themselves paid through normal authenticated table access.
+- [x] Payout status values are constrained to `pending`, `processing`, `paid`, `failed`, and `cancelled`.
+- [ ] No payout execution Edge Function or provider transfer workflow is currently listed among the active functions. Therefore bank payout execution is not implemented/verified by the current function inventory.
+- [ ] Before adding payout execution, design a server-only, idempotent payout workflow with eligibility checks against approved earnings, per-worker verified payout details, transfer provider webhook/signature validation, retry handling, and a ledger/reconciliation trail. Do not mark earnings paid before provider-confirmed transfer.
+- [ ] No payout schema or real money movement was changed during this review.
+
 ## Supervisor / earnings integrity review (20 October 2026)
 - [x] Verified `supervisor-dashboard` Edge Function is active version 4 with gateway JWT verification enabled and checks trusted `app_metadata.role` for `supervisor` or `admin`.
 - [x] Verified job approval requires `funded_pending_review`, a succeeded deposit matching the job company and required total, and an atomic status update conditioned on the previous status.
