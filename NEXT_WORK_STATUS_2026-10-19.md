@@ -86,3 +86,14 @@ This is a progress note, not a claim that the product is launch-ready. Existing 
 - [x] Reviewed `.github/workflows/build-apk.yml`: current workflow builds `assembleDebug` and uploads a debug APK for testing; it is **not** a signed public-release build.
 - [ ] Release signing configuration and protected signing credentials are not verified/configured here. Do not upload the current debug artifact as a final public release. A signed release workflow needs secure repository secrets and a controlled signing process.
 - [ ] Need a fresh build after any Android source/build configuration changes, followed by installation and phone QA. Backend-only changes do not automatically change the APK.
+
+
+## Public-launch readiness pass — 20 October 2026 (continued)
+- [x] Re-listed deployed Supabase Edge Functions: `supervisor-dashboard` v4 (JWT required), `company-payments` v4 (gateway JWT off for signed webhook; handler authenticates user actions and validates Razorpay HMAC), `worker-task` v4 (JWT required), `ai-master` v2 (JWT required; intentionally pending).
+- [x] Rechecked RLS policies for jobs, applications, task submissions, earnings, deposits and payouts. Application creation is limited to the caller's own `submitted` application for an open job with a positive funded reserve; task submission additionally requires an approved application and funded/open job. Workers can only read their own earnings/payouts; no client payout insert/update policy is present.
+- [x] Rechecked deposit indexes: unique partial index `company_deposits_one_active_or_successful_job_funding_idx` prevents multiple deposits in pending/succeeded state for the same job.
+- [x] Re-ran Supabase security advisor: only reported warning is leaked-password protection disabled.
+- [x] Re-ran performance advisor: 21 unused-index notices. These are informational on a low-traffic/near-empty database; no indexes were removed without query-plan evidence.
+- [ ] No real payment, payout, or worker/supervisor end-to-end test was executed. Live payment secrets and merchant onboarding remain unverified.
+- [ ] Current Android GitHub workflow builds a debug APK only. A release-signed artifact still requires a keystore/signing process stored in protected secrets; do not publish the debug APK as the final store release.
+- [ ] No Android source changed in this pass, so no new APK was triggered by this audit-only update.
