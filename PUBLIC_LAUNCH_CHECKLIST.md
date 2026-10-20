@@ -19,6 +19,8 @@ This is a readiness checklist, not a declaration that Viyzo Worker is production
 
 ## 2. Authentication and account lifecycle
 
+- [x] Android now encrypts persisted session fields using AES-GCM with an Android Keystore key and migrates legacy plaintext session values on restore.
+- [ ] Device-test encrypted session persistence across app restart, logout, and upgrade from the prior APK.
 - [ ] Test sign-up, email confirmation, sign-in, sign-out, expired session, password reset, and account deletion using dedicated test accounts.
 - [ ] Enable Supabase leaked-password protection before public launch.
 - [ ] Verify role grants are assigned only by trusted server-side administration, never by client-editable profile metadata.
