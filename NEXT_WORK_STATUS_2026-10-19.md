@@ -24,6 +24,15 @@ This is a progress note, not a claim that the product is launch-ready. Existing 
 - [ ] Supabase Auth leaked-password protection is still reported disabled. Keep it for the final security pass as requested; enable before public launch.
 - [ ] Performance advisor reports unused indexes on a near-empty database. Do not delete them just because they are currently unused; review with representative query plans and real traffic.
 
+## Payment flow code review (20 October 2026)
+- [x] Reviewed active `company-payments` Edge Function version 4 and `supervisor-dashboard` version 4.
+- [x] Company payment creation requires an authenticated user, a verified company profile, ownership of the selected job, and `pending_funding` job status.
+- [x] Current provider flow is Razorpay + INR only; total budget is constrained to ₹100–₹10,00,000 and uses 2x the worker reserve for the planned 50/50 split. This is not yet global payment support.
+- [x] Webhook handler verifies Razorpay HMAC signature before processing capture/failure events; captured payment confirmation delegates to a row-locking database RPC that checks amount, currency, job ownership/status, prevents repeat confirmation, creates ledger/funding allocation, and moves the job to `funded_pending_review`.
+- [x] Supervisor job approval checks for a succeeded deposit matching company and required total; supervisor identity comes from trusted `app_metadata.role`.
+- [ ] No payment secrets were inspected or exposed. Merchant onboarding, configured server secrets, and signed test webhook have not been verified. No real payment was attempted.
+- [ ] A race/negative-path test suite is still required for duplicate webhooks, late payment-failed/captured events, provider timeouts, refunds, and reconciliation.
+
 ## Current real-work/payment status
 - Database tables and server functions exist for company profiles, jobs, deposits, funding allocations, worker submissions, earnings, payouts, ledger, and supervisor review.
 - This does **not** prove end-to-end live payments or payouts. Live provider secrets/merchant onboarding and a signed test payment have not been confirmed.
