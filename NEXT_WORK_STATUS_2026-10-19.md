@@ -15,6 +15,8 @@ This is a progress note, not a claim that the product is launch-ready. Existing 
 - [x] Redeployed `worker-task` as active version 4 with JWT verification still enabled.
 - [x] Re-fetched the deployed function and verified the new approval guard is present.
 - [ ] Full end-to-end runtime test remains pending because the relevant job/application/funding tables have no test records yet. Do not claim the flow is fully tested.
+- [x] Tightened the database INSERT RLS policy `Workers can submit own completed tasks` to require the matching application status to be `approved`, alongside existing owner/job/open/funded checks. Re-read `pg_policies` after the change and verified the approval predicate is present.
+- [ ] Runtime positive/negative tests still require test user/job/funding records; no production records were created.
 
 ## Security / backend audit
 - [x] Supabase security advisor showed RLS enabled on the 14 observed public tables.
