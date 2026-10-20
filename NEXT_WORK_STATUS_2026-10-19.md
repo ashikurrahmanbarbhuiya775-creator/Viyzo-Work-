@@ -107,3 +107,9 @@ This is a progress note, not a claim that the product is launch-ready. Existing 
 - [ ] Existing debug APK workflow remains separate for phone QA. After the Gradle change, verify its next GitHub Actions run before installing a fresh APK.
 
 - [x] Updated the debug APK workflow to fail if the APK is missing/empty and to upload a SHA-256 checksum beside the APK, with 14-day artifact retention. The next workflow run must be checked for success; this configuration change is not itself proof of a successful build.
+
+
+## Additional release readiness work (20 October 2026)
+- [x] Strengthened the manual signed-AAB workflow: it now runs `jarsigner -verify` before creating the checksum and uploading the artifact.
+- [x] Added `PUBLIC_LAUNCH_CHECKLIST.md` covering Android signing/device QA, authentication, job lifecycle, payments/payouts, privacy/store listing, and the intentionally paused AI Master work. It distinguishes verified controls from pending tests and provider onboarding.
+- [ ] Neither the debug nor signed-release workflow has been executed by these latest file changes yet. Verify the next debug build; signed build requires the protected keystore secrets.
