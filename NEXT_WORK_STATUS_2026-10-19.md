@@ -26,6 +26,14 @@ This is a progress note, not a claim that the product is launch-ready. Existing 
 - [ ] Supabase Auth leaked-password protection is still reported disabled. Keep it for the final security pass as requested; enable before public launch.
 - [ ] Performance advisor reports unused indexes on a near-empty database. Do not delete them just because they are currently unused; review with representative query plans and real traffic.
 
+## Supervisor / earnings integrity review (20 October 2026)
+- [x] Verified `supervisor-dashboard` Edge Function is active version 4 with gateway JWT verification enabled and checks trusted `app_metadata.role` for `supervisor` or `admin`.
+- [x] Verified job approval requires `funded_pending_review`, a succeeded deposit matching the job company and required total, and an atomic status update conditioned on the previous status.
+- [x] Verified the task-review database function locks the submission and job rows, accepts only `submitted` records, checks funding reserve, and blocks approvals if the job is not open or the worker reserve would be exceeded.
+- [x] Verified unique index `earnings_one_record_per_submission_idx` prevents multiple earnings rows for the same submission; unique application constraint also prevents multiple submissions per application.
+- [ ] No runtime tests with supervisor/worker test accounts have been performed; authorization, concurrent approvals, reject/approve race, and earnings creation still need staging tests.
+- [ ] Bank payout execution remains separate and unverified.
+
 ## Payment flow code review (20 October 2026)
 - [x] Reviewed active `company-payments` Edge Function version 4 and `supervisor-dashboard` version 4.
 - [x] Company payment creation requires an authenticated user, a verified company profile, ownership of the selected job, and `pending_funding` job status.
