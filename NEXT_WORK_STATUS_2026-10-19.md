@@ -78,3 +78,11 @@ This is a progress note, not a claim that the product is launch-ready. Existing 
 - [x] Queried `pg_policies` after migration and verified the deployed policy includes the initial-status check.
 - [ ] End-to-end negative tests using a real authenticated staging worker and test job are still pending; no production job/payment records were created.
 - [ ] Security advisor still reports leaked-password protection disabled. Remediation: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
+
+
+## Android public-release packaging audit (20 October 2026)
+- [x] Reviewed `AndroidManifest.xml`: internet/network permissions are present, cleartext traffic is disabled, and Android backup is disabled.
+- [x] Reviewed `app/build.gradle`: current source declares `versionCode 6` and `versionName 1.0.5` (verify this is what the newest build displays on-device).
+- [x] Reviewed `.github/workflows/build-apk.yml`: current workflow builds `assembleDebug` and uploads a debug APK for testing; it is **not** a signed public-release build.
+- [ ] Release signing configuration and protected signing credentials are not verified/configured here. Do not upload the current debug artifact as a final public release. A signed release workflow needs secure repository secrets and a controlled signing process.
+- [ ] Need a fresh build after any Android source/build configuration changes, followed by installation and phone QA. Backend-only changes do not automatically change the APK.
