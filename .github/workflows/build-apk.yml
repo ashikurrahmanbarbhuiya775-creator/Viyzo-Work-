@@ -1,7 +1,6 @@
 name: Build Viyzo APK
 
-# Keep only the newest APK build running for this branch.
-# Rebuild APK on every main-branch source update; artifact is for testing only.
+# Debug APK for phone QA only; not a public-store release artifact.
 concurrency:
   group: viyzo-apk-${{ github.ref }}
   cancel-in-progress: true
@@ -11,6 +10,9 @@ on:
     branches:
       - main
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -31,11 +33,20 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      - name: Build APK
-        run: gradle assembleDebug
+      - name: Build and validate debug APK
+        run: |
+          set -euo pipefail
+          gradle assembleDebug
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          sha256sum "$APK" > "$APK.sha256"
 
-      - name: Upload APK
+      - name: Upload APK and checksum
         uses: actions/upload-artifact@v4
         with:
           name: Viyzo-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/debug/app-debug.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
