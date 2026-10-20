@@ -97,3 +97,11 @@ This is a progress note, not a claim that the product is launch-ready. Existing 
 - [ ] No real payment, payout, or worker/supervisor end-to-end test was executed. Live payment secrets and merchant onboarding remain unverified.
 - [ ] Current Android GitHub workflow builds a debug APK only. A release-signed artifact still requires a keystore/signing process stored in protected secrets; do not publish the debug APK as the final store release.
 - [ ] No Android source changed in this pass, so no new APK was triggered by this audit-only update.
+
+
+## Signed Android release pipeline prepared (20 October 2026)
+- [x] Added environment-based release signing configuration to `app/build.gradle`. Signing values are read only from environment variables; no keystore/passwords are committed.
+- [x] Added manual-only workflow `.github/workflows/signed-android-release.yml` to validate required protected secrets, build a release AAB, produce a SHA-256 checksum, upload the artifact for review (14-day retention), and remove the temporary keystore.
+- [ ] Before this workflow can succeed, configure GitHub Actions secrets: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`. The keystore must be backed up securely; losing it can prevent future updates under the same signing identity.
+- [ ] Workflow has not yet been run; no signed AAB exists yet. A successful build is still not a Play Store publication; store listing, privacy/data-safety declarations, content rating, testing requirements, and Play Console account checks remain.
+- [ ] Existing debug APK workflow remains separate for phone QA. After the Gradle change, verify its next GitHub Actions run before installing a fresh APK.
