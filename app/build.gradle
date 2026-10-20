@@ -13,6 +13,29 @@ android {
         versionCode 6
         versionName "1.0.5"
     }
+
+    // Release signing is supplied only by the protected release workflow.
+    // Never commit a keystore or passwords to this repository.
+    def releaseStorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+    if (releaseStorePath != null && !releaseStorePath.isEmpty()) {
+        signingConfigs {
+            release {
+                storeFile file(releaseStorePath)
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (releaseStorePath != null && !releaseStorePath.isEmpty()) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
 }
 
 dependencies {
