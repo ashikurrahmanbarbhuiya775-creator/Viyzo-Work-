@@ -113,3 +113,10 @@ This is a progress note, not a claim that the product is launch-ready. Existing 
 - [x] Strengthened the manual signed-AAB workflow: it now runs `jarsigner -verify` before creating the checksum and uploading the artifact.
 - [x] Added `PUBLIC_LAUNCH_CHECKLIST.md` covering Android signing/device QA, authentication, job lifecycle, payments/payouts, privacy/store listing, and the intentionally paused AI Master work. It distinguishes verified controls from pending tests and provider onboarding.
 - [ ] Neither the debug nor signed-release workflow has been executed by these latest file changes yet. Verify the next debug build; signed build requires the protected keystore secrets.
+
+
+## Android session-storage security improvement (20 October 2026)
+- [x] Updated `MainActivity.java` to encrypt persisted session token, user ID, email, and display name using AES-GCM with an AES key held by Android Keystore. No extra third-party dependency or hardcoded secret was added.
+- [x] Added a compatibility migration path: older plaintext session values are encrypted when restored; if decryption/key access fails, the app clears the broken session and requires sign-in again.
+- [ ] This Android source change has not yet been confirmed by a new successful GitHub Actions build or device test. Verify login persistence, app restart, logout, and upgrade from the prior APK before treating it as release-ready.
+- [ ] This reduces exposure from ordinary app-private preference storage but does not replace short session lifetimes, refresh-token rotation, device security, or backend authorization tests.
