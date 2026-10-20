@@ -28,6 +28,14 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.FrameLayout;
+import android.util.Base64;
+import android.security.keystore.KeyGenParameterSpec;
+import android.security.keystore.KeyProperties;
+import java.security.KeyStore;
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -139,6 +147,62 @@ public class MainActivity extends Activity {
         return new JSONArray(text.toString());
     }
 
+    private static final String SESSION_KEY_ALIAS = "viyzo_worker_session_v1";
+    private static final String ENCRYPTED_VALUE_PREFIX = "enc:";
+
+    // Encrypt session values with an AES key held by Android Keystore.
+    // Tokens are never written as plaintext to SharedPreferences.
+    private SecretKey getOrCreateSessionKey() throws Exception {
+        KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
+        keyStore.load(null);
+        java.security.Key existing = keyStore.getKey(SESSION_KEY_ALIAS, null);
+        if (existing instanceof SecretKey) return (SecretKey) existing;
+        KeyGenerator generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
+        generator.init(new KeyGenParameterSpec.Builder(SESSION_KEY_ALIAS,
+                KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setRandomizedEncryptionRequired(true)
+                .build());
+        return generator.generateKey();
+    }
+
+    private String encryptSessionValue(String value) throws Exception {
+        if (value == null || value.isEmpty()) return "";
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(Cipher.ENCRYPT_MODE, getOrCreateSessionKey());
+        byte[] iv = cipher.getIV();
+        byte[] ciphertext = cipher.doFinal(value.getBytes(StandardCharsets.UTF_8));
+        byte[] combined = new byte[iv.length + ciphertext.length];
+        System.arraycopy(iv, 0, combined, 0, iv.length);
+        System.arraycopy(ciphertext, 0, combined, iv.length, ciphertext.length);
+        return ENCRYPTED_VALUE_PREFIX + Base64.encodeToString(combined, Base64.NO_WRAP);
+    }
+
+    private String decryptSessionValue(String stored) throws Exception {
+        if (stored == null || stored.isEmpty()) return "";
+        // Legacy plaintext values are migrated to encrypted storage on restore.
+        if (!stored.startsWith(ENCRYPTED_VALUE_PREFIX)) return stored;
+        byte[] combined = Base64.decode(stored.substring(ENCRYPTED_VALUE_PREFIX.length()), Base64.NO_WRAP);
+        if (combined.length <= 12) throw new Exception("Stored session value is invalid");
+        byte[] iv = new byte[12];
+        byte[] ciphertext = new byte[combined.length - iv.length];
+        System.arraycopy(combined, 0, iv, 0, iv.length);
+        System.arraycopy(combined, iv.length, ciphertext, 0, ciphertext.length);
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(Cipher.DECRYPT_MODE, getOrCreateSessionKey(), new GCMParameterSpec(128, iv));
+        return new String(cipher.doFinal(ciphertext), StandardCharsets.UTF_8);
+    }
+
+    private void writeEncryptedSession() throws Exception {
+        getSharedPreferences(SESSION_PREFS, MODE_PRIVATE).edit()
+                .putString("access_token", encryptSessionValue(accessToken))
+                .putString("user_id", encryptSessionValue(userId))
+                .putString("email", encryptSessionValue(userEmail))
+                .putString("worker_name", encryptSessionValue(workerName))
+                .apply();
+    }
+
     private void saveSession(JSONObject auth) throws Exception {
         JSONObject user = auth.optJSONObject("user");
         if (user == null || auth.optString("access_token", "").isEmpty()) throw new Exception("Account needs email confirmation before login.");
@@ -147,16 +211,31 @@ public class MainActivity extends Activity {
         userEmail = user.optString("email", "");
         JSONObject metadata = user.optJSONObject("user_metadata");
         workerName = metadata == null ? "" : metadata.optString("full_name", "");
-        getSharedPreferences(SESSION_PREFS, MODE_PRIVATE).edit().putString("access_token", accessToken)
-                .putString("user_id", userId).putString("email", userEmail).putString("worker_name", workerName).apply();
+        writeEncryptedSession();
     }
 
     private void restoreLiveSession() {
         SharedPreferences p = getSharedPreferences(SESSION_PREFS, MODE_PRIVATE);
-        accessToken = p.getString("access_token", "");
-        userId = p.getString("user_id", "");
-        userEmail = p.getString("email", "");
-        workerName = p.getString("worker_name", "");
+        try {
+            String storedToken = p.getString("access_token", "");
+            String storedId = p.getString("user_id", "");
+            String storedEmail = p.getString("email", "");
+            String storedName = p.getString("worker_name", "");
+            accessToken = decryptSessionValue(storedToken);
+            userId = decryptSessionValue(storedId);
+            userEmail = decryptSessionValue(storedEmail);
+            workerName = decryptSessionValue(storedName);
+            if (!accessToken.isEmpty() && (!storedToken.startsWith(ENCRYPTED_VALUE_PREFIX)
+                    || !storedId.startsWith(ENCRYPTED_VALUE_PREFIX)
+                    || !storedEmail.startsWith(ENCRYPTED_VALUE_PREFIX)
+                    || !storedName.startsWith(ENCRYPTED_VALUE_PREFIX))) {
+                writeEncryptedSession();
+            }
+        } catch (Exception sessionReadError) {
+            // If the keystore key is unavailable or ciphertext is invalid, fail closed
+            // and require sign-in again instead of keeping a broken session.
+            clearLiveSession();
+        }
     }
 
     private void clearLiveSession() {
