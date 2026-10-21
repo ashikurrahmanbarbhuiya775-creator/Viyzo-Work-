@@ -1,0 +1,37 @@
+name: Feature request
+description: Suggest a useful improvement for Viyzo Worker
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What user problem should this solve?
+      description: Explain who is affected and what is difficult today.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed behaviour
+      description: Describe the simplest useful version.
+    validations:
+      required: true
+  - type: dropdown
+    id: audience
+    attributes:
+      label: Who benefits most?
+      options:
+        - Workers
+        - Companies
+        - Supervisors / operations
+        - Everyone
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks, privacy, or payment considerations
+      description: Mention sensitive data, abuse cases, or money movement if relevant.
+    validations:
+      required: false
