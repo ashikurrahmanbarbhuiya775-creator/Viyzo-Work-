@@ -1,6 +1,6 @@
 # Viyzo Worker — Public Launch Checklist
 
-Last reviewed: 20 October 2026
+Last reviewed: 21 October 2026
 
 This is a readiness checklist, not a declaration that Viyzo Worker is production-ready. Do not announce that payments, payouts, identity verification, or AI are live until each item has been tested and evidenced.
 
@@ -12,7 +12,7 @@ This is a readiness checklist, not a declaration that Viyzo Worker is production
 - [x] Release workflow verifies the bundle signature before uploading the AAB.
 - [ ] Configure and securely back up the Android upload/release keystore.
 - [ ] Configure GitHub Actions secrets: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
-- [ ] Run debug workflow and verify its latest result and artifact.
+- [x] Verified debug APK workflow run #147 succeeded on 21 October 2026; artifact `Viyzo-APK` uploaded with SHA-256 digest `169b1fe03f65083e69e7368cb1bcdad8dd235576d79494b5bc4b18fbd9d4fe6f` (artifact expires 4 November 2026). This is a debug QA APK only.\n- [ ] Install this artifact on a real device and complete the smoke-test checklist.
 - [ ] Run signed-release workflow and verify a signed AAB is produced. Do not upload debug APK to Play Store.
 - [ ] Test install, upgrade, sign-in/sign-out, network failure, empty states, permission denial, accessibility, small screens, and crash logs on real devices.
 - [ ] Confirm versionCode/versionName policy and increment versionCode for each store release.
@@ -70,3 +70,9 @@ Do not mark public launch ready until all critical security, payment/payout, pri
 ## Brand trust and operations
 - [x] Added `BRAND_TRUST_OPERATIONS.md` covering product reliability, company/worker trust, payment controls, privacy/security, support/reputation, and responsible brand growth.
 - [ ] Brand trust items remain pending until each is implemented and evidenced; a checklist document alone does not complete the underlying system.
+
+
+## Verified automation results — 21 October 2026
+- [x] APK build #147: all build, APK validation, and artifact-upload steps passed. Run: https://github.com/ashikurrahmanbarbhuiya775-creator/Viyzo-Work-/actions/runs/39561988937
+- [x] GitHub Pages deployment #149 succeeded for commit `b5eebbe86244a950ad03495e294a1153219d4cb2`. Run: https://github.com/ashikurrahmanbarbhuiya775-creator/Viyzo-Work-/actions/runs/39561988580
+- [ ] Real-device QA, signed AAB build, and production payment/payout tests remain open. CI success is not proof of those items.
