@@ -2760,13 +2760,92 @@ public class MainActivity extends Activity {
         showCountryLanguageSetup();
     }
 
+    // Live diagnostics: check Auth reachability without reading private user data.
+    private void showSystemHealth() {
+        startScreen(false);
+        LinearLayout c = content();
+        c.addView(heading("System Health"));
+        c.addView(small("Checks the Viyzo authentication service and your current sign-in session. This test does not change account data."));
+
+        LinearLayout authCard = card();
+        authCard.addView(tv("Authentication service", 15, WHITE));
+        TextView authStatus = tv("Not checked yet", 13, GOLD);
+        authCard.addView(authStatus);
+        c.addView(authCard);
+        setMargins(authCard, 0, 0, 0, 10);
+
+        LinearLayout sessionCard = card();
+        sessionCard.addView(tv("Current session", 15, WHITE));
+        TextView sessionStatus = tv(accessToken.isEmpty() ? "Signed out" : "Session token present — validation pending", 13, accessToken.isEmpty() ? GRAY : GOLD);
+        sessionCard.addView(sessionStatus);
+        c.addView(sessionCard);
+        setMargins(sessionCard, 0, 0, 0, 10);
+
+        TextView details = small("Run a check to get the latest result.");
+        c.addView(details);
+
+        Button check = primary("Check Connection Now");
+        check.setOnClickListener(v -> {
+            check.setEnabled(false);
+            authStatus.setText("Checking…");
+            authStatus.setTextColor(GOLD);
+            details.setText("Contacting authentication service…");
+            new Thread(() -> {
+                String serviceResult;
+                String sessionResult;
+                String detailResult;
+                boolean serviceOk = false;
+                boolean sessionOk = false;
+                try {
+                    apiRequest("/auth/v1/health", "GET", null, false, "");
+                    serviceOk = true;
+                    serviceResult = "Reachable";
+                    detailResult = "Authentication endpoint responded successfully.";
+                } catch (Exception ex) {
+                    serviceResult = "Could not confirm";
+                    detailResult = "Service check failed: " + ex.getMessage();
+                }
+                if (!accessToken.isEmpty()) {
+                    try {
+                        apiRequest("/auth/v1/user", "GET", null, true, "");
+                        sessionOk = true;
+                        sessionResult = "Signed in • session validated";
+                    } catch (Exception ex) {
+                        sessionResult = "Session invalid or expired — sign in again";
+                        if (serviceOk) detailResult = "Authentication service is reachable, but this session could not be validated.";
+                    }
+                } else {
+                    sessionResult = "Signed out • sign in to validate an account";
+                }
+                final boolean fServiceOk = serviceOk;
+                final boolean fSessionOk = sessionOk;
+                final String fService = serviceResult;
+                final String fSession = sessionResult;
+                final String fDetail = detailResult;
+                runOnUiThread(() -> {
+                    authStatus.setText(fService);
+                    authStatus.setTextColor(fServiceOk ? GREEN : RED);
+                    sessionStatus.setText(fSession);
+                    sessionStatus.setTextColor(accessToken.isEmpty() ? GRAY : (fSessionOk ? GREEN : RED));
+                    details.setText(fDetail);
+                    check.setEnabled(true);
+                });
+            }).start();
+        });
+        c.addView(check);
+
+        Button back = secondary("← Back to Settings");
+        back.setOnClickListener(v -> showSettings());
+        c.addView(back);
+    }
+
     private void showSettings() {
         startScreen(false);
         LinearLayout c = content();
 
         c.addView(heading("Settings"));
 
-        Button notifications = secondary("🔔  Notification Settings");
+        Button health = secondary("🩺  System Health & Connection");\n        health.setOnClickListener(v -> showSystemHealth());\n        c.addView(health);\n\n        Button notifications = secondary("🔔  Notification Settings");
         notifications.setOnClickListener(v -> showNotifications());
         c.addView(notifications);
 
