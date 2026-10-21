@@ -18,8 +18,8 @@
         android:allowBackup="false"
         android:usesCleartextTraffic="false"
         android:label="Viyzo Worker"
-        android:icon="@drawable/ic_viyzo"
-        android:roundIcon="@drawable/ic_viyzo"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
