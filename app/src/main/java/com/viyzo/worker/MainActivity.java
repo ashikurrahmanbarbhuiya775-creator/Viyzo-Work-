@@ -2845,7 +2845,11 @@ public class MainActivity extends Activity {
 
         c.addView(heading("Settings"));
 
-        Button health = secondary("🩺  System Health & Connection");\n        health.setOnClickListener(v -> showSystemHealth());\n        c.addView(health);\n\n        Button notifications = secondary("🔔  Notification Settings");
+        Button health = secondary("🩺  System Health & Connection");
+        health.setOnClickListener(v -> showSystemHealth());
+        c.addView(health);
+
+        Button notifications = secondary("🔔  Notification Settings");
         notifications.setOnClickListener(v -> showNotifications());
         c.addView(notifications);
 
