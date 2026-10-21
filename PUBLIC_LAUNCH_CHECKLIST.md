@@ -76,3 +76,12 @@ Do not mark public launch ready until all critical security, payment/payout, pri
 - [x] APK build #147: all build, APK validation, and artifact-upload steps passed. Run: https://github.com/ashikurrahmanbarbhuiya775-creator/Viyzo-Work-/actions/runs/39561988937
 - [x] GitHub Pages deployment #149 succeeded for commit `b5eebbe86244a950ad03495e294a1153219d4cb2`. Run: https://github.com/ashikurrahmanbarbhuiya775-creator/Viyzo-Work-/actions/runs/39561988580
 - [ ] Real-device QA, signed AAB build, and production payment/payout tests remain open. CI success is not proof of those items.
+
+
+## Latest verified build and QA handoff — 21 October 2026
+- [x] APK workflow #149 succeeded after adding package/version metadata checks. The job passed Gradle build, APK validation, and artifact upload: https://github.com/ashikurrahmanbarbhuiya775-creator/Viyzo-Work-/actions/runs/39562532618
+- [x] Artifact `Viyzo-APK` ID `12328541802` uploaded; SHA-256 artifact digest `ebe4872e3d7e4fe48ada3f2a9db5e4b2445bce9923696037f11428d668246b84`. It expires 4 November 2026. This remains a debug QA APK.
+- [x] GitHub Pages deployment #151 succeeded for commit `13ff388e2ead768db21a5f793c8170af8746cd4b`: https://github.com/ashikurrahmanbarbhuiya775-creator/Viyzo-Work-/actions/runs/39562532168
+- [x] Added `REAL_DEVICE_QA_CHECKLIST.md` to guide install/upgrade, account lifecycle, role isolation, worker/company task flow, and sandbox-only payment tests.
+- [ ] Download and install the current artifact on a real phone and record the QA results. This cannot be verified by CI alone.
+- [ ] Signed release AAB, merchant approval, end-to-end payment sandbox, and automatic worker payouts remain separate launch blockers.
