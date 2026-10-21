@@ -2450,12 +2450,112 @@ public class MainActivity extends Activity {
         companyLogin.setOnClickListener(v -> showCompanyDashboard());
         c.addView(companyLogin);
 
+        Button register = secondary("📝  Register a Company Account");
+        register.setOnClickListener(v -> showCompanyRegister());
+        c.addView(register);
+
         Button model = secondary("💰  Pricing / Work Budget Model");
         model.setOnClickListener(v -> showPricingModel());
         c.addView(model);
 
         Button back = secondary("← Back to Worker App");
         back.setOnClickListener(v -> showHome());
+        c.addView(back);
+    }
+
+    private void showCompanyRegister() {
+        startScreen(false);
+        LinearLayout c = content();
+        c.addView(brandHeader());
+        c.addView(heading("Register Company Account"));
+        c.addView(small("Separate company registration. Company profiles start as pending review; registration does not activate jobs or accept payments."));
+
+        EditText legalName = input("Registered Legal Business Name");
+        EditText displayName = input("Public Company / Brand Name");
+        EditText email = input("Company Contact Email");
+        email.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        EditText phone = input("Company Phone (include country code)");
+        phone.setInputType(InputType.TYPE_CLASS_PHONE);
+        Spinner country = spinner(new String[]{"Select Country","India (IN)","United States (US)","United Kingdom (GB)","Germany (DE)","France (FR)","Canada (CA)","Australia (AU)","United Arab Emirates (AE)","Singapore (SG)","Other country"});
+        EditText password = input("Create Company Login Password (8+ characters)");
+        password.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        c.addView(legalName);
+        c.addView(displayName);
+        c.addView(email);
+        c.addView(phone);
+        c.addView(country);
+        c.addView(password);
+        CheckBox terms = new CheckBox(this);
+        terms.setText("I confirm these company details are accurate and accept Viyzo Terms and Privacy Policy.");
+        terms.setTextColor(TEXT);
+        c.addView(terms);
+        TextView status = small("");
+        c.addView(status);
+
+        Button create = primary("Create Company Account");
+        create.setOnClickListener(v -> {
+            String legal = legalName.getText().toString().trim();
+            String display = displayName.getText().toString().trim();
+            String mail = email.getText().toString().trim();
+            String phoneValue = phone.getText().toString().trim();
+            String pass = password.getText().toString();
+            String digits = phoneValue.replaceAll("[^0-9]", "");
+            if (legal.isEmpty() || display.isEmpty() || !android.util.Patterns.EMAIL_ADDRESS.matcher(mail).matches()
+                    || digits.length() < 8 || digits.length() > 15 || pass.length() < 8 || country.getSelectedItemPosition() == 0) {
+                status.setText("Enter legal and public company names, valid email/phone, country, and a password of at least 8 characters.");
+                return;
+            }
+            if (!terms.isChecked()) {
+                status.setText("Please confirm the company information and accept the Terms and Privacy Policy.");
+                return;
+            }
+            String selectedCountry = String.valueOf(country.getSelectedItem());
+            String countryCode = selectedCountry.contains("(")
+                    ? selectedCountry.substring(selectedCountry.indexOf("(") + 1, selectedCountry.indexOf(")")) : "XX";
+            create.setEnabled(false);
+            status.setText("Creating your company login securely…");
+            new Thread(() -> {
+                String result;
+                try {
+                    JSONObject metadata = new JSONObject()
+                            .put("full_name", display)
+                            .put("phone", phoneValue)
+                            .put("account_type", "company");
+                    JSONObject body = new JSONObject().put("email", mail).put("password", pass).put("data", metadata);
+                    JSONObject auth = apiRequest("/auth/v1/signup", "POST", body, false, null);
+                    String token = auth.optString("access_token", "");
+                    if (token.isEmpty()) {
+                        result = "Company login request accepted. Confirm the email, then sign in and return to Company Portal to submit your profile for review.";
+                    } else {
+                        saveSession(auth);
+                        JSONObject profile = new JSONObject()
+                                .put("id", userId)
+                                .put("legal_name", legal)
+                                .put("display_name", display)
+                                .put("country", countryCode)
+                                .put("contact_email", mail)
+                                .put("verification_status", "pending");
+                        apiRequest("/rest/v1/company_profiles", "POST", profile, true, "return=minimal");
+                        result = "Company account created. Profile submitted as pending review; job funding and payments are not activated until verification and payment-provider setup.";
+                    }
+                } catch (Exception ex) {
+                    result = "Company registration could not be completed: "
+                            + (ex.getMessage() == null ? "Please try again." : ex.getMessage());
+                }
+                final String message = result;
+                runOnUiThread(() -> {
+                    create.setEnabled(true);
+                    status.setText(message);
+                    if (!accessToken.isEmpty() && !userId.isEmpty()) {
+                        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+                        showCompanyDashboard();
+                    }
+                });
+            }).start();
+        });
+        c.addView(create);
+        Button back = secondary("← Back to Company Portal");
+        back.setOnClickListener(v -> showCompanyPortal());
         c.addView(back);
     }
 
