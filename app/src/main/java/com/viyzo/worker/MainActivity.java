@@ -47,6 +47,9 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.TimeZone;
 
 /**
  * VIYZO WORKER
@@ -1926,6 +1929,37 @@ public class MainActivity extends Activity {
             default: return status.replace("_", " ");
         }
     }
+    private String applicationAgeLabel(String timestamp) {
+        if (timestamp == null || timestamp.trim().isEmpty()) return "Application date unavailable";
+        try {
+            String normalized = timestamp.trim();
+            SimpleDateFormat parser;
+            if (normalized.length() >= 19 && normalized.charAt(10) == 'T') {
+                parser = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
+                parser.setTimeZone(TimeZone.getTimeZone("UTC"));
+                if (normalized.length() > 19 && normalized.charAt(19) == '.') {
+                    normalized = normalized.substring(0, 19);
+                } else if (normalized.length() > 19 && (normalized.charAt(19) == '+' || normalized.charAt(19) == '-')) {
+                    normalized = normalized.substring(0, 19);
+                } else if (normalized.endsWith("Z")) {
+                    normalized = normalized.substring(0, 19);
+                }
+            } else {
+                return "Application date recorded";
+            }
+            Date created = parser.parse(normalized);
+            if (created == null) return "Application date recorded";
+            long elapsed = Math.max(0L, System.currentTimeMillis() - created.getTime());
+            long hours = elapsed / (60L * 60L * 1000L);
+            if (hours < 1) return "Applied less than an hour ago";
+            if (hours < 24) return "Applied " + hours + " hour(s) ago";
+            long days = hours / 24L;
+            return "Applied " + days + " day(s) ago";
+        } catch (Exception ignored) {
+            return "Application date recorded";
+        }
+    }
+
     private void showMyJobs() {
         if (accessToken.isEmpty() || userId.isEmpty()) { showLogin(); return; }
         startScreen(true);
@@ -1969,6 +2003,7 @@ public class MainActivity extends Activity {
                         LinearLayout item=card();
                         item.addView(heading(job==null?"Viyzo work order":job.optString("title","Viyzo work order")));
                         item.addView(small("Application status: "+friendlyApplicationStatus(app.optString("status","submitted"))));
+                        item.addView(small(applicationAgeLabel(app.optString("created_at", ""))));
                         if(job!=null) item.addView(tv("Worker payment per approved task: ₹"+formatNumber(job.optDouble("payment_amount",0)),13,GREEN));
                         if (submission != null) {
                             String reviewStatus = submission.optString("status","submitted");
