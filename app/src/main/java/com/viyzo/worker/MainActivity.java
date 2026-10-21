@@ -143,7 +143,7 @@ public class MainActivity extends Activity {
             String line; while ((line = reader.readLine()) != null) text.append(line);
         }
         connection.disconnect();
-        if (code < 200 || code >= 300) throw new Exception("Could not load Viyzo data (HTTP " + code + "): " + text);
+        if (code < 200 || code >= 300) throw new Exception("Could not load Viyzo data (HTTP " + code + ").");
         return new JSONArray(text.toString());
     }
 
@@ -2075,7 +2075,7 @@ public class MainActivity extends Activity {
                     status.setText("Earning records: "+earnings.length()+" • Payout records: "+payouts.length());
                     LinearLayout summary=card();
                     summary.addView(wideInfo("✓","Approved earnings","₹"+formatNumber(fApproved)));
-                    summary.addView(wideInfo("🏦","Marked paid","₹"+formatNumber(fPaid)));
+                    summary.addView(wideInfo("🏦","Earnings marked paid (record status)","₹"+formatNumber(fPaid)));
                     c.addView(summary);
                     c.addView(heading("Earning History"));
                     if(earnings.length()==0) c.addView(small("No real earnings recorded yet."));
@@ -2091,13 +2091,13 @@ public class MainActivity extends Activity {
                     for(int i=0;i<payouts.length();i++){
                         JSONObject p=payouts.optJSONObject(i); if(p==null) continue;
                         LinearLayout item=card();
-                        item.addView(tv("₹"+formatNumber(p.optDouble("amount",0)),16,WHITE));
+                        item.addView(tv(p.optString("currency","INR")+" "+formatNumber(p.optDouble("amount",0)),16,WHITE));
                         item.addView(small("Payout status: "+p.optString("status","pending")+" • "+p.optString("created_at","")));
                         c.addView(item); setMargins(item,0,6,0,6);
                     }
                 });
             } catch(Exception ex) {
-                runOnUiThread(() -> status.setText("Could not load earnings: "+ex.getMessage()));
+                runOnUiThread(() -> status.setText("Could not load earnings right now. Check your connection and try again. If this continues, contact support with the time of the error."));
             }
         }).start();
         Button methods=secondary("Payment Methods / Requirements");
