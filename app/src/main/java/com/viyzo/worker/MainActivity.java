@@ -1280,7 +1280,7 @@ public class MainActivity extends Activity {
         EditText email = input("Email address");
         email.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
         c.addView(email);
-        EditText phone = input("Phone number (optional)");
+        EditText phone = input("Phone number (required, include country code)");
         phone.setInputType(InputType.TYPE_CLASS_PHONE);
         c.addView(phone);
         EditText pass = input("Create Viyzo Password (8+ characters)");
@@ -1299,9 +1299,15 @@ public class MainActivity extends Activity {
         create.setOnClickListener(v -> {
             String n = name.getText().toString().trim();
             String e = email.getText().toString().trim();
+            String phoneValue = phone.getText().toString().trim();
             String p = pass.getText().toString();
-            if (n.isEmpty() || e.isEmpty() || p.length() < 8) {
-                status.setText("Enter your name, a valid email, and a password of at least 8 characters.");
+            String digitsOnlyPhone = phoneValue.replaceAll("[^0-9]", "");
+            if (n.isEmpty() || !android.util.Patterns.EMAIL_ADDRESS.matcher(e).matches() || p.length() < 8) {
+                status.setText("Enter your name, a valid email address, and a password of at least 8 characters.");
+                return;
+            }
+            if (digitsOnlyPhone.length() < 8 || digitsOnlyPhone.length() > 15) {
+                status.setText("Enter a valid phone number with country code (8–15 digits).");
                 return;
             }
             if (!terms.isChecked()) {
@@ -1312,7 +1318,7 @@ public class MainActivity extends Activity {
             status.setText("Creating your account securely…");
             new Thread(() -> {
                 try {
-                    JSONObject metadata = new JSONObject().put("full_name", n).put("phone", phone.getText().toString().trim()).put("account_type", "worker");
+                    JSONObject metadata = new JSONObject().put("full_name", n).put("phone", phoneValue).put("account_type", "worker");
                     JSONObject body = new JSONObject().put("email", e).put("password", p).put("data", metadata);
                     JSONObject auth = apiRequest("/auth/v1/signup", "POST", body, false, null);
                     String token = auth.optString("access_token", "");
