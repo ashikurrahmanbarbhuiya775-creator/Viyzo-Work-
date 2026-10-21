@@ -120,3 +120,16 @@ This is a progress note, not a claim that the product is launch-ready. Existing 
 - [x] Added a compatibility migration path: older plaintext session values are encrypted when restored; if decryption/key access fails, the app clears the broken session and requires sign-in again.
 - [ ] This Android source change has not yet been confirmed by a new successful GitHub Actions build or device test. Verify login persistence, app restart, logout, and upgrade from the prior APK before treating it as release-ready.
 - [ ] This reduces exposure from ordinary app-private preference storage but does not replace short session lifetimes, refresh-token rotation, device security, or backend authorization tests.
+
+
+## Follow-up audit and payment setup preparation — 21 October 2026
+- [x] Rechecked Supabase project status: project is `ACTIVE_HEALTHY` in `ap-south-1`.
+- [x] Rechecked public table inventory: 14 tables listed; RLS is enabled on each observed public table. Job/application/earning/payment/payout tables currently have no production-like test records; the worker profile table has one row.
+- [x] Rechecked active Edge Functions: `supervisor-dashboard` v4 (JWT on), `company-payments` v4 (JWT gateway off because the handler supports signed webhooks and manually validates user bearer tokens), `worker-task` v4 (JWT on), and `ai-master` v2 (JWT on).
+- [x] Re-ran security advisor. The known `auth_leaked_password_protection` warning remains; it is still a launch blocker.
+- [x] Re-ran performance advisor. It reports 21 unused indexes on a near-empty database; no indexes were removed because current traffic is insufficient evidence that they are unnecessary.
+- [x] Reviewed Android Company Portal and Payment Settings code. Company profile/job submission and live company dashboard queries exist, but the app's Payment Settings explicitly says worker bank payout is not connected. The complete provider checkout/return flow has not been verified on-device.
+- [x] Added `COMPANY_PAYMENT_SETUP_TEST_PLAN.md` with required server-only test secrets, sandbox webhook sequence, replay/failure cases, and launch gates.
+- [ ] No payment credentials were read, changed, or disclosed. No real payment was made. Merchant/KYC approval and provider secret configuration remain unverified.
+- [ ] No worker payout provider or automatic transfer function is confirmed active; do not claim worker bank transfers are live.
+- [ ] No new APK was built as part of this audit; the latest verified artifact remains APK #117 (debug QA artifact), and phone installation/smoke test remains pending.
