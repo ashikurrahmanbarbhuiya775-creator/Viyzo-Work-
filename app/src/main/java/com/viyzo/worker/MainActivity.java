@@ -320,6 +320,62 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getWindow().setStatusBarColor(Color.rgb(3, 8, 28));
+        getWindow().setNavigationBarColor(Color.rgb(3, 8, 28));
+        showBrandSplash();
+        new Handler().postDelayed(this::continueStartup, 1400);
+    }
+
+    private void showBrandSplash() {
+        android.widget.RelativeLayout splash = new android.widget.RelativeLayout(this);
+        splash.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{Color.rgb(2, 8, 32), Color.rgb(4, 24, 75), Color.rgb(1, 5, 20)}));
+        LinearLayout brand = new LinearLayout(this);
+        brand.setOrientation(LinearLayout.VERTICAL);
+        brand.setGravity(Gravity.CENTER);
+        brand.setPadding(dp(24), dp(24), dp(24), dp(24));
+
+        TextView emblem = tv("V", 112, Color.rgb(0, 239, 255));
+        emblem.setGravity(Gravity.CENTER);
+        emblem.setTypeface(Typeface.create("sans-serif-black", Typeface.BOLD));
+        GradientDrawable emblemBg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{Color.rgb(0, 239, 255), Color.rgb(0, 91, 255), Color.rgb(23, 40, 150)});
+        emblemBg.setShape(GradientDrawable.OVAL);
+        emblemBg.setStroke(dp(3), Color.rgb(48, 175, 255));
+        emblem.setBackground(emblemBg);
+        LinearLayout.LayoutParams ep = new LinearLayout.LayoutParams(dp(190), dp(190));
+        ep.gravity = Gravity.CENTER;
+        ep.bottomMargin = dp(28);
+        brand.addView(emblem, ep);
+
+        TextView name = tv("VIYZO", 42, Color.WHITE);
+        name.setGravity(Gravity.CENTER);
+        name.setTypeface(Typeface.create("sans-serif-black", Typeface.BOLD));
+        brand.addView(name, new LinearLayout.LayoutParams(-1, -2));
+
+        TextView worker = tv("W O R K E R", 22, Color.rgb(0, 239, 255));
+        worker.setGravity(Gravity.CENTER);
+        worker.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        LinearLayout.LayoutParams wp = new LinearLayout.LayoutParams(-1, -2);
+        wp.topMargin = dp(4);
+        brand.addView(worker, wp);
+
+        TextView tagline = tv("WORK WITH TRUST. GROW WITHOUT BORDERS.", 11, Color.rgb(190, 218, 255));
+        tagline.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(-1, -2);
+        tp.topMargin = dp(24);
+        brand.addView(tagline, tp);
+
+        android.widget.RelativeLayout.LayoutParams bp = new android.widget.RelativeLayout.LayoutParams(
+                android.widget.RelativeLayout.LayoutParams.MATCH_PARENT,
+                android.widget.RelativeLayout.LayoutParams.WRAP_CONTENT);
+        bp.addRule(android.widget.RelativeLayout.CENTER_IN_PARENT);
+        splash.addView(brand, bp);
+        setContentView(splash);
+    }
+
+    private void continueStartup() {
+        if (isFinishing() || isDestroyed()) return;
         getWindow().setStatusBarColor(BG);
         getWindow().setNavigationBarColor(BG);
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
