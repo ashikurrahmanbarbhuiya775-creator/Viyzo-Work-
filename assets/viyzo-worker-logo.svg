@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+<title id="title">Viyzo Worker logo</title><desc id="desc">A bold cyan and electric-blue V inside a segmented circular ring on a dark navy background.</desc>
+<defs><linearGradient id="v" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#00f0ff"/><stop offset=".52" stop-color="#078bff"/><stop offset="1" stop-color="#343cff"/></linearGradient><linearGradient id="ring" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#05efff"/><stop offset="1" stop-color="#164cff"/></linearGradient></defs>
+<rect width="512" height="512" rx="112" fill="#050b1d"/>
+<circle cx="256" cy="242" r="166" fill="none" stroke="url(#ring)" stroke-width="13" stroke-dasharray="850 194" transform="rotate(-42 256 242)" stroke-linecap="round"/>
+<path d="M105 133 L183 133 L256 295 L365 112 L431 112 L294 360 Q277 391 251 391 Q224 391 208 359 Z" fill="url(#v)"/>
+<path d="M105 133 L183 133 L256 295 L224 355 Z" fill="#126bff" opacity=".48"/>
+<path d="M256 295 L365 112 L431 112 L294 360 Q277 391 251 391 L222 358 Z" fill="url(#v)"/>
+<path d="M183 133 L256 295 L365 112" fill="none" stroke="#8ffaff" stroke-opacity=".72" stroke-width="4" stroke-linejoin="round"/>
+</svg>
