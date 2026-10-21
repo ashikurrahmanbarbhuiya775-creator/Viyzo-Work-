@@ -1,0 +1,62 @@
+name: Bug report
+description: Report a reproducible problem in Viyzo Worker
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "Please do not include passwords, OTPs, payment secrets, full bank details, Aadhaar/PAN numbers, or private user data."
+  - type: input
+    id: app_version
+    attributes:
+      label: App version / build
+      placeholder: "e.g. 1.0.x or GitHub Actions run"
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and Android version
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area affected
+      options:
+        - Sign-up / login
+        - Worker jobs / applications
+        - Company portal / job creation
+        - Task review / earnings
+        - Payments / payouts
+        - Supervisor tools
+        - Accessibility / language
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the smallest set of steps that reliably triggers the issue.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted logs or screenshots
+      description: Remove personal data and tokens before attaching anything.
+    validations:
+      required: false
