@@ -133,3 +133,10 @@ This is a progress note, not a claim that the product is launch-ready. Existing 
 - [ ] No payment credentials were read, changed, or disclosed. No real payment was made. Merchant/KYC approval and provider secret configuration remain unverified.
 - [ ] No worker payout provider or automatic transfer function is confirmed active; do not claim worker bank transfers are live.
 - [ ] No new APK was built as part of this audit; the latest verified artifact remains APK #117 (debug QA artifact), and phone installation/smoke test remains pending.
+
+
+## Latest automated build evidence — 21 October 2026
+- [x] GitHub Actions run #140 completed successfully: https://github.com/ashikurrahmanbarbhuiya775-creator/Viyzo-Work-/actions/runs/39560793680
+- [x] Build job passed all steps: checkout, Java setup, Gradle setup, `gradle assembleDebug`, APK file validation, and artifact upload.
+- [x] Artifact `Viyzo-APK` is available (artifact ID `12327552958`), with SHA-256 digest `f130de55840d4bb75e77099544762c70e91e8be8df2e1c10b1ae971ae065633b`. Artifact expiration: 4 November 2026.
+- [ ] This is a **debug QA APK**, not a signed Play Store release. The build passing does not prove phone/device QA, live payment, or payout.
