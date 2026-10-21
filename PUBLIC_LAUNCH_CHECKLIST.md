@@ -85,3 +85,11 @@ Do not mark public launch ready until all critical security, payment/payout, pri
 - [x] Added `REAL_DEVICE_QA_CHECKLIST.md` to guide install/upgrade, account lifecycle, role isolation, worker/company task flow, and sandbox-only payment tests.
 - [ ] Download and install the current artifact on a real phone and record the QA results. This cannot be verified by CI alone.
 - [ ] Signed release AAB, merchant approval, end-to-end payment sandbox, and automatic worker payouts remain separate launch blockers.
+
+
+## Latest verification — 21 October 2026 (13:10 IST)
+- [x] APK workflow #152 completed successfully after the earnings-status/error-message changes; this confirms CI build success only, not device QA: https://github.com/ashikurrahmanbarbhuiya775-creator/Viyzo-Work-/actions/runs/39563400713
+- [x] Supabase security advisor checked on project `jxnfsqxyrakkblizziel`: it reported one warning, `auth_leaked_password_protection` (compromised-password protection disabled).
+- [ ] Enable Supabase Auth leaked-password protection in the Supabase Dashboard under Authentication password/security settings, then rerun the security advisor to verify. The currently available connected Supabase tools can inspect advisors/SQL but cannot change this Auth Dashboard setting; do not mark complete until rechecked.
+- [x] Performance advisor returned unused-index informational findings only; do not drop these indexes based on low/no usage alone before real workload measurements.
+- [ ] Real-device QA, signed release AAB, merchant onboarding, payment sandbox reconciliation, and server-only automated worker payouts remain open.
