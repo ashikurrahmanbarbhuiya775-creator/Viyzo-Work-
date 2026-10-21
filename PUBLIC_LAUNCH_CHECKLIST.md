@@ -65,3 +65,8 @@ This is a readiness checklist, not a declaration that Viyzo Worker is production
 ## Release gate
 
 Do not mark public launch ready until all critical security, payment/payout, privacy, signed-build, and device-QA items have evidence. A green build alone does not prove the product is production-ready. Keep a dated test report and rollback plan for every release.
+
+
+## Brand trust and operations
+- [x] Added `BRAND_TRUST_OPERATIONS.md` covering product reliability, company/worker trust, payment controls, privacy/security, support/reputation, and responsible brand growth.
+- [ ] Brand trust items remain pending until each is implemented and evidenced; a checklist document alone does not complete the underlying system.
