@@ -47,6 +47,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
+import java.util.Map;
+import java.util.TreeMap;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
@@ -2156,23 +2158,31 @@ public class MainActivity extends Activity {
             try {
                 JSONArray earnings=apiArray("/rest/v1/earnings?select=id,amount,currency,status,created_at,job_id&worker_id=eq."+userId+"&order=created_at.desc&limit=100");
                 JSONArray payouts=apiArray("/rest/v1/worker_payouts?select=id,amount,currency,status,reference,created_at&worker_id=eq."+userId+"&order=created_at.desc&limit=100");
-                double total=0,pending=0,paid=0,approved=0;
+                Map<String,Double> pendingByCurrency=new TreeMap<>();
+                Map<String,Double> approvedByCurrency=new TreeMap<>();
+                Map<String,Double> paidByCurrency=new TreeMap<>();
                 for(int i=0;i<earnings.length();i++){
                     JSONObject e=earnings.optJSONObject(i); if(e==null) continue;
-                    double amount=e.optDouble("amount",0); String st=e.optString("status","");
-                    if("pending".equals(st)) pending+=amount;
-                    if("approved".equals(st)) approved+=amount;
-                    if("paid".equals(st)) paid+=amount;
+                    double amount=e.optDouble("amount",0);
+                    String currency=e.optString("currency","INR").toUpperCase(Locale.ROOT);
+                    String st=e.optString("status","");
+                    if("pending".equals(st)) pendingByCurrency.put(currency,pendingByCurrency.getOrDefault(currency,0.0)+amount);
+                    if("approved".equals(st)) approvedByCurrency.put(currency,approvedByCurrency.getOrDefault(currency,0.0)+amount);
+                    if("paid".equals(st)) paidByCurrency.put(currency,paidByCurrency.getOrDefault(currency,0.0)+amount);
                 }
-                total=approved+paid;
-                final double fTotal=total,fPending=pending,fPaid=paid,fApproved=approved;
+                Map<String,Double> approvedAndPaidByCurrency=new TreeMap<>(approvedByCurrency);
+                for(Map.Entry<String,Double> entry:paidByCurrency.entrySet()) approvedAndPaidByCurrency.put(entry.getKey(),approvedAndPaidByCurrency.getOrDefault(entry.getKey(),0.0)+entry.getValue());
+                final String fTotal=formatCurrencyTotals(approvedAndPaidByCurrency);
+                final String fPending=formatCurrencyTotals(pendingByCurrency);
+                final String fPaid=formatCurrencyTotals(paidByCurrency);
+                final String fApproved=formatCurrencyTotals(approvedByCurrency);
                 runOnUiThread(() -> {
-                    totalText.setText("₹"+formatNumber(fTotal));
-                    pendingText.setText("Pending: ₹"+formatNumber(fPending));
+                    totalText.setText(fTotal);
+                    pendingText.setText("Pending by currency: "+fPending);
                     status.setText("Earning records: "+earnings.length()+" • Payout records: "+payouts.length());
                     LinearLayout summary=card();
-                    summary.addView(wideInfo("✓","Approved earnings","₹"+formatNumber(fApproved)));
-                    summary.addView(wideInfo("🏦","Earnings marked paid (record status)","₹"+formatNumber(fPaid)));
+                    summary.addView(wideInfo("✓","Approved earnings by currency",fApproved));
+                    summary.addView(wideInfo("🏦","Earnings marked paid (record status)",fPaid));
                     c.addView(summary);
                     c.addView(heading("Earning History"));
                     if(earnings.length()==0) c.addView(small("No real earnings recorded yet."));
@@ -2200,6 +2210,17 @@ public class MainActivity extends Activity {
         Button methods=secondary("Payment Methods / Requirements");
         methods.setOnClickListener(v -> showPaymentSettings());
         c.addView(methods);
+    }
+
+    // Keep totals separate by currency; adding INR, USD, EUR, etc. together is misleading.
+    private String formatCurrencyTotals(Map<String,Double> amounts) {
+        if (amounts == null || amounts.isEmpty()) return "0.00";
+        StringBuilder result = new StringBuilder();
+        for (Map.Entry<String,Double> entry : amounts.entrySet()) {
+            if (result.length() > 0) result.append("\n");
+            result.append(entry.getKey()).append(" ").append(formatNumber(entry.getValue()));
+        }
+        return result.toString();
     }
 
     private void showPaymentSettings() {
