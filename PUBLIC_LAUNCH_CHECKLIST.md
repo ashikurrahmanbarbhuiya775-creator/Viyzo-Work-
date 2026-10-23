@@ -93,3 +93,13 @@ Do not mark public launch ready until all critical security, payment/payout, pri
 - [ ] Enable Supabase Auth leaked-password protection in the Supabase Dashboard under Authentication password/security settings, then rerun the security advisor to verify. The currently available connected Supabase tools can inspect advisors/SQL but cannot change this Auth Dashboard setting; do not mark complete until rechecked.
 - [x] Performance advisor returned unused-index informational findings only; do not drop these indexes based on low/no usage alone before real workload measurements.
 - [ ] Real-device QA, signed release AAB, merchant onboarding, payment sandbox reconciliation, and server-only automated worker payouts remain open.
+
+## Latest verified status — 23 October 2026
+- [x] APK workflow #170 succeeded for commit `59bde7706e8b953cd32d32a1ce607e870e4e96fd`: https://github.com/ashikurrahmanbarbhuiya775-creator/Viyzo-Work-/actions/runs/39569606997
+- [x] GitHub Pages deployment #172 succeeded for the same commit: https://github.com/ashikurrahmanbarbhuiya775-creator/Viyzo-Work-/actions/runs/39569606269
+- [x] APK workflow #169 also succeeded for commit `9e158977bc7d7f5f8beb7f32e3cc6c303c84e27c`: https://github.com/ashikurrahmanbarbhuiya775-creator/Viyzo-Work-/actions/runs/39568247595
+- [x] Global payment metadata is stored in `country_currency_rules` and `country_payment_methods`; worker payout destination references have a separate RLS-protected table `worker_payout_profiles`.
+- [ ] Live-payment audit: the database currently contains 44 country-method rows, but **0 checkout-enabled, 0 payout-enabled, and 0 live** methods. The country currency entries are configuration only, not payment-provider integrations.
+- [ ] Only the existing Razorpay/INR company deposit flow is implemented; merchant secrets/onboarding and end-to-end sandbox verification are still outstanding. Worker payouts are not live.
+- [ ] The security advisor still reports leaked-password protection disabled; enable it in Supabase Auth settings and re-run the advisor.
+- [ ] The remaining launch gates are real-device QA, signed release AAB/keystore setup, company-worker-supervisor end-to-end tests, payment/payout reconciliation, privacy/legal review, support contact, and country-by-country provider approval.
