@@ -119,3 +119,6 @@ Do not mark public launch ready until all critical security, payment/payout, pri
 - [x] Verified all three indexes exist in the live Supabase database.
 - [ ] Measure query latency with representative data and real concurrent load before claiming performance targets.
 - [ ] Global scale still requires load testing, capacity monitoring, rate limits, caching/pagination review, and a plan for scaling beyond the current Supabase Free/Nano resources. Indexes alone do not guarantee support for millions of concurrent users.
+
+- [x] Added and verified `job_applications_worker_created_at_idx` for a worker's application history ordered by newest first.
+- [ ] Current database is only about 12 MB and the main jobs/applications/earnings tables have zero rows at this audit; this is not a representative scale test. Run load tests with realistic seeded data before setting public capacity targets.
