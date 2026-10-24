@@ -103,3 +103,11 @@ Do not mark public launch ready until all critical security, payment/payout, pri
 - [ ] Only the existing Razorpay/INR company deposit flow is implemented; merchant secrets/onboarding and end-to-end sandbox verification are still outstanding. Worker payouts are not live.
 - [ ] The security advisor still reports leaked-password protection disabled; enable it in Supabase Auth settings and re-run the advisor.
 - [ ] The remaining launch gates are real-device QA, signed release AAB/keystore setup, company-worker-supervisor end-to-end tests, payment/payout reconciliation, privacy/legal review, support contact, and country-by-country provider approval.
+
+
+## Verification update — 24 October 2026
+- [x] APK workflow #172 succeeded for commit `51ec2faab52dc634f21a1ab20419845522c06ad3`; this build includes currency-separated earnings totals. Run: https://github.com/ashikurrahmanbarbhuiya775-creator/Viyzo-Work-/actions/runs/39992631972
+- [x] Reviewed the live `confirm_viyzo_company_deposit` database function: it locks the deposit/job rows, checks expected amount in paise, job/company ownership, pending-funding status, INR currency, and writes ledger/funding allocation within the transaction. This is a code review, not a completed provider sandbox test.
+- [ ] Company deposits remain INR/Razorpay-only; provider merchant approval and secrets are not confirmed, so live charging is not verified.
+- [ ] Worker payout execution/transfer confirmation remains unimplemented or unverified; do not mark earnings as a real bank transfer without provider confirmation.
+- [ ] Supabase leaked-password protection, signed AAB, and real-device end-to-end QA remain launch blockers.
