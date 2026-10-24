@@ -111,3 +111,11 @@ Do not mark public launch ready until all critical security, payment/payout, pri
 - [ ] Company deposits remain INR/Razorpay-only; provider merchant approval and secrets are not confirmed, so live charging is not verified.
 - [ ] Worker payout execution/transfer confirmation remains unimplemented or unverified; do not mark earnings as a real bank transfer without provider confirmation.
 - [ ] Supabase leaked-password protection, signed AAB, and real-device end-to-end QA remain launch blockers.
+
+
+## Performance baseline — 24 October 2026
+- [x] Added a partial index for the open-jobs feed ordered by newest first: `jobs_open_created_at_idx`.
+- [x] Added composite indexes for each worker's recent earnings and payout history: `earnings_worker_created_at_idx`, `worker_payouts_worker_created_at_idx`.
+- [x] Verified all three indexes exist in the live Supabase database.
+- [ ] Measure query latency with representative data and real concurrent load before claiming performance targets.
+- [ ] Global scale still requires load testing, capacity monitoring, rate limits, caching/pagination review, and a plan for scaling beyond the current Supabase Free/Nano resources. Indexes alone do not guarantee support for millions of concurrent users.
