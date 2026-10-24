@@ -327,8 +327,9 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         getWindow().setStatusBarColor(Color.rgb(3, 8, 28));
         getWindow().setNavigationBarColor(Color.rgb(3, 8, 28));
+        // Keep the branded splash, but do not add an artificial startup delay.
         showBrandSplash();
-        new Handler().postDelayed(this::continueStartup, 1400);
+        continueStartup();
     }
 
     private void showBrandSplash() {
