@@ -130,3 +130,12 @@ Do not mark public launch ready until all critical security, payment/payout, pri
 - [ ] Add real pagination or server-side aggregate/count queries before companies need to browse more than the latest 100 jobs.
 - [ ] Run representative-data load tests, latency/error monitoring and concurrent-user tests; current production dataset is too small to certify global scale.
 - [ ] Review Supabase Free/Nano capacity and prepare a tested scaling/incident-recovery plan before public launch.
+
+
+## Global scale and ultra-fast performance — 24 October 2026
+- [x] Added `GLOBAL_SCALE_ARCHITECTURE.md` defining the target architecture, Android performance gates, scale gates, and safe rollout order.
+- [x] Android startup code renders the first useful screen before initializing optional AI/TTS; fixed artificial splash delay was removed earlier.
+- [ ] Measure cold/warm startup on a low-memory older Android phone and a modern phone; record timing and memory.
+- [ ] Run offline/slow-network tests and verify the UI remains responsive with retry/empty/error states.
+- [ ] Complete a representative load-test plan and run controlled load tests; no 100M/500M capacity is claimed.
+- [ ] Reassess hosting/database plan before public growth; current Supabase Free/Nano is not evidence of massive-scale capacity.
