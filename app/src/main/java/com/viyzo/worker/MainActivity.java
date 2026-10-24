@@ -2721,12 +2721,38 @@ public class MainActivity extends Activity {
         c.addView(titleField);
         c.addView(descriptionField);
 
-        Spinner categoryField = spinner(new String[]{"Select Category","Product Listing","Data Entry","Content Review","Translation","Research","Image / Media Work","Customer Support","AI Data / Annotation","Other"});
+        // Extensible global work catalogue. Keep original categories and add international categories.
+        Spinner categoryField = spinner(new String[]{
+                "Select Category",
+                "Product Listing", "Data Entry", "Content Review", "Translation", "Research",
+                "Image / Media Work", "Customer Support", "AI Data / Annotation", "Other",
+                "Audio Recording / Transcription", "Survey / User Research",
+                "App / Website / Game Testing", "E-commerce / Catalog Operations",
+                "Public Information Verification", "Microtasks / Quick Tasks",
+                "Graphic Design / Branding", "Video Editing / Animation",
+                "Writing / Copywriting", "Social Media / Digital Marketing",
+                "SEO / Advertising", "Virtual Assistant / Office Support",
+                "Sales / Lead Generation", "Accounting / Bookkeeping",
+                "Documents / Reports / Presentations", "Web / Mobile Development",
+                "Software / API / Automation", "Data Analytics / Data Science",
+                "IT / Cloud / Cybersecurity", "Engineering / CAD / 3D",
+                "Education / Tutoring / Training", "Legal / HR / Professional Services",
+                "Local Store / Inventory Inspection", "Delivery / Logistics / Warehouse",
+                "Cleaning / Repair / Events / Hospitality", "Other Professional Services"
+        });
         c.addView(categoryField);
+        Spinner workPatternField = spinner(new String[]{
+                "Work Type / Schedule",
+                "One-time Small Task", "Microtask Batch", "Project / Milestone",
+                "Recurring Daily Work", "Recurring Weekly / Monthly Contract",
+                "Shift / Hourly Work", "Local On-site Task", "Long-term Contract"
+        });
+        c.addView(workPatternField);
         Spinner locationField = spinner(new String[]{"Worker Location","Worldwide","India","United States","United Kingdom","Europe","Middle East","Asia","Africa","Other / Multiple Countries"});
         c.addView(locationField);
         Spinner currencyField = spinner(new String[]{"Currency","INR"});
         c.addView(currencyField);
+        c.addView(small("Global category catalogue: currency and live payment support currently remain INR-only. A category does not mean a real job is already available."));
 
         EditText budgetField = input("Total Company Budget (INR)");
         EditText workersField = input("Number of Work Slots (1–1000000)");
@@ -2786,12 +2812,14 @@ public class MainActivity extends Activity {
                 return;
             }
             final String selectedCategory = categoryField.getSelectedItemPosition() == 0 ? "Other" : String.valueOf(categoryField.getSelectedItem());
+            final String selectedWorkPattern = workPatternField.getSelectedItemPosition() == 0 ? "Project / Milestone" : String.valueOf(workPatternField.getSelectedItem());
             final String selectedLocation = locationField.getSelectedItemPosition() == 0 ? "India" : String.valueOf(locationField.getSelectedItem());
             final String selectedTitle = title;
             final String selectedDescription = description
                     + "\\nSkills: " + (skillsField.getText().toString().trim().isEmpty() ? "Not specified" : skillsField.getText().toString().trim())
                     + "\\nLanguage: " + (languageField.getText().toString().trim().isEmpty() ? "Not specified" : languageField.getText().toString().trim())
                     + "\\nDeadline: " + (deadlineField.getText().toString().trim().isEmpty() ? "Not specified" : deadlineField.getText().toString().trim())
+                    + "\\nWork Type / Schedule: " + selectedWorkPattern
                     + "\\nRemote: " + (remote.isChecked() ? "Yes" : "No");
             post.setEnabled(false);
             post.setText("Saving securely…");
