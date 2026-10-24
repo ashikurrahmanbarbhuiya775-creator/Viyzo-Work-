@@ -2741,6 +2741,15 @@ public class MainActivity extends Activity {
                 "Cleaning / Repair / Events / Hospitality", "Other Professional Services"
         });
         c.addView(categoryField);
+        Spinner productTargetField = spinner(new String[]{
+                "Product / Website Target (optional)",
+                "Google Search", "Google Chrome", "YouTube",
+                "ChatGPT", "Google Gemini", "Other AI Assistant",
+                "Website / Web App", "Android / iOS App", "Desktop Software",
+                "Game", "E-commerce Store", "Other Digital Product"
+        });
+        c.addView(productTargetField);
+        c.addView(small("Use this for authorized usability tests, bug reports, accessibility checks, localization and website/app QA only. Paid fake views, likes, subscribers, reviews or policy evasion are not allowed."));
         Spinner workPatternField = spinner(new String[]{
                 "Work Type / Schedule",
                 "One-time Small Task", "Microtask Batch", "Project / Milestone",
@@ -2812,6 +2821,7 @@ public class MainActivity extends Activity {
                 return;
             }
             final String selectedCategory = categoryField.getSelectedItemPosition() == 0 ? "Other" : String.valueOf(categoryField.getSelectedItem());
+            final String selectedProductTarget = productTargetField.getSelectedItemPosition() == 0 ? "Not specified" : String.valueOf(productTargetField.getSelectedItem());
             final String selectedWorkPattern = workPatternField.getSelectedItemPosition() == 0 ? "Project / Milestone" : String.valueOf(workPatternField.getSelectedItem());
             final String selectedLocation = locationField.getSelectedItemPosition() == 0 ? "India" : String.valueOf(locationField.getSelectedItem());
             final String selectedTitle = title;
@@ -2820,6 +2830,7 @@ public class MainActivity extends Activity {
                     + "\\nLanguage: " + (languageField.getText().toString().trim().isEmpty() ? "Not specified" : languageField.getText().toString().trim())
                     + "\\nDeadline: " + (deadlineField.getText().toString().trim().isEmpty() ? "Not specified" : deadlineField.getText().toString().trim())
                     + "\\nWork Type / Schedule: " + selectedWorkPattern
+                    + "\\nProduct / Website Target: " + selectedProductTarget
                     + "\\nRemote: " + (remote.isChecked() ? "Yes" : "No");
             post.setEnabled(false);
             post.setText("Saving securely…");
