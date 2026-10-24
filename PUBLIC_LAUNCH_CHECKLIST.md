@@ -139,3 +139,13 @@ Do not mark public launch ready until all critical security, payment/payout, pri
 - [ ] Run offline/slow-network tests and verify the UI remains responsive with retry/empty/error states.
 - [ ] Complete a representative load-test plan and run controlled load tests; no 100M/500M capacity is claimed.
 - [ ] Reassess hosting/database plan before public growth; current Supabase Free/Nano is not evidence of massive-scale capacity.
+
+
+## Multi-phone QA handoff — 24 October 2026
+- [x] APK workflow #187 completed successfully for version 1.0.7 (`versionCode 8`), package `com.viyzo.worker`, min SDK 23; artifact `Viyzo-APK` uploaded with SHA-256 checksum. This is a **debug QA APK**, not a signed store release. Run: https://github.com/ashikurrahmanbarbhuiya775-creator/Viyzo-Work-/actions/runs/40082024571
+- [ ] Install and test on at least one older/low-RAM phone and one modern Android phone; test fresh install, upgrade over previous version, signup/login, navigation, slow/offline network, app relaunch and screen rotation if supported.
+- [ ] Do not claim load balancing or autoscaling is live: the current app uses Supabase and no multi-app-server load balancer/autoscaling setup has been verified. This requires provisioned infrastructure, deployment configuration, health checks, monitoring, and load testing.
+- [ ] Global payment methods are still metadata only (44 configured rows; 0 checkout-enabled, 0 payout-enabled, 0 live); existing deposit code is Razorpay/INR only. Real provider accounts, secrets, merchant approval, sandbox verification and payout execution are prerequisites.
+- [ ] Enable Supabase leaked-password protection in the Auth dashboard; current security advisor reports it disabled.
+- [ ] Signed release build/keystore, production monitoring, real end-to-end role tests and representative load tests remain launch blockers.
+- [ ] AI Master/WhatsApp automation remains intentionally pending, per project direction.
