@@ -10,8 +10,8 @@ android {
         applicationId "com.viyzo.worker"
         minSdk 23
         targetSdk 35
-        versionCode 7
-        versionName "1.0.6"
+        versionCode 8
+        versionName "1.0.7"
     }
 
     // Release signing is supplied only by the protected release workflow.
@@ -30,7 +30,10 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+            // Enable R8 shrinking/optimization for release builds; debug QA APK stays readable.
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             if (releaseStorePath != null && !releaseStorePath.isEmpty()) {
                 signingConfig signingConfigs.release
             }
