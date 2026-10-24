@@ -2656,7 +2656,7 @@ public class MainActivity extends Activity {
                     profileMessage = "Company: " + profile.optString("legal_name", "Company")
                             + " • Verification: " + profile.optString("verification_status", "pending");
                 }
-                JSONArray jobs = apiArray("/rest/v1/jobs?select=id,title,status,payment_amount,task_limit,currency,created_at&company_id=eq." + userId + "&order=created_at.desc&limit=1000");
+                JSONArray jobs = apiArray("/rest/v1/jobs?select=id,title,status,payment_amount,task_limit,currency,created_at&company_id=eq." + userId + "&order=created_at.desc&limit=100");
                 int openCount = 0;
                 int totalCount = jobs.length();
                 double totalBudget = 0.0;
@@ -2665,9 +2665,9 @@ public class MainActivity extends Activity {
                     if ("open".equalsIgnoreCase(job.optString("status", ""))) openCount++;
                     totalBudget += job.optDouble("payment_amount", 0.0) * job.optInt("task_limit", 1) * 2.0;
                 }
-                jobsMessage = "Your jobs: " + totalCount + " total • " + openCount + " currently open to workers";
-                spendingMessage = "Recorded job budget: ₹" + String.format(Locale.ROOT, "%.2f", totalBudget)
-                        + " (includes worker pool + platform share; not a payment receipt)";
+                jobsMessage = "Recent jobs loaded: " + totalCount + " (latest 100 max) • " + openCount + " currently open in this list";
+                spendingMessage = "Budget of loaded recent jobs: ₹" + String.format(Locale.ROOT, "%.2f", totalBudget)
+                        + " (latest 100 max; includes worker pool + platform share; not a payment receipt)";
                 final JSONArray companyJobs = jobs;
                 runOnUiThread(() -> {
                     c.addView(heading("Your Job History"));
