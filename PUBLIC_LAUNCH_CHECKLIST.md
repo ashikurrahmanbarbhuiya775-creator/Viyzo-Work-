@@ -122,3 +122,11 @@ Do not mark public launch ready until all critical security, payment/payout, pri
 
 - [x] Added and verified `job_applications_worker_created_at_idx` for a worker's application history ordered by newest first.
 - [ ] Current database is only about 12 MB and the main jobs/applications/earnings tables have zero rows at this audit; this is not a representative scale test. Run load tests with realistic seeded data before setting public capacity targets.
+
+
+## Scalability hardening — 24 October 2026
+- [x] Company dashboard job-history query capped from 1,000 rows to the latest 100 to bound response size and UI work.
+- [x] Dashboard labels now explicitly describe job counts and budget as the loaded recent list, avoiding false claims that a 100-row page is the full company history.
+- [ ] Add real pagination or server-side aggregate/count queries before companies need to browse more than the latest 100 jobs.
+- [ ] Run representative-data load tests, latency/error monitoring and concurrent-user tests; current production dataset is too small to certify global scale.
+- [ ] Review Supabase Free/Nano capacity and prepare a tested scaling/incident-recovery plan before public launch.
