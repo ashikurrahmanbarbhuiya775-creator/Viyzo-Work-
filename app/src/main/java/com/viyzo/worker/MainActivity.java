@@ -391,19 +391,22 @@ public class MainActivity extends Activity {
         if (!selectedLanguageTag.isEmpty()) {
             aiLocale = Locale.forLanguageTag(selectedLanguageTag);
         }
-        initAIMasterVoice();
+        // Render the first useful screen before initializing optional voice services.
+        // Text-to-speech initialization is deferred so low-end phones can show UI sooner.
         restoreLiveSession();
         if (selectedCountryCode.isEmpty() || selectedLanguageTag.isEmpty()) {
             showCountryLanguageSetup();
         } else {
             showHome();
-            new Handler().postDelayed(() -> {
-                if (!aiWelcomeSpoken) {
-                    aiWelcomeSpoken = true;
-                    speakAI(aiWelcomeMessage());
-                }
-            }, 1100);
         }
+        new Handler().postDelayed(() -> {
+            if (isFinishing() || isDestroyed()) return;
+            initAIMasterVoice();
+            if (!selectedCountryCode.isEmpty() && !selectedLanguageTag.isEmpty() && !aiWelcomeSpoken) {
+                aiWelcomeSpoken = true;
+                speakAI(aiWelcomeMessage());
+            }
+        }, 500);
     }
 
     // ============================================================
