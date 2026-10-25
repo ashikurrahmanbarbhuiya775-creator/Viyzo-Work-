@@ -149,3 +149,12 @@ Do not mark public launch ready until all critical security, payment/payout, pri
 - [ ] Enable Supabase leaked-password protection in the Auth dashboard; current security advisor reports it disabled.
 - [ ] Signed release build/keystore, production monitoring, real end-to-end role tests and representative load tests remain launch blockers.
 - [ ] AI Master/WhatsApp automation remains intentionally pending, per project direction.
+
+
+## Escrow foundation — 25 October 2026
+- [x] Created `public.escrow_cases` and `public.escrow_events` tracking tables in Supabase with lifecycle states, status indexes, provider-event deduplication and RLS enabled.
+- [x] Direct anon/authenticated table access revoked; trusted server-side code must manage escrow state and append audit events.
+- [ ] This is escrow **tracking**, not a regulated account or custody of money. Funds are not held by these tables.
+- [ ] Connect to an approved escrow/payment provider, confirm legal/merchant eligibility, implement signed/idempotent provider webhooks and real release/refund flows, and verify in sandbox before any real funds are used.
+- [ ] Link existing company deposit confirmation to escrow case creation only after verified provider capture; never mark a job funded based only on client-side status.
+- [ ] Test disputes, duplicate webhooks, partial failures, refunds, provider reconciliation and ledger consistency before launch.
