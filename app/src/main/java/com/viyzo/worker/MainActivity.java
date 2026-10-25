@@ -1245,7 +1245,106 @@ public class MainActivity extends Activity {
         create.setOnClickListener(v -> showCreateAccount());
         center.addView(create);
 
+        Button learn = secondary("🎓  AI Interview & Video Learning");
+        learn.setOnClickListener(v -> showInterviewLearning());
+        center.addView(learn);
+
         c.addView(center);
+    }
+
+    // ============================================================
+    // AI INTERVIEW & COUNTRY-LANGUAGE LEARNING
+    // ============================================================
+    private void showInterviewLearning() {
+        startScreen(false);
+        LinearLayout c = content();
+        c.addView(brandHeader());
+        c.addView(heading("🎓 AI Interview & Video Learning"));
+        Locale lang = selectedLanguageTag.isEmpty() ? Locale.getDefault() : Locale.forLanguageTag(selectedLanguageTag);
+        String languageName = lang.getDisplayLanguage(lang);
+        c.addView(small("Country: " + (selectedCountryName.isEmpty() ? new Locale("", Locale.getDefault().getCountry()).getDisplayCountry(Locale.ENGLISH) : selectedCountryName)
+                + " • Language: " + languageName));
+        c.addView(wideInfo("🤖", "AI practice interview", "Choose a practice interview, answer the questions, and get ready before applying. Practice answers are not an official hiring decision."));
+        
+        c.addView(heading("Choose interview type"));
+        Button worker = primary("👷  New Worker Interview Practice");
+        worker.setOnClickListener(v -> showPracticeInterview(false));
+        c.addView(worker);
+        Button company = secondary("🏢  Company / Recruiter Interview Practice");
+        company.setOnClickListener(v -> showPracticeInterview(true));
+        c.addView(company);
+
+        c.addView(heading("Video lessons"));
+        c.addView(small("Videos open in YouTube search using your selected language. Video availability and translation depend on the creator; these are learning links, not Viyzo-produced videos."));
+        addVideoSearch(c, "1. How Viyzo works", "Viyzo Worker app how it works tutorial " + languageName);
+        addVideoSearch(c, "2. Worker safety and avoiding scams", "online job worker safety avoid job scams " + languageName);
+        addVideoSearch(c, "3. How to complete digital tasks", "beginner digital work tasks tutorial " + languageName);
+        addVideoSearch(c, "4. Company: post work and manage applicants", "how to post jobs manage applicants tutorial " + languageName);
+        addVideoSearch(c, "5. Payments, fees and payout safety", "online work payments payout safety explained " + languageName);
+
+        Button back = secondary("← Back to Viyzo");
+        back.setOnClickListener(v -> showHome());
+        c.addView(back);
+    }
+
+    private void addVideoSearch(LinearLayout parent, String label, String query) {
+        Button b = secondary("▶  " + label);
+        b.setOnClickListener(v -> {
+            try {
+                String url = "https://www.youtube.com/results?search_query="
+                        + java.net.URLEncoder.encode(query, "UTF-8");
+                Intent intent = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url));
+                startActivity(intent);
+            } catch (Exception ex) {
+                Toast.makeText(this, "Could not open video search. Please try again.", Toast.LENGTH_LONG).show();
+            }
+        });
+        parent.addView(b);
+    }
+
+    private void showPracticeInterview(boolean companyInterview) {
+        startScreen(false);
+        LinearLayout c = content();
+        c.addView(brandHeader());
+        c.addView(heading(companyInterview ? "🏢 Company Interview Practice" : "👷 Worker Interview Practice"));
+        c.addView(small("Practice only. Your answers stay on this screen and are not submitted to a recruiter or saved to your account."));
+        String[] questions = companyInterview
+                ? new String[]{"What type of work do you need completed?","How will you explain the task, deadline and acceptance criteria?","What budget and currency will you fund before work starts?","How will you review work fairly and resolve a dispute?"}
+                : new String[]{"Please introduce yourself and describe your useful skills.","What languages can you work in, and what is your availability?","How would you confirm you understand a task before accepting it?","What would you do if task instructions are unclear or seem unsafe?"};
+        EditText[] answers = new EditText[questions.length];
+        for (int i=0;i<questions.length;i++) {
+            c.addView(tv((i+1)+". "+questions[i], 14, WHITE));
+            answers[i] = input("Your practice answer");
+            answers[i].setMinLines(2);
+            answers[i].setGravity(Gravity.TOP | Gravity.START);
+            c.addView(answers[i]);
+            setMargins(answers[i],0,0,0,12);
+        }
+        TextView feedback = small("");
+        c.addView(feedback);
+        Button review = primary("🤖  Review my practice answers");
+        review.setOnClickListener(v -> {
+            int filled=0;
+            for(EditText a:answers) if(!a.getText().toString().trim().isEmpty()) filled++;
+            if(filled==0) {
+                feedback.setText("Please answer at least one question first.");
+                return;
+            }
+            StringBuilder tips=new StringBuilder("Practice review • "+filled+"/"+questions.length+" answers started.\n");
+            for(int i=0;i<questions.length;i++) {
+                String a=answers[i].getText().toString().trim();
+                tips.append("\n").append(i+1).append(". ");
+                if(a.isEmpty()) tips.append("Try answering this question with a clear example.");
+                else if(a.length()<35) tips.append("Add a specific example, steps you would take, and the result you expect.");
+                else tips.append("Good start. Check that your answer is honest, specific, and easy to understand.");
+            }
+            tips.append("\n\nThis is a simple on-device practice checklist, not an AI hiring score or an employment decision.");
+            feedback.setText(tips.toString());
+        });
+        c.addView(review);
+        Button back=secondary("← Back to learning");
+        back.setOnClickListener(v -> showInterviewLearning());
+        c.addView(back);
     }
 
     // ============================================================
