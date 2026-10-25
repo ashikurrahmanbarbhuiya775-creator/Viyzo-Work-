@@ -47,3 +47,13 @@ Status: architecture plan for staged implementation; **not a claim that this cap
 3. Complete funded job lifecycle, payment sandbox tests, payout provider flow and security checks.
 4. Add job ingestion/partner integrations only with lawful authorization and clear source/quality checks.
 5. Load test, fix measured bottlenecks, choose a paid capacity plan when justified, then expand rollout.
+
+
+## Automated operations, supervisor and data separation — 25 October 2026
+
+- Use bounded queues for slow/retryable job matching, notifications, reconciliation and cleanup; retry transient failures with exponential backoff and idempotency keys, and move exhausted items to a dead-letter queue for supervisor review. Never auto-guess financial ledger changes.
+- Add readiness/health checks, rate limits, alerting for p95/p99 latency, error rates, DB saturation, queue age and payment webhook failures. Traffic should be routed away from unhealthy instances; autoscaling is enabled only after a hosting provider and limits are configured.
+- Supervisor console should show service health, deployment version, queue backlog, failed/retried tasks, security alerts and payment reconciliation exceptions. Protect supervisor APIs server-side and log privileged actions; require human review for refunds, payout corrections, identity decisions and account suspensions.
+- Keep PostgreSQL as the single authoritative transactional source for jobs, funding, earnings and immutable ledger. Separate access by purpose (identity/profile, marketplace, payments/ledger, operations/audit, analytics) using RLS and least privilege. Store documents in private object storage, not large database blobs.
+- Start with indexes, pagination and short transactions. Add read replicas, time partitioning, analytics storage and regional routing only after measurements justify them; do not split financial transactions across independent databases prematurely. Backups and restore drills are required.
+- **Deployment boundary:** current Supabase project has Edge Functions and queue/supervisor-related tables, but a separate multi-server fleet, load balancer, external durable queue consumer and autoscaling policy have not been verified as deployed. Existing tables/functions are not proof of an active automation loop. Supabase Free/Nano is not proof of global high-traffic capacity. Do not mark automation or load balancing live until wired, monitored and tested.
