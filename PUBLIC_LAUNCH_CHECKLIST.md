@@ -166,3 +166,14 @@ Do not mark public launch ready until all critical security, payment/payout, pri
 - [x] Job remains `funded_pending_review` after capture; payment confirmation alone does not bypass review or mean funds are held in a regulated escrow account.
 - [ ] Provider custody/escrow agreement, merchant/legal approval, signed webhook sandbox verification, real release/refund and dispute flows remain prerequisites. Current provider flow is Razorpay INR only and does not implement worker payout execution.
 - [ ] End-to-end test with provider sandbox and synthetic company/job/deposit, including duplicate webhook, wrong amount/currency, replay, provider failure and DB transaction rollback, before using real money.
+
+
+## 8. Beginner learning and AI interview assistant (QA build 1.1.0)
+- [x] Add a 15-lesson step-by-step in-app learning course covering language setup, account safety, profiles, jobs, task completion, earnings, company job posting, review, voice controls, disputes and privacy.
+- [x] Add local lesson-completion progress saved on the device.
+- [x] Route lesson narration requests through the AI endpoint with selected-language instructions; availability depends on configured AI credentials, network, and installed device voice data.
+- [x] Add worker and company spoken interview practice with speech recognition, repeated questions and AI coaching request.
+- [ ] Test every lesson in Hindi, Bengali, English and at least two non-Indian languages on real devices.
+- [ ] Test microphone denial, speech recognition unavailable, missing TTS voice data, offline mode, AI timeout, and empty answers.
+- [ ] Replace external video search links with Viyzo-produced captioned videos in each supported language; no owned prerecorded videos are included yet.
+- [ ] Verify the AI coaching feedback endpoint returns safe, useful localized feedback; do not use practice answers as an automated hiring decision.
