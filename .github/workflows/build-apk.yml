@@ -44,7 +44,7 @@ jobs:
           AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)"
           test -n "$AAPT"
           BADGING="$("$AAPT" dump badging "$APK")"
-          printf '%s\n' "$BADGING" | grep -F "package: name='com.viyzo.worker' versionCode='10' versionName='1.0.9'"
+          printf '%s\n' "$BADGING" | grep -F "package: name='com.viyzo.worker' versionCode='11' versionName='1.1.0'"
           printf '%s\n' "$BADGING" | grep -F "sdkVersion:'23'"
           sha256sum "$APK" > "$APK.sha256"
 
