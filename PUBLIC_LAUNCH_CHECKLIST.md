@@ -158,3 +158,11 @@ Do not mark public launch ready until all critical security, payment/payout, pri
 - [ ] Connect to an approved escrow/payment provider, confirm legal/merchant eligibility, implement signed/idempotent provider webhooks and real release/refund flows, and verify in sandbox before any real funds are used.
 - [ ] Link existing company deposit confirmation to escrow case creation only after verified provider capture; never mark a job funded based only on client-side status.
 - [ ] Test disputes, duplicate webhooks, partial failures, refunds, provider reconciliation and ledger consistency before launch.
+
+
+## Escrow integration hardening — 25 October 2026
+- [x] Verified provider-captured company deposits now create an escrow tracking case and funding-confirmed audit event in the same database transaction as deposit/ledger/funding allocation updates.
+- [x] Escrow case creation is idempotent by unique deposit reference; client roles cannot directly read/write the escrow tables; privileged deposit confirmation RPC is executable only by service_role.
+- [x] Job remains `funded_pending_review` after capture; payment confirmation alone does not bypass review or mean funds are held in a regulated escrow account.
+- [ ] Provider custody/escrow agreement, merchant/legal approval, signed webhook sandbox verification, real release/refund and dispute flows remain prerequisites. Current provider flow is Razorpay INR only and does not implement worker payout execution.
+- [ ] End-to-end test with provider sandbox and synthetic company/job/deposit, including duplicate webhook, wrong amount/currency, replay, provider failure and DB transaction rollback, before using real money.
