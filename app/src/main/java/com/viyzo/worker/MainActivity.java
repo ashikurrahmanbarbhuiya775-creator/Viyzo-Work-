@@ -1315,8 +1315,13 @@ public class MainActivity extends Activity {
         addLessonButton(c, 13, "AI Master and voice controls", "Tap the microphone and speak in your selected language. Wait for AI Master to answer. If voice does not work, check microphone permission, internet connection, phone media volume and the installed Android speech language. Text controls remain an alternative.");
         addLessonButton(c, 14, "Supervisor, support and disputes", "Use official support for account, task, verification or payment problems. Keep the task ID and relevant evidence ready. Never give support staff your password or one-time code. Escalate disagreements through the official flow when available.");
         addLessonButton(c, 15, "Privacy, scams and account safety", "Use your own account, give honest information and protect personal data. Avoid jobs asking you to pay upfront, move money illegally or perform unsafe or deceptive activity. Sign out on shared devices and report suspicious work.");
-        c.addView(heading("Video library"));
-        c.addView(small("These links search for videos in your selected language. External video availability and translations depend on the publisher. Viyzo's own fully produced, captioned videos still need recording."));
+        c.addView(heading("📽️ Viyzo complete walkthrough"));
+        c.addView(small("Open the visual step-by-step guide. Each scene explains one task, with voice narration in the selected language when Android TTS supports it. This guide is bundled as app screens; it is not a prerecorded MP4 video."));
+        Button walkthrough = primary("▶  Play complete visual walkthrough");
+        walkthrough.setOnClickListener(v -> startWalkthrough());
+        c.addView(walkthrough);
+        c.addView(heading("External video library"));
+        c.addView(small("These links search for videos in your selected language. They are external videos, not videos produced by Viyzo."));
         addVideoSearch(c, "Viyzo app walkthrough", "Viyzo Worker app tutorial " + languageName);
         addVideoSearch(c, "Worker task training", "beginner online work task tutorial " + languageName);
         addVideoSearch(c, "Company job posting training", "how to post a job manage workers tutorial " + languageName);
@@ -1332,6 +1337,71 @@ public class MainActivity extends Activity {
         Button back = secondary("← Back to Viyzo");
         back.setOnClickListener(v -> showHome());
         c.addView(back);
+    }
+
+    private int walkthroughScene = 0;
+    private TextView walkthroughSceneTitle;
+    private TextView walkthroughSceneBody;
+    private final String[][] walkthroughScenes = {
+        {"1 / 10 • Welcome", "Viyzo Worker connects companies that need work done with workers who can do it. Start by choosing your country and language. Use the speaker button to listen."},
+        {"2 / 10 • Account", "Create your own account, confirm your email if requested, and keep your password private. Never share one-time codes."},
+        {"3 / 10 • Profile", "Add honest skills, languages and availability. Submit identity information only through an official secure verification screen when requested."},
+        {"4 / 10 • Find work", "Open Jobs, select a task, listen to its instructions and check the deadline, requirements, currency and payment terms before accepting."},
+        {"5 / 10 • Understand the task", "If a step is unclear, ask the company or AI Master before starting. Never guess about safety, money or sensitive information."},
+        {"6 / 10 • Do the work", "Follow each task step, save progress and do the work honestly. Never fake clicks, views, reviews, ratings or evidence."},
+        {"7 / 10 • Submit", "Check your result, attach only the requested proof, and submit through the official task screen. Keep the task reference for support."},
+        {"8 / 10 • Review and earnings", "Check task status and the displayed currency. Earnings targets are not guarantees. Wait for confirmed approval and payout status."},
+        {"9 / 10 • Company workflow", "Companies should write clear deliverables, deadlines, acceptance criteria and budgets. Work must not start until required funding is confirmed."},
+        {"10 / 10 • Safety and help", "Never pay a stranger to get a job or share passwords. Use official support for disputes. AI practice interviews help you prepare but do not guarantee employment."}
+    };
+
+    private void startWalkthrough() {
+        walkthroughScene = 0;
+        startScreen(false);
+        LinearLayout c = content();
+        c.addView(brandHeader());
+        c.addView(heading("📽️ Viyzo complete walkthrough"));
+        c.addView(small("Visual step-by-step learning guide • selected language voice when supported"));
+        walkthroughSceneTitle = heading("");
+        c.addView(walkthroughSceneTitle);
+        walkthroughSceneBody = small("");
+        walkthroughSceneBody.setTextSize(18);
+        c.addView(walkthroughSceneBody);
+        Button listen = primary("🔊  Explain this scene aloud");
+        listen.setOnClickListener(v -> {
+            Locale lang = selectedLanguageTag.isEmpty() ? Locale.getDefault() : Locale.forLanguageTag(selectedLanguageTag);
+            String prompt = "Explain the following Viyzo Worker tutorial scene in simple " + lang.getDisplayLanguage(lang) + " (" + lang.toLanguageTag() + "). Use short, beginner-friendly sentences and do not invent app capabilities. Scene: " + walkthroughScenes[walkthroughScene][0] + ". Explanation: " + walkthroughScenes[walkthroughScene][1];
+            askAIMasterBackend(prompt);
+        });
+        c.addView(listen);
+        LinearLayout nav = new LinearLayout(this);
+        nav.setOrientation(LinearLayout.HORIZONTAL);
+        Button prev = secondary("← Previous");
+        prev.setOnClickListener(v -> { if (walkthroughScene > 0) walkthroughScene--; renderWalkthroughScene(); });
+        Button next = primary("Next →");
+        next.setOnClickListener(v -> {
+            if (walkthroughScene < walkthroughScenes.length - 1) walkthroughScene++;
+            else {
+                getSharedPreferences("viyzo_learning", MODE_PRIVATE).edit().putBoolean("walkthrough_completed", true).apply();
+                Toast.makeText(this, "Walkthrough completed on this phone.", Toast.LENGTH_SHORT).show();
+                showInterviewLearning();
+                return;
+            }
+            renderWalkthroughScene();
+        });
+        nav.addView(prev, new LinearLayout.LayoutParams(0, dp(52), 1));
+        nav.addView(next, new LinearLayout.LayoutParams(0, dp(52), 1));
+        c.addView(nav);
+        Button back = secondary("← Back to learning school");
+        back.setOnClickListener(v -> showInterviewLearning());
+        c.addView(back);
+        renderWalkthroughScene();
+    }
+
+    private void renderWalkthroughScene() {
+        if (walkthroughSceneTitle == null || walkthroughSceneBody == null) return;
+        walkthroughSceneTitle.setText(walkthroughScenes[walkthroughScene][0]);
+        walkthroughSceneBody.setText(walkthroughScenes[walkthroughScene][1]);
     }
 
     private void addLessonButton(LinearLayout parent, int lessonNumber, String title, String lessonText) {
