@@ -57,3 +57,8 @@ Status: architecture plan for staged implementation; **not a claim that this cap
 - Keep PostgreSQL as the single authoritative transactional source for jobs, funding, earnings and immutable ledger. Separate access by purpose (identity/profile, marketplace, payments/ledger, operations/audit, analytics) using RLS and least privilege. Store documents in private object storage, not large database blobs.
 - Start with indexes, pagination and short transactions. Add read replicas, time partitioning, analytics storage and regional routing only after measurements justify them; do not split financial transactions across independent databases prematurely. Backups and restore drills are required.
 - **Deployment boundary:** current Supabase project has Edge Functions and queue/supervisor-related tables, but a separate multi-server fleet, load balancer, external durable queue consumer and autoscaling policy have not been verified as deployed. Existing tables/functions are not proof of an active automation loop. Supabase Free/Nano is not proof of global high-traffic capacity. Do not mark automation or load balancing live until wired, monitored and tested.
+
+
+## Escrow lifecycle foundation — 25 October 2026
+- Added private `escrow_cases` and `escrow_events` tables to track company/job funding, held/release/refund/dispute states and an auditable event history. Direct client-role table access is revoked; server-side privileged code must perform mutations.
+- These tables do not hold money and are not a legal/regulated escrow account. Provider custody, compliance/merchant approval, signed idempotent webhook handling, actual release/refund integration and sandbox tests remain required. Do not advertise escrow as live until these gates pass.
