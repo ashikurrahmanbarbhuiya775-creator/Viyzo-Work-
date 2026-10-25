@@ -1279,50 +1279,84 @@ public class MainActivity extends Activity {
         startScreen(false);
         LinearLayout c = content();
         c.addView(brandHeader());
-        c.addView(heading("🎓 AI Interview & Video Learning"));
+        c.addView(heading("🎓 Viyzo Learning School"));
         Locale lang = selectedLanguageTag.isEmpty() ? Locale.getDefault() : Locale.forLanguageTag(selectedLanguageTag);
         String languageName = lang.getDisplayLanguage(lang);
         c.addView(small("Country: " + (selectedCountryName.isEmpty() ? new Locale("", Locale.getDefault().getCountry()).getDisplayCountry(Locale.ENGLISH) : selectedCountryName)
-                + " • Language: " + languageName));
-        c.addView(wideInfo("🤖", "AI practice interview", "Choose a practice interview, answer the questions, and get ready before applying. Practice answers are not an official hiring decision."));
+                + " • Learning language: " + languageName));
+        c.addView(wideInfo("🤖", "Learn by listening", "Choose any lesson. AI Master will explain it in your selected language when the online AI service is available. You can replay lessons as often as you need."));
         
-        c.addView(heading("Choose interview type"));
-        Button worker = primary("🎙️  Start live AI worker interview");
+        c.addView(heading("Live spoken interview assistant"));
+        c.addView(small("This practice interview asks one question at a time, listens to your spoken answer and can request AI feedback. It is not a hiring decision and does not guarantee a job."));
+        Button worker = primary("🎙️  Start worker interview");
         worker.setOnClickListener(v -> startVoiceInterview(false));
         c.addView(worker);
-        Button company = secondary("🎙️  Start live AI company interview");
+        Button company = secondary("🎙️  Start company / recruiter interview");
         company.setOnClickListener(v -> startVoiceInterview(true));
         c.addView(company);
-        Button writtenPractice = secondary("✍️  Practice interview by typing");
+        Button writtenPractice = secondary("✍️  Practice by typing");
         writtenPractice.setOnClickListener(v -> showPracticeInterview(false));
         c.addView(writtenPractice);
 
-        c.addView(heading("Complete step-by-step video course"));
-        c.addView(small("The app now includes a chapter-based spoken guide. AI Master reads each lesson aloud in the selected language. This is an in-app guided lesson, not a prerecorded video yet."));
-        addLessonButton(c, "1. Welcome and choosing language", "Welcome to Viyzo Worker. First choose your country and language. You can change them later. If reading is difficult, use the microphone and AI Master voice guidance. Never share your password or one-time code.");
-        addLessonButton(c, "2. Create an account and sign in", "Create your worker account with your real contact details, confirm your email if asked, and keep your password private. If you cannot read, ask a trusted person to help you navigate, but type your password yourself and never tell it to them.");
-        addLessonButton(c, "3. Complete your profile and verification", "Fill only the information the app requests. Submit genuine information and documents only through the secure app flow when available. Never send identity documents or bank details to strangers in chat.");
-        addLessonButton(c, "4. Find and understand a job", "Open Jobs, listen to or read the task instructions, check the deadline, required skills, country, currency and payment terms. Ask AI Master to explain anything you do not understand. Do not accept a task if the terms are unclear.");
-        addLessonButton(c, "5. Complete and submit work", "Follow the task steps, save your progress, check the result and submit through the app. Do not fake clicks, reviews, views or proof. If blocked, ask for help instead of guessing.");
-        addLessonButton(c, "6. Earnings, fees and payout safety", "Check the displayed currency and payment status. A displayed target is not a guaranteed income. Never pay a recruiter a personal fee to get work. Do not assume a payout is complete until the app shows a verified status.");
-        addLessonButton(c, "7. Company: post and fund work", "Companies should describe the deliverable, acceptance criteria, deadline and budget clearly. Funding and provider approval must be verified before work starts. Do not promise work or payout that the platform has not confirmed.");
-        addLessonButton(c, "8. Review, dispute and get support", "Review work against the agreed criteria. If something goes wrong, keep evidence and use the official support or dispute flow when available. Do not share passwords or one-time codes with support staff.");
-        addLessonButton(c, "9. AI Master and voice controls", "Tap the microphone, speak in your selected language and wait for the answer. If speech stops, check microphone permission, phone media volume and installed text-to-speech language data. You can use text buttons if voice is unavailable.");
-        addVideoSearch(c, "Find more videos in your language", "Viyzo Worker beginner tutorial " + languageName);
-
+        c.addView(heading("Step-by-step course • 15 lessons"));
+        c.addView(small("Lesson progress is saved on this phone. Tap a lesson to hear the explanation; mark it complete when you understand it. Lessons are spoken guidance, not prerecorded video files yet."));
+        addLessonButton(c, 1, "Welcome and choose language", "Welcome to Viyzo Worker. First choose your country and language. You can change them later. If reading is difficult, tap a lesson and listen. You can ask AI Master to repeat or explain any step. Never share your password or one-time code.");
+        addLessonButton(c, 2, "Create account and sign in", "Create your worker account with your own contact details and confirm your email if requested. Keep your password private. If you need help reading, ask someone trusted to explain the screen, but enter your password yourself and do not tell it to anyone.");
+        addLessonButton(c, 3, "Profile, skills and verification", "Enter honest profile details and the languages and skills you can really use. Provide identity documents only through an official secure flow when the app requests them. Never send documents to strangers or unofficial chat accounts.");
+        addLessonButton(c, 4, "Find and understand a job", "Open Jobs and check the task instructions, deadline, required skills, country, currency and payment terms. Listen to the instructions before accepting. If anything is unclear, ask the company or AI Master before starting.");
+        addLessonButton(c, 5, "Accept work and check requirements", "Accept only work you understand and can complete. Check what proof or result is required, when it is due, and how completion will be reviewed. Do not start a task if the app has not confirmed its funded status where funding is required.");
+        addLessonButton(c, 6, "Complete digital tasks", "Follow each step, save your progress, check the result and submit it through the official app flow. Never fake clicks, views, reviews, ratings or evidence. If blocked, stop and request clarification rather than guessing.");
+        addLessonButton(c, 7, "Local and field work safety", "For in-person tasks, confirm the location, schedule, contact and safety instructions first. Do not enter unsafe places or share unnecessary personal information. Tell official support if instructions seem dangerous or suspicious.");
+        addLessonButton(c, 8, "Submit work and track review", "Submit the required result and evidence once it is ready. Keep your own copy when appropriate. Check the status in the app. Do not assume the task is approved until the app shows the verified status.");
+        addLessonButton(c, 9, "Earnings, 50-50 model and currency", "Viyzo's proposed model allocates fifty percent to the worker pool and fifty percent to the platform, subject to the actual job terms, fees, applicable law and displayed currency. Your final amount depends on approved work and the terms shown. No earning target is a guarantee.");
+        addLessonButton(c, 10, "Payments, refunds and payout safety", "Check whether a payment is pending, held, approved or completed. Never pay a recruiter a personal fee to get a job. Never share banking passwords or one-time codes. A payout is complete only after the app and payment provider confirm it.");
+        addLessonButton(c, 11, "Company: create and explain a job", "A company should explain the deliverable, required skills, deadline, acceptance criteria and budget clearly. Choose the correct currency and country. Do not promise workers that money is secured until the payment provider confirms funding.");
+        addLessonButton(c, 12, "Company: review work fairly", "Review submitted work against the requirements agreed before the task started. Give clear reasons when requesting corrections. Keep evidence and use the official dispute process if available. Do not reject work for reasons unrelated to the agreed task.");
+        addLessonButton(c, 13, "AI Master and voice controls", "Tap the microphone and speak in your selected language. Wait for AI Master to answer. If voice does not work, check microphone permission, internet connection, phone media volume and the installed Android speech language. Text controls remain an alternative.");
+        addLessonButton(c, 14, "Supervisor, support and disputes", "Use official support for account, task, verification or payment problems. Keep the task ID and relevant evidence ready. Never give support staff your password or one-time code. Escalate disagreements through the official flow when available.");
+        addLessonButton(c, 15, "Privacy, scams and account safety", "Use your own account, give honest information and protect personal data. Avoid jobs asking you to pay upfront, move money illegally or perform unsafe or deceptive activity. Sign out on shared devices and report suspicious work.");
+        c.addView(heading("Video library"));
+        c.addView(small("These links search for videos in your selected language. External video availability and translations depend on the publisher. Viyzo's own fully produced, captioned videos still need recording."));
+        addVideoSearch(c, "Viyzo app walkthrough", "Viyzo Worker app tutorial " + languageName);
+        addVideoSearch(c, "Worker task training", "beginner online work task tutorial " + languageName);
+        addVideoSearch(c, "Company job posting training", "how to post a job manage workers tutorial " + languageName);
+        addVideoSearch(c, "Online work safety", "online job scam prevention worker safety " + languageName);
+        addVideoSearch(c, "Payments and payout safety", "online work payments payout safety explained " + languageName);
+        Button reset = secondary("Reset lesson progress on this phone");
+        reset.setOnClickListener(v -> {
+            getSharedPreferences("viyzo_learning", MODE_PRIVATE).edit().clear().apply();
+            Toast.makeText(this, "Lesson progress reset.", Toast.LENGTH_SHORT).show();
+            showInterviewLearning();
+        });
+        c.addView(reset);
         Button back = secondary("← Back to Viyzo");
         back.setOnClickListener(v -> showHome());
         c.addView(back);
     }
 
-    private void addLessonButton(LinearLayout parent, String title, String lessonText) {
-        Button b = secondary("▶  " + title);
-        b.setOnClickListener(v -> {
+    private void addLessonButton(LinearLayout parent, int lessonNumber, String title, String lessonText) {
+        SharedPreferences progress = getSharedPreferences("viyzo_learning", MODE_PRIVATE);
+        boolean completed = progress.getBoolean("lesson_" + lessonNumber, false);
+        LinearLayout card = column();
+        card.setPadding(dp(8), dp(6), dp(8), dp(8));
+        Button play = secondary((completed ? "✅ " : "▶ ") + lessonNumber + ". " + title);
+        play.setContentDescription("Play lesson " + lessonNumber + ": " + title);
+        play.setOnClickListener(v -> {
             interviewVoiceMode = false;
-            speakAI(lessonText);
-            Toast.makeText(this, "AI Master is reading this lesson aloud. Use phone volume controls.", Toast.LENGTH_LONG).show();
+            Locale lang = selectedLanguageTag.isEmpty() ? Locale.getDefault() : Locale.forLanguageTag(selectedLanguageTag);
+            String languageName = lang.getDisplayLanguage(lang);
+            String prompt = "Teach this Viyzo Worker training lesson in " + languageName + " (" + lang.toLanguageTag() + "). Speak naturally and simply for a beginner who may not read well. Do not answer in English unless that is the selected language. Explain the steps in order, keep important safety warnings, and do not invent app features. Lesson title: " + title + ". Lesson content: " + lessonText;
+            askAIMasterBackend(prompt);
+            Toast.makeText(this, "AI Master is preparing this lesson in " + languageName + ".", Toast.LENGTH_LONG).show();
         });
-        parent.addView(b);
+        card.addView(play);
+        Button done = secondary(completed ? "Mark lesson not completed" : "✓ I understood this lesson");
+        done.setOnClickListener(v -> {
+            progress.edit().putBoolean("lesson_" + lessonNumber, !progress.getBoolean("lesson_" + lessonNumber, false)).apply();
+            showInterviewLearning();
+        });
+        card.addView(done);
+        parent.addView(card);
     }
 
     private void startVoiceInterview(boolean companyInterview) {
@@ -1334,28 +1368,28 @@ public class MainActivity extends Activity {
         LinearLayout c = content();
         c.addView(brandHeader());
         c.addView(heading(companyInterview ? "🎙️ Live AI company interview" : "🎙️ Live AI worker interview"));
-        c.addView(small("AI Master asks one question at a time. Speak naturally in the language selected in settings. This is practice, not an official hiring decision. Answers are not submitted to an employer."));
+        c.addView(small("Practice only. AI Master asks one question at a time in your selected language, listens to your spoken answer and can give coaching. This is not an official hiring decision. Your answers are not sent to an employer."));
         interviewStatusView = small("");
         c.addView(interviewStatusView);
-        Button start = primary("▶  Start speaking interview");
+        Button start = primary("▶  Start interview");
         start.setOnClickListener(v -> askNextInterviewQuestion());
         c.addView(start);
         Button repeat = secondary("🔁  Repeat current question");
         repeat.setOnClickListener(v -> {
             String[] qs = interviewCompanyMode ? companyInterviewQuestions : workerInterviewQuestions;
-            if(interviewQuestionIndex < qs.length) speakAI(qs[interviewQuestionIndex]);
+            if(interviewQuestionIndex < qs.length) askNextInterviewQuestion();
         });
         c.addView(repeat);
         Button answer = secondary("🎤  Record spoken answer");
         answer.setOnClickListener(v -> startAIVoiceInput());
         c.addView(answer);
-        Button finish = secondary("Finish interview and review");
+        Button finish = secondary("Finish and get AI feedback");
         finish.setOnClickListener(v -> finishVoiceInterview());
         c.addView(finish);
         Button back = secondary("← Back to learning");
         back.setOnClickListener(v -> { interviewVoiceMode=false; showInterviewLearning(); });
         c.addView(back);
-        if (interviewStatusView != null) interviewStatusView.setText("Ready. Tap Start, listen to the question, then tap Record spoken answer.");
+        if (interviewStatusView != null) interviewStatusView.setText("Ready. Tap Start, listen, then record your spoken answer.");
     }
 
     private void askNextInterviewQuestion() {
@@ -1364,34 +1398,35 @@ public class MainActivity extends Activity {
             finishVoiceInterview();
             return;
         }
-        if (interviewStatusView != null) interviewStatusView.setText("Question " + (interviewQuestionIndex+1) + " of " + qs.length + ". Listen, then tap Record spoken answer.");
-        speakAI("Question " + (interviewQuestionIndex+1) + ". " + qs[interviewQuestionIndex]);
+        if (interviewStatusView != null) interviewStatusView.setText("Question " + (interviewQuestionIndex+1) + " of " + qs.length + ". Preparing spoken question…");
+        Locale lang = selectedLanguageTag.isEmpty() ? Locale.getDefault() : Locale.forLanguageTag(selectedLanguageTag);
+        String languageName = lang.getDisplayLanguage(lang);
+        String prompt = "Ask this interview question in " + languageName + " (" + lang.toLanguageTag() + "). Translate it naturally and simply without changing its meaning. Do not add an answer or explanation. Question: " + qs[interviewQuestionIndex];
+        askAIMasterBackend(prompt);
     }
 
     private void finishVoiceInterview() {
         interviewVoiceMode = false;
         String[] qs = interviewCompanyMode ? companyInterviewQuestions : workerInterviewQuestions;
-        StringBuilder report = new StringBuilder("Practice interview summary\nAnswered: " + interviewAnswers.size() + " of " + qs.length + "\n\n");
+        StringBuilder prompt = new StringBuilder("You are a kind interview coach for Viyzo Worker. Review this practice interview in the user's selected language. Be encouraging, do not discriminate, do not make a hiring decision, and give practical tips. Assess clarity and completeness, not accent, disability, nationality or literacy. Questions and spoken answers:\n");
         for (int i=0;i<qs.length;i++) {
-            report.append(i+1).append(". ").append(qs[i]).append("\n");
-            if (i < interviewAnswers.size()) {
-                String a=interviewAnswers.get(i);
-                report.append(a.length()<25 ? "Tip: add more detail and a real example.\n" : "Tip: make sure your answer is honest, clear and specific.\n");
-            } else report.append("Tip: try answering this question next time.\n");
+            prompt.append("\nQ").append(i+1).append(": ").append(qs[i]).append("\nAnswer: ");
+            if (i < interviewAnswers.size()) prompt.append(interviewAnswers.get(i));
+            else prompt.append("(not answered)");
         }
-        report.append("\nThis is a practice checklist, not an automated hiring score.");
+        prompt.append("\nGive two strengths, two specific improvements, and one example of how to make an answer clearer. State that this is practice feedback only.");
         startScreen(false);
         LinearLayout c=content();
         c.addView(brandHeader());
         c.addView(heading("Interview practice review"));
-        c.addView(small(report.toString()));
-        Button again=primary("Try interview again");
-        again.setOnClickListener(v -> startVoiceInterview(interviewCompanyMode));
-        c.addView(again);
+        c.addView(small("AI Master is preparing feedback in your selected language. This feedback is for learning only and does not decide whether anyone gets a job."));
+        Button retry=primary("Try interview again");
+        retry.setOnClickListener(v -> startVoiceInterview(interviewCompanyMode));
+        c.addView(retry);
         Button back=secondary("← Back to learning");
         back.setOnClickListener(v -> showInterviewLearning());
         c.addView(back);
-        speakAI("Interview practice finished. You can review your answers on screen. This is not a hiring decision.");
+        askAIMasterBackend(prompt.toString());
     }
 
     private void addVideoSearch(LinearLayout parent, String label, String query) {
@@ -3530,7 +3565,7 @@ public class MainActivity extends Activity {
                 if (interviewVoiceMode) {
                     interviewAnswers.add(spokenText);
                     interviewQuestionIndex++;
-                    if (interviewStatusView != null) interviewStatusView.setText("Answer recorded locally. Tap next question or finish the practice interview.");
+                    if (interviewStatusView != null) interviewStatusView.setText("Answer recorded. Preparing the next question in your selected language.");
                     Toast.makeText(this, "Answer recorded for practice.", Toast.LENGTH_SHORT).show();
                     askNextInterviewQuestion();
                     return;
