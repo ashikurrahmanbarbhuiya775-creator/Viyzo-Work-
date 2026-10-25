@@ -1176,11 +1176,19 @@ public class MainActivity extends Activity {
     private void setAILanguageByLocale(Locale locale) {
         aiLocale = locale == null ? Locale.getDefault() : locale;
         if (aiTts != null && !aiTtsInitializing) {
-            int result = aiTts.setLanguage(aiLocale);
-            aiTtsReady = result != TextToSpeech.LANG_MISSING_DATA
-                    && result != TextToSpeech.LANG_NOT_SUPPORTED;
-            if (!aiTtsReady && aiStatusView != null) {
-                aiStatusView.setText("Selected language text is available, but voice data may need to be installed.");
+            try {
+                int result = aiTts.setLanguage(aiLocale);
+                aiTtsReady = result != TextToSpeech.LANG_MISSING_DATA
+                        && result != TextToSpeech.LANG_NOT_SUPPORTED;
+                if (!aiTtsReady && aiStatusView != null) {
+                    aiStatusView.setText("Voice data missing for " + aiLocale.getDisplayLanguage()
+                            + ". Install this language in Android Text-to-Speech settings; text answers remain available.");
+                } else if (aiTtsReady && aiStatusView != null) {
+                    aiStatusView.setText("AI Master voice ready • " + aiLocale.getDisplayLanguage());
+                }
+            } catch (Exception e) {
+                aiTtsReady = false;
+                if (aiStatusView != null) aiStatusView.setText("Could not switch voice language. Check Android TTS settings.");
             }
         }
     }
@@ -3292,6 +3300,8 @@ public class MainActivity extends Activity {
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                     RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, aiLocale.toLanguageTag());
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, aiLocale.toLanguageTag());
+            intent.putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, false);
             intent.putExtra(RecognizerIntent.EXTRA_PROMPT, aiText(
                     "Ask AI Master your question", "AI Master से अपना सवाल पूछें",
                     "AI Master-কে আপনার প্রশ্ন বলুন", "AI Master سے سوال پوچھیں",
