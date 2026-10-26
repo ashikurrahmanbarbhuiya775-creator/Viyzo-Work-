@@ -36,7 +36,8 @@ jobs:
       - name: Build and validate debug APK
         run: |
           set -euo pipefail
-          gradle assembleDebug
+          # Run Android static analysis and available unit tests before packaging.
+          gradle lintDebug testDebugUnitTest assembleDebug
           APK="app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
 
