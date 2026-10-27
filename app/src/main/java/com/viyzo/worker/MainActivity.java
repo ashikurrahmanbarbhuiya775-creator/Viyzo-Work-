@@ -1031,7 +1031,7 @@ public class MainActivity extends Activity {
         Locale primary = defaultLanguageForCountry(countryCode);
         addLanguage(found, primary.getLanguage(), countryCode);
         java.util.ArrayList<Locale> result = new java.util.ArrayList<>(found.values());
-        result.sort((a, b) -> {
+        java.util.Collections.sort(result, (a, b) -> {
             if (a.getLanguage().equals("en")) return b.getLanguage().equals("en") ? 0 : -1;
             if (b.getLanguage().equals("en")) return 1;
             return localeDisplayName(a).compareToIgnoreCase(localeDisplayName(b));
@@ -2489,12 +2489,12 @@ public class MainActivity extends Activity {
                     double amount=e.optDouble("amount",0);
                     String currency=e.optString("currency","INR").toUpperCase(Locale.ROOT);
                     String st=e.optString("status","");
-                    if("pending".equals(st)) pendingByCurrency.put(currency,pendingByCurrency.getOrDefault(currency,0.0)+amount);
-                    if("approved".equals(st)) approvedByCurrency.put(currency,approvedByCurrency.getOrDefault(currency,0.0)+amount);
-                    if("paid".equals(st)) paidByCurrency.put(currency,paidByCurrency.getOrDefault(currency,0.0)+amount);
+                    if("pending".equals(st)) pendingByCurrency.put(currency,(pendingByCurrency.containsKey(currency) ? pendingByCurrency.get(currency) : 0.0)+amount);
+                    if("approved".equals(st)) approvedByCurrency.put(currency,(approvedByCurrency.containsKey(currency) ? approvedByCurrency.get(currency) : 0.0)+amount);
+                    if("paid".equals(st)) paidByCurrency.put(currency,(paidByCurrency.containsKey(currency) ? paidByCurrency.get(currency) : 0.0)+amount);
                 }
                 Map<String,Double> approvedAndPaidByCurrency=new TreeMap<>(approvedByCurrency);
-                for(Map.Entry<String,Double> entry:paidByCurrency.entrySet()) approvedAndPaidByCurrency.put(entry.getKey(),approvedAndPaidByCurrency.getOrDefault(entry.getKey(),0.0)+entry.getValue());
+                for(Map.Entry<String,Double> entry:paidByCurrency.entrySet()) approvedAndPaidByCurrency.put(entry.getKey(),(approvedAndPaidByCurrency.containsKey(entry.getKey()) ? approvedAndPaidByCurrency.get(entry.getKey()) : 0.0)+entry.getValue());
                 final String fTotal=formatCurrencyTotals(approvedAndPaidByCurrency);
                 final String fPending=formatCurrencyTotals(pendingByCurrency);
                 final String fPaid=formatCurrencyTotals(paidByCurrency);
