@@ -1031,7 +1031,7 @@ public class MainActivity extends Activity {
         Locale primary = defaultLanguageForCountry(countryCode);
         addLanguage(found, primary.getLanguage(), countryCode);
         java.util.ArrayList<Locale> result = new java.util.ArrayList<>(found.values());
-        result.sort((a, b) -> {
+        java.util.Collections.sort(result, (a, b) -> {
             if (a.getLanguage().equals("en")) return b.getLanguage().equals("en") ? 0 : -1;
             if (b.getLanguage().equals("en")) return 1;
             return localeDisplayName(a).compareToIgnoreCase(localeDisplayName(b));
