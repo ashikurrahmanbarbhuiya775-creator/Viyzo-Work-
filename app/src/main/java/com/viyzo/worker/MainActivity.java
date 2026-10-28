@@ -2392,43 +2392,14 @@ public class MainActivity extends Activity {
     }
 
     private void showWorkExecution() {
-        startScreen(false);
-        LinearLayout c = content();
-
-        c.addView(heading("Work Execution"));
-        c.addView(small("DEMO ONLY — this workspace does not submit real work or create earnings. For real funded jobs, use Available Work → My Work → Submit Completed Work for supervisor review."));
-
-        c.addView(wideInfo("📦", "Task Batch",
-                "Product Listing • Batch #VZ-DEMO-001"));
-        c.addView(wideInfo("📊", "Progress",
-                "125 / 1000 completed"));
-        c.addView(wideInfo("💰", "Worker Earning",
-                "Shown after approved task calculation"));
-
-        c.addView(input("Task result / item ID"));
-
-        CheckBox done = new CheckBox(this);
-        done.setText("I confirm this task is complete and accurate.");
-        done.setTextColor(TEXT);
-        c.addView(done);
-
-        Button submit = primary("✓  Submit Completed Work");
-        submit.setOnClickListener(v -> {
-            if (!done.isChecked()) {
-                Toast.makeText(this,
-                        "Please confirm the task is complete.",
-                        Toast.LENGTH_SHORT).show();
-                return;
-            }
-            Toast.makeText(this,
-                    "Demo submission recorded. Quality review will be backend-controlled.",
-                    Toast.LENGTH_SHORT).show();
-        });
-        c.addView(submit);
-
-        Button back = secondary("← Back to My Work");
-        back.setOnClickListener(v -> showMyJobs());
-        c.addView(back);
+        // Never show fabricated task counts or pretend a demo tap created real work.
+        // Route workers to their authenticated applications and the server-backed
+        // completion submission flow, which validates approval and job funding.
+        if (accessToken.isEmpty() || userId.isEmpty()) {
+            showLogin();
+            return;
+        }
+        showMyJobs();
     }
 
     private void showWorkPool() {
