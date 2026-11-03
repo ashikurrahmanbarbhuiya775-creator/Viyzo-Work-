@@ -1917,6 +1917,32 @@ public class MainActivity extends Activity {
         c.addView(status);
         setMargins(status, 0, 0, 0, 10);
 
+        TextView titanStatus = tv("TITAN CORE 0016: Not checked", 12, GOLD);
+        c.addView(titanStatus);
+        Button titanCheck = secondary("🧠  Check TITAN CORE Engine 0016");
+        titanCheck.setOnClickListener(v -> {
+            titanStatus.setText("TITAN CORE: Checking secure server status…");
+            new Thread(() -> {
+                try {
+                    JSONObject result = apiRequest("/functions/v1/titan-core", "GET", null, true, "");
+                    JSONObject engine = result.optJSONObject("engine");
+                    JSONObject orchestration = result.optJSONObject("orchestration");
+                    String engineName = engine == null ? "TITAN CORE" : engine.optString("name", "TITAN CORE");
+                    String version = engine == null ? "unknown" : engine.optString("version", "unknown");
+                    String engineState = engine == null ? "unknown" : engine.optString("status", "unknown");
+                    int tracked = orchestration == null ? 0 : orchestration.optInt("tracked_systems", 0);
+                    String report = engineName + " v" + version + " • " + engineState
+                            + (tracked > 0 ? " • " + tracked + " systems checked" : "");
+                    runOnUiThread(() -> titanStatus.setText(report));
+                } catch (Exception error) {
+                    String message = "TITAN CORE check failed: " + error.getMessage();
+                    runOnUiThread(() -> titanStatus.setText(message));
+                }
+            }).start();
+        });
+        c.addView(titanCheck);
+        setMargins(titanCheck, 0, 0, 0, 12);
+
         c.addView(wideInfo("📋", "Task supervision", "Open My Work to review the assignments currently shown in this app."));
         Button work = secondary("📋  Review My Work");
         work.setOnClickListener(v -> showMyJobs());
