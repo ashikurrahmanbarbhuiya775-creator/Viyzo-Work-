@@ -2957,7 +2957,7 @@ public class MainActivity extends Activity {
                 for (int i = 0; i < jobs.length(); i++) {
                     JSONObject job = jobs.getJSONObject(i);
                     if ("open".equalsIgnoreCase(job.optString("status", ""))) openCount++;
-                    totalBudget += job.optDouble("payment_amount", 0.0) * job.optInt("task_limit", 1) * 2.0;
+                    totalBudget += job.optDouble("payment_amount", 0.0) * job.optInt("task_limit", 1) / (WORKER_SHARE_PERCENT / 100.0);
                 }
                 jobsMessage = "Recent jobs loaded: " + totalCount + " (latest 100 max) • " + openCount + " currently open in this list";
                 spendingMessage = "Budget of loaded recent jobs: ₹" + String.format(Locale.ROOT, "%.2f", totalBudget)
@@ -2979,7 +2979,7 @@ public class MainActivity extends Activity {
                             item.addView(small("Worker payment per task: " + job.optString("currency", "INR") + " " 
                                     + String.format(Locale.ROOT, "%.2f", taskPay) + " • Work slots: " + taskLimit));
                             item.addView(small("Estimated total funding: " + job.optString("currency", "INR") + " "
-                                    + String.format(Locale.ROOT, "%.2f", taskPay * taskLimit * 2.0)
+                                    + String.format(Locale.ROOT, "%.2f", taskPay * taskLimit / (WORKER_SHARE_PERCENT / 100.0))
                                     + " • This is not proof of payment."));
                             c.addView(item);
                             setMargins(item, 0, 6, 0, 6);
