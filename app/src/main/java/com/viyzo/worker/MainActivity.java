@@ -66,6 +66,9 @@ import java.util.TimeZone;
  */
 public class MainActivity extends Activity {
 
+    private AdaptiveNetworkEngine adaptiveNetworkEngine;
+    private volatile AdaptiveNetworkEngine.State networkState = AdaptiveNetworkEngine.State.UNKNOWN;
+
     private boolean interviewVoiceMode = false;
     private boolean interviewCompanyMode = false;
     private int interviewQuestionIndex = 0;
@@ -345,6 +348,8 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        adaptiveNetworkEngine = new AdaptiveNetworkEngine(this, (state, metered) -> networkState = state);
+        adaptiveNetworkEngine.start();
         getWindow().setStatusBarColor(Color.rgb(3, 8, 28));
         getWindow().setNavigationBarColor(Color.rgb(3, 8, 28));
         // Keep the branded splash, but do not add an artificial startup delay.
@@ -3830,6 +3835,10 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (adaptiveNetworkEngine != null) {
+            adaptiveNetworkEngine.stop();
+            adaptiveNetworkEngine = null;
+        }
         if (aiTts != null) {
             aiTts.stop();
             aiTts.shutdown();
