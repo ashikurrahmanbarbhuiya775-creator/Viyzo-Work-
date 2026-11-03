@@ -177,3 +177,12 @@ Do not mark public launch ready until all critical security, payment/payout, pri
 - [ ] Test microphone denial, speech recognition unavailable, missing TTS voice data, offline mode, AI timeout, and empty answers.
 - [ ] Replace external video search links with Viyzo-produced captioned videos in each supported language; no owned prerecorded videos are included yet.
 - [ ] Verify the AI coaching feedback endpoint returns safe, useful localized feedback; do not use practice answers as an automated hiring decision.
+
+
+## Temporary revenue allocation update — 3 November 2026
+- [x] Founder-approved temporary launch allocation set to 70% worker pool / 30% Viyzo platform share.
+- [x] Android UI constants, company budget preview, company history estimate, and earnings guidance updated to 70/30.
+- [x] Company payment Edge Function deployed as version 6: gross funding is calculated from the 70% worker reserve and the 30% platform share.
+- [x] Database deposit-confirmation and pre-funding validation functions updated to verify the 70/30 allocation.
+- [ ] Run full Razorpay sandbox tests for fractional amounts, amount/currency mismatch, duplicate/replayed webhooks, and job reserve validation before enabling live deposits.
+- [ ] This is a temporary launch allocation. Any future percentage change requires a reviewed backend + Android update and must not rewrite already-funded jobs or approved earnings.
