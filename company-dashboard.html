@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101014"><meta name="robots" content="noindex,nofollow">
+<title>Viyzo Worker — Company Dashboard</title>
+<style>
+:root{color-scheme:dark;--bg:#101014;--panel:#191d29;--line:#30384d;--text:#f5f7ff;--muted:#b3bbcf;--blue:#7897ff;--mint:#74dfc8;--warn:#ffd17b}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 90% 0%,#202d55,transparent 38%),var(--bg);color:var(--text);font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}main{width:min(1040px,calc(100% - 32px));margin:auto;padding:18px 0 60px}
+nav{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0 20px;border-bottom:1px solid #ffffff20}a{color:#bdccff}.brand{font-weight:850;letter-spacing:.08em;color:white;text-decoration:none}.navlinks{display:flex;gap:16px;flex-wrap:wrap}
+h1{font-size:clamp(2rem,5vw,3.3rem);line-height:1.1;margin:38px 0 10px}.muted{color:var(--muted)}.panel{background:linear-gradient(145deg,#1c2231,#151821);border:1px solid var(--line);border-radius:18px;padding:20px;margin:18px 0}.auth{max-width:480px}.field{display:grid;gap:6px;margin:13px 0}label{font-size:.9rem;color:#d8deef}input{width:100%;padding:13px 14px;border:1px solid #3a4560;border-radius:10px;background:#10141e;color:white;font:inherit}button{border:0;border-radius:11px;padding:12px 17px;background:linear-gradient(120deg,#7897ff,#536fe3);color:white;font-weight:750;font:inherit;cursor:pointer}button.secondary{background:#252d40;border:1px solid #46516b}button:disabled{opacity:.55;cursor:wait}.status{margin-top:12px;color:var(--warn);white-space:pre-wrap}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.metric{background:#121722;border:1px solid #30384d;border-radius:14px;padding:16px}.metric strong{display:block;font-size:1.55rem;margin-top:4px}.list{display:grid;gap:10px}.item{padding:14px;border:1px solid #30384d;border-radius:13px;background:#131823}.item h3{margin:0 0 5px;font-size:1.05rem}.pill{display:inline-block;padding:3px 9px;border-radius:30px;background:#283451;color:#cbd7ff;font-size:.8rem}.hidden{display:none!important}.warning{border-left:3px solid var(--warn);padding:12px 14px;background:#ffd17b12;border-radius:0 10px 10px 0;color:#e7d9b8}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.section-title{margin:28px 0 10px}.foot{border-top:1px solid #ffffff20;padding-top:20px;margin-top:42px;color:var(--muted);font-size:.9rem}
+@media(max-width:700px){.grid{grid-template-columns:1fr}.navlinks{gap:9px;font-size:.85rem}main{width:calc(100% - 24px)}.panel{padding:16px}}
+</style>
+</head>
+<body><main>
+<nav><a class="brand" href="./">VIYZO WORKER</a><div class="navlinks"><a href="faq.html">About</a><a href="privacy.html">Privacy</a><a href="support.html">Support</a></div></nav>
+<h1>Company Dashboard</h1>
+<p class="muted">Sign in with your existing Viyzo account. This dashboard reads only records permitted by your signed-in account and database access rules.</p>
+<section id="authPanel" class="panel auth">
+<h2>Secure sign in</h2>
+<form id="loginForm">
+<div class="field"><label for="email">Email address</label><input id="email" type="email" autocomplete="username" required></div>
+<div class="field"><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required></div>
+<button id="loginBtn" type="submit">Sign in</button>
+</form><p id="authStatus" class="status" role="status"></p>
+<p class="muted">Use the account created in the Viyzo app. Email confirmation may be required. Do not share your password or OTP.</p>
+</section>
+<section id="dashboard" class="hidden">
+<div class="panel"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><strong id="welcome">Welcome</strong><div class="muted" id="accountEmail"></div></div><button id="logoutBtn" class="secondary">Sign out</button></div><p id="roleStatus" class="status"></p></div>
+<div class="warning">Development dashboard: records are read-only here. Payment collection, job release, identity approval and bank payouts are not activated by this page. A displayed status is not a payment receipt or income guarantee.</div>
+<div id="metrics" class="grid"></div>
+<div class="section-title"><h2>Your jobs</h2><p class="muted">Latest company job records. Funding totals shown are estimates, not proof of payment.</p></div>
+<div id="jobs" class="list"><div class="item">Loading…</div></div>
+<div class="section-title"><h2>Recent deposits</h2></div>
+<div id="secondary" class="list"><div class="item">Loading…</div></div>
+</section>
+<footer class="foot"><a href="./">Home</a> · <a href="terms.html">Terms (Draft)</a> · <a href="privacy.html">Privacy</a> · <a href="support.html">Support</a><p>Viyzo Worker · Development preview</p></footer>
+</main>
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+const supabase=createClient("https://jxnfsqxyrakkblizziel.supabase.co","sb_publishable_skl_ZZCN1w0m6AaKYzBucQ_8AmS6Wvx",{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+const ROLE="company";
+const $=id=>document.getElementById(id);
+const money=(n,c="INR")=>{try{return new Intl.NumberFormat(undefined,{style:"currency",currency:c,maximumFractionDigits:2}).format(Number(n||0))}catch{return c+" "+Number(n||0).toFixed(2)}};
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function metric(label,value){return '<div class="metric"><span class="muted">'+esc(label)+'</span><strong>'+esc(value)+'</strong></div>'}
+function item(title,detail,status){return '<article class="item"><h3>'+esc(title)+'</h3><div class="muted">'+esc(detail)+'</div>'+(status?'<p><span class="pill">'+esc(status)+'</span></p>':'')+'</article>'}
+function fail(label,error){return '<article class="item"><h3>'+esc(label)+'</h3><p class="muted">This information is not available to this account right now. '+esc(error?.message||"Please try again later.")+'</p></article>'}
+$("loginForm").addEventListener("submit",async e=>{e.preventDefault();$("loginBtn").disabled=true;$("authStatus").textContent="Signing in securely…";const {data,error}=await supabase.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});$("loginBtn").disabled=false;if(error){$("authStatus").textContent=error.message;return}await load(data.user)});
+$("logoutBtn").addEventListener("click",async()=>{await supabase.auth.signOut();$("dashboard").classList.add("hidden");$("authPanel").classList.remove("hidden");$("authStatus").textContent="Signed out."});
+async function load(user){
+ $("authPanel").classList.add("hidden");$("dashboard").classList.remove("hidden");$("welcome").textContent="Welcome";$("accountEmail").textContent=user.email||"";$("roleStatus").textContent="Checking account role…";
+ const meta=user.user_metadata||{};const accountType=String(meta.account_type||"").toLowerCase();
+ if(accountType && accountType!==ROLE){$("roleStatus").textContent="This is a "+accountType+" account. Please sign out and use the "+accountType+" dashboard.";return}
+ if(ROLE==="company") await company(user); else await worker(user);
+}
+async function company(user){
+ const profile=await supabase.from("company_profiles").select("legal_name,display_name,country,verification_status").eq("id",user.id).maybeSingle();
+ if(profile.error){$("roleStatus").textContent="Company profile access issue: "+profile.error.message;return}
+ if(!profile.data){$("roleStatus").textContent="No company profile is linked to this account. Register a company through the Viyzo app first.";return}
+ const p=profile.data;$("welcome").textContent=p.display_name||p.legal_name||"Company";$("roleStatus").textContent="Company verification: "+p.verification_status+" · Country: "+(p.country||"Not set");
+ const jobs=await supabase.from("jobs").select("id,title,status,payment_amount,currency,task_limit,created_at").eq("company_id",user.id).order("created_at",{ascending:false}).limit(50);
+ const deposits=await supabase.from("company_deposits").select("id,amount,currency,status,created_at").eq("company_id",user.id).order("created_at",{ascending:false}).limit(20);
+ const j=jobs.data||[];const total=j.length;const open=j.filter(x=>x.status==="open").length;
+ $("metrics").innerHTML=metric("Company status",p.verification_status)+metric("Jobs listed",String(total))+metric("Open jobs",String(open));
+ $("jobs").innerHTML=jobs.error?fail("Jobs unavailable",jobs.error):j.length?j.map(x=>item(x.title,(x.currency||"INR")+" "+money(x.payment_amount,x.currency||"INR")+" per task · "+(x.task_limit||1)+" slots",x.status)).join(""):item("No jobs yet","Create your company profile and wait for verification before posting work.","No jobs");
+ $("secondary").innerHTML=deposits.error?fail("Deposits unavailable",deposits.error):deposits.data?.length?deposits.data.map(x=>item("Deposit record",money(x.amount,x.currency)+" · "+new Date(x.created_at).toLocaleString(),x.status)).join(""):item("No deposit records","No company deposit records are visible yet.","—");
+}
+async function worker(user){
+ const profile=await supabase.from("worker_profiles").select("display_name,country,preferred_language").eq("id",user.id).maybeSingle();
+ if(profile.error){$("roleStatus").textContent="Worker profile access issue: "+profile.error.message;return}
+ const p=profile.data||{};$("welcome").textContent=p.display_name||user.user_metadata?.full_name||"Worker";$("roleStatus").textContent="Worker account · "+(p.country||"Country not set")+" · "+(p.preferred_language||"Language not set");
+ const [jobs,apps,earnings,payouts]=await Promise.all([
+ supabase.from("jobs").select("id,title,description,category,country,payment_amount,currency,status,created_at").eq("status","open").order("created_at",{ascending:false}).limit(30),
+ supabase.from("job_applications").select("id,job_id,status,created_at").eq("worker_id",user.id).order("created_at",{ascending:false}).limit(30),
+ supabase.from("earnings").select("id,amount,currency,status,created_at").eq("worker_id",user.id).order("created_at",{ascending:false}).limit(30),
+ supabase.from("worker_payouts").select("id,amount,currency,status,created_at").eq("worker_id",user.id).order("created_at",{ascending:false}).limit(20)
+ ]);
+ const e=earnings.data||[],sum=e.filter(x=>x.status==="approved"||x.status==="paid").reduce((s,x)=>s+Number(x.amount||0),0);
+ $("metrics").innerHTML=metric("Open jobs",jobs.error?"—":String(jobs.data?.length||0))+metric("Approved/paid earnings",money(sum,e[0]?.currency||"INR"))+metric("Applications",apps.error?"—":String(apps.data?.length||0));
+ $("jobs").innerHTML=jobs.error?fail("Available jobs unavailable",jobs.error):jobs.data?.length?jobs.data.map(x=>item(x.title,(x.category||"General")+" · "+(x.country||"Global")+" · "+money(x.payment_amount,x.currency),x.status)).join(""):item("No funded jobs are visible","Only work released after funding confirmation appears here.","No open jobs");
+ let out=[];if(apps.error)out.push(fail("Applications unavailable",apps.error));else out.push(...(apps.data||[]).map(x=>item("Application "+x.job_id.slice(0,8),new Date(x.created_at).toLocaleString(),x.status)));
+ if(earnings.error)out.push(fail("Earnings unavailable",earnings.error));else out.push(...(e).map(x=>item("Earning",money(x.amount,x.currency),x.status)));
+ if(payouts.error)out.push(fail("Payouts unavailable",payouts.error));else out.push(...(payouts.data||[]).map(x=>item("Payout",money(x.amount,x.currency),x.status)));
+ $("secondary").innerHTML=out.length?out.join(""):item("No history yet","Applications, verified earnings and payout records will appear here.","—");
+}
+supabase.auth.getSession().then(({data})=>{if(data.session?.user)load(data.session.user)}).catch(e=>$("authStatus").textContent=e.message);
+supabase.auth.onAuthStateChange((event,session)=>{if(event==="SIGNED_OUT"){$("dashboard").classList.add("hidden");$("authPanel").classList.remove("hidden")}});
+</script>
+</body></html>
