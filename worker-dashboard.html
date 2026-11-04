@@ -29,8 +29,10 @@ h1{font-size:clamp(2rem,5vw,3.3rem);line-height:1.1;margin:38px 0 10px}.muted{co
 <div class="panel"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><strong id="welcome">Welcome</strong><div class="muted" id="accountEmail"></div></div><button id="logoutBtn" class="secondary">Sign out</button></div><p id="roleStatus" class="status"></p></div>
 <div class="warning">Development dashboard: records are read-only here. Payment collection, job release, identity approval and bank payouts are not activated by this page. A displayed status is not a payment receipt or income guarantee.</div>
 <div id="metrics" class="grid"></div>
-<div class="section-title"><h2>Available funded jobs</h2><p class="muted">Only jobs marked open are listed. Applying for work is not enabled on this website yet.</p></div>
+<div class="section-title"><h2>Available funded jobs</h2><p class="muted">Only jobs marked open are listed. Accepting an invitation creates an application for company or supervisor review; it does not start work automatically.</p></div>
 <div id="jobs" class="list"><div class="item">Loading…</div></div>
+<div class="section-title"><h2>Job invitations</h2><p class="muted">Accepting an invitation submits your application for review. Do not start work until approval is confirmed.</p></div>
+<div id="invitations" class="list"><div class="item">Loading invitations…</div></div>
 <div class="section-title"><h2>Your applications and earnings</h2></div>
 <div id="secondary" class="list"><div class="item">Loading…</div></div>
 </section>
@@ -70,15 +72,26 @@ async function worker(user){
  const profile=await supabase.from("worker_profiles").select("display_name,country,preferred_language").eq("id",user.id).maybeSingle();
  if(profile.error){$("roleStatus").textContent="Worker profile access issue: "+profile.error.message;return}
  const p=profile.data||{};$("welcome").textContent=p.display_name||user.user_metadata?.full_name||"Worker";$("roleStatus").textContent="Worker account · "+(p.country||"Country not set")+" · "+(p.preferred_language||"Language not set");
- const [jobs,apps,earnings,payouts]=await Promise.all([
+ const [jobs,apps,earnings,payouts,taskResult]=await Promise.all([
  supabase.from("jobs").select("id,title,description,category,country,payment_amount,currency,status,created_at").eq("status","open").order("created_at",{ascending:false}).limit(30),
  supabase.from("job_applications").select("id,job_id,status,created_at").eq("worker_id",user.id).order("created_at",{ascending:false}).limit(30),
  supabase.from("earnings").select("id,amount,currency,status,created_at").eq("worker_id",user.id).order("created_at",{ascending:false}).limit(30),
- supabase.from("worker_payouts").select("id,amount,currency,status,created_at").eq("worker_id",user.id).order("created_at",{ascending:false}).limit(20)
+ supabase.from("worker_payouts").select("id,amount,currency,status,created_at").eq("worker_id",user.id).order("created_at",{ascending:false}).limit(20),
+ supabase.functions.invoke("worker-task",{method:"GET"})
  ]);
  const e=earnings.data||[],sum=e.filter(x=>x.status==="approved"||x.status==="paid").reduce((s,x)=>s+Number(x.amount||0),0);
  $("metrics").innerHTML=metric("Open jobs",jobs.error?"—":String(jobs.data?.length||0))+metric("Approved/paid earnings",money(sum,e[0]?.currency||"INR"))+metric("Applications",apps.error?"—":String(apps.data?.length||0));
  $("jobs").innerHTML=jobs.error?fail("Available jobs unavailable",jobs.error):jobs.data?.length?jobs.data.map(x=>item(x.title,(x.category||"General")+" · "+(x.country||"Global")+" · "+money(x.payment_amount,x.currency),x.status)).join(""):item("No funded jobs are visible","Only work released after funding confirmation appears here.","No open jobs");
+ const invitations=taskResult.data?.invitations||[];
+ $("invitations").innerHTML=taskResult.error?fail("Invitations unavailable",taskResult.error):invitations.length?invitations.map(x=>'<article class="item"><h3>'+esc(x.job?.title||"Job invitation")+'</h3><div class="muted">'+esc((x.job?.category||"General")+" · "+(x.job?.country||"Global")+" · "+money(x.job?.payment_amount,x.job?.currency||"INR"))+'</div><p><span class="pill">'+esc(x.status)+'</span></p><div class="actions"><button data-invite-job="'+esc(x.job_id)+'" data-invite-response="accept">Accept invitation</button><button class="secondary" data-invite-job="'+esc(x.job_id)+'" data-invite-response="decline">Decline</button></div></article>').join(""):item("No invitations yet","When a funded job matches your verified skills and availability, its invitation will appear here.","No invitations");
+ $("invitations").querySelectorAll("[data-invite-job]").forEach(button=>button.addEventListener("click",async()=>{
+   const jobId=button.getAttribute("data-invite-job"),response=button.getAttribute("data-invite-response");
+   button.disabled=true;button.textContent="Sending…";
+   const {data,error}=await supabase.functions.invoke("worker-task",{body:{action:"respond_invitation",job_id:jobId,response}});
+   if(error||data?.error){button.disabled=false;button.textContent=response==="accept"?"Accept invitation":"Decline";alert(data?.error||error.message||"Could not send response.");return}
+   alert(response==="accept"?"Invitation accepted. Your application is waiting for company/supervisor review.":"Invitation declined.");
+   await worker(user);
+ }));
  let out=[];if(apps.error)out.push(fail("Applications unavailable",apps.error));else out.push(...(apps.data||[]).map(x=>item("Application "+x.job_id.slice(0,8),new Date(x.created_at).toLocaleString(),x.status)));
  if(earnings.error)out.push(fail("Earnings unavailable",earnings.error));else out.push(...(e).map(x=>item("Earning",money(x.amount,x.currency),x.status)));
  if(payouts.error)out.push(fail("Payouts unavailable",payouts.error));else out.push(...(payouts.data||[]).map(x=>item("Payout",money(x.amount,x.currency),x.status)));
