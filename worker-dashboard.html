@@ -29,6 +29,8 @@ h1{font-size:clamp(2rem,5vw,3.3rem);line-height:1.1;margin:38px 0 10px}.muted{co
 <div class="panel"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><strong id="welcome">Welcome</strong><div class="muted" id="accountEmail"></div></div><button id="logoutBtn" class="secondary">Sign out</button></div><p id="roleStatus" class="status"></p></div>
 <div class="warning">Development dashboard: records are read-only here. Payment collection, job release, identity approval and bank payouts are not activated by this page. A displayed status is not a payment receipt or income guarantee.</div>
 <div id="metrics" class="grid"></div>
+<div class="section-title"><h2>Work availability</h2><p class="muted">Choose whether you can receive new job invitations. Only identity-verified workers with matching verified skills are considered.</p></div>
+<div id="availability" class="item">Loading availability…</div>
 <div class="section-title"><h2>Available funded jobs</h2><p class="muted">Only jobs marked open are listed. Accepting an invitation creates an application for company or supervisor review; it does not start work automatically.</p></div>
 <div id="jobs" class="list"><div class="item">Loading…</div></div>
 <div class="section-title"><h2>Job invitations</h2><p class="muted">Accepting an invitation submits your application for review. Do not start work until approval is confirmed.</p></div>
@@ -82,6 +84,16 @@ async function worker(user){
  const e=earnings.data||[],sum=e.filter(x=>x.status==="approved"||x.status==="paid").reduce((s,x)=>s+Number(x.amount||0),0);
  $("metrics").innerHTML=metric("Open jobs",jobs.error?"—":String(jobs.data?.length||0))+metric("Approved/paid earnings",money(sum,e[0]?.currency||"INR"))+metric("Applications",apps.error?"—":String(apps.data?.length||0));
  $("jobs").innerHTML=jobs.error?fail("Available jobs unavailable",jobs.error):jobs.data?.length?jobs.data.map(x=>item(x.title,(x.category||"General")+" · "+(x.country||"Global")+" · "+money(x.payment_amount,x.currency),x.status)).join(""):item("No funded jobs are visible","Only work released after funding confirmation appears here.","No open jobs");
+ const availability=taskResult.data?.availability;
+ $("availability").innerHTML=taskResult.error?fail("Availability unavailable",taskResult.error):'<div><strong>Current status: '+esc(availability?.availability_status||"unavailable")+'</strong><p class="muted">New invitations: '+(availability?.accepts_new_jobs?"enabled":"paused")+'</p><button id="availabilityToggle">'+(availability?.accepts_new_jobs?"Pause new invitations":"I am available for work")+'</button></div>';
+ const availabilityButton=$("availability").querySelector("#availabilityToggle");
+ if(availabilityButton) availabilityButton.addEventListener("click",async()=>{
+   availabilityButton.disabled=true;availabilityButton.textContent="Updating…";
+   const nextStatus=availability?.accepts_new_jobs?"unavailable":"available";
+   const {data,error}=await supabase.functions.invoke("worker-task",{body:{action:"set_availability",status:nextStatus}});
+   if(error||data?.error){availabilityButton.disabled=false;availabilityButton.textContent="Try again";alert(data?.error||error.message||"Could not update availability.");return}
+   await worker(user);
+ });
  const invitations=taskResult.data?.invitations||[];
  $("invitations").innerHTML=taskResult.error?fail("Invitations unavailable",taskResult.error):invitations.length?invitations.map(x=>'<article class="item"><h3>'+esc(x.job?.title||"Job invitation")+'</h3><div class="muted">'+esc((x.job?.category||"General")+" · "+(x.job?.country||"Global")+" · "+money(x.job?.payment_amount,x.job?.currency||"INR"))+'</div><p><span class="pill">'+esc(x.status)+'</span></p><div class="actions"><button data-invite-job="'+esc(x.job_id)+'" data-invite-response="accept">Accept invitation</button><button class="secondary" data-invite-job="'+esc(x.job_id)+'" data-invite-response="decline">Decline</button></div></article>').join(""):item("No invitations yet","When a funded job matches your verified skills and availability, its invitation will appear here.","No invitations");
  $("invitations").querySelectorAll("[data-invite-job]").forEach(button=>button.addEventListener("click",async()=>{
