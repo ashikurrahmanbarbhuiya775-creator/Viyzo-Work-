@@ -31,7 +31,7 @@ Deno.serve(async (req: Request) => {
       admin.from("job_notification_queue")
         .select("id,job_id,status,created_at")
         .eq("worker_id", workerId).eq("channel", "in_app")
-        .in("status", ["queued", "sent", "delivered"])
+        .eq("status", "queued")
         .order("created_at", { ascending: false }).limit(50),
       admin.rpc("manage_worker_availability", { p_worker_id: workerId, p_action: "get", p_status: null }),
     ]);
@@ -85,7 +85,8 @@ Deno.serve(async (req: Request) => {
     });
     if (error) {
       const safe = ["invitation_not_available", "job_not_open",
-        "verified_job_funding_allocation_required", "verified_company_deposit_required",
+        "verified_job_funding_allocation_required", "verified_company_deposit_required", "worker_verification_required",
+        "worker_not_available", "company_not_verified", "job_funding_amount_or_currency_mismatch",
         "application_already_exists", "invalid_invitation_response"];
       const message = safe.find((code) => error.message.includes(code));
       if (message) return json({ error: message }, 409);
