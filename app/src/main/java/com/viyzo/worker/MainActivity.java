@@ -2876,7 +2876,7 @@ public class MainActivity extends Activity {
                                 .put("country", countryCode)
                                 .put("contact_email", mail)
                                 .put("verification_status", "pending");
-                        apiRequest("/rest/v1/company_profiles", "POST", profile, true, "return=minimal");
+                        apiRequest("/rest/v1/company_profiles?on_conflict=id", "POST", profile, true, "resolution=merge-duplicates,return=minimal");
                         result = "Company account created. Profile submitted as pending review; job funding and payments are not activated until verification and payment-provider setup.";
                     }
                 } catch (Exception ex) {
