@@ -40,6 +40,12 @@ form{display:grid;gap:12px;max-width:440px}label{display:grid;gap:6px;color:var(
       <p class="muted">Only orders with a confirmed matching deposit appear here. Approving publishes the job to workers; rejecting does not automatically refund the company.</p>
       <div id="reviewJobs" class="muted">Loading funded work orders…</div>
       <div id="reviewMessage" class="message" role="status" aria-live="polite"></div>
+      <section style="margin-top:24px;padding-top:20px;border-top:1px solid var(--line)">
+        <h2>Worker matching queue</h2>
+        <p class="muted">Published, provider-funded jobs enter this queue automatically. Processing matches identity-verified, available workers by verified skills and country, then sends an in-app invitation. Every match still requires human review. WhatsApp is not enabled.</p>
+        <div class="actions"><button id="dispatchNextButton" type="button">Process next funded job</button></div>
+        <div id="dispatchMessage" class="message" role="status" aria-live="polite"></div>
+      </section>
       <h2 style="margin-top:24px">Worker completion submissions</h2>
       <p class="muted">Approve a verified completion to create a pending earning record. This does not send a bank payout automatically.</p>
       <div id="taskSubmissions" class="muted">Loading submissions…</div>
@@ -103,9 +109,10 @@ function renderReviewJobs(items) {
   if (!items.length) { root.textContent = 'No funded work orders are waiting for review.'; return; }
   root.innerHTML = items.map(j => {
     const share = Number(j.payment_amount) * Number(j.task_limit || 1);
+    const platformReserve = share * 30 / 70;
     return '<article style="padding:14px 0;border-bottom:1px solid var(--line)"><strong>'+escapeHtml(j.title)+'</strong>'+
-      '<div style="margin-top:6px">Worker reserve: ₹'+share.toLocaleString('en-IN')+' · Viyzo 50% share: ₹'+share.toLocaleString('en-IN')+
-      ' · Total funded: ₹'+(share*2).toLocaleString('en-IN')+'</div><div class="muted">'+Number(j.task_limit||1)+' task slot(s) · '+escapeHtml(j.currency||'INR')+
+      '<div style="margin-top:6px">Worker reserve target: '+escapeHtml(j.currency||'INR')+' '+share.toLocaleString('en-IN')+' · Platform reserve target: '+platformReserve.toLocaleString('en-IN')+
+      ' · Total funding target: '+(share+platformReserve).toLocaleString('en-IN')+'</div><div class="muted">'+Number(j.task_limit||1)+' task slot(s) · '+escapeHtml(j.currency||'INR')+
       ' · '+new Date(j.created_at).toLocaleString()+'</div>'+(j.description?'<p>'+escapeHtml(j.description)+'</p>':'')+
       '<div class="actions"><button type="button" data-review-action="approve_job" data-job-id="'+escapeHtml(j.id)+'">Approve & publish</button>'+
       '<button type="button" class="secondary" data-review-action="reject_job" data-job-id="'+escapeHtml(j.id)+'">Reject</button></div></article>';
@@ -174,6 +181,30 @@ $('loginForm').addEventListener('submit', async (event) => {
   } catch (err) {
     message('loginMessage',err?.message || 'Sign-in failed. Check the email and password.','error');
   } finally { $('loginButton').disabled = false; }
+});
+$('dispatchNextButton').addEventListener('click',async()=>{
+  const button=$('dispatchNextButton');
+  button.disabled=true;
+  message('dispatchMessage','Processing the next funded job and preparing worker invitations…');
+  try {
+    const {data:{session},error}=await supabase.auth.getSession();
+    if(error||!session) throw new Error('Please sign in again.');
+    const response=await fetch(SUPABASE_URL+'/functions/v1/job-dispatch',{
+      method:'POST',
+      headers:{Authorization:'Bearer '+session.access_token,apikey:SUPABASE_PUBLISHABLE_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({action:'process_next',limit:10})
+    });
+    const result=await response.json().catch(()=>({}));
+    if(!response.ok) throw new Error(result.error||'Worker matching request failed.');
+    if(result.processed===false&&result.reason==='queue_empty'){
+      message('dispatchMessage','The funded-job queue is empty. No work was dispatched.','success');
+    } else {
+      message('dispatchMessage','Matching completed. '+(result.candidate_count??0)+' suitable worker(s) shortlisted; '+(result.notifications_queued??0)+' in-app invitation(s) queued. Human review remains required.','success');
+    }
+    await loadMetrics();
+  } catch(err) {
+    message('dispatchMessage',err?.message||'Could not process the matching queue.','error');
+  } finally {button.disabled=false;}
 });
 $('refreshButton').addEventListener('click',loadMetrics);
 $('logoutButton').addEventListener('click',async()=>{
