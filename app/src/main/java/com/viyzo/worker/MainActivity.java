@@ -3646,6 +3646,22 @@ public class MainActivity extends Activity {
     }
 
 
+    // Remove direct identifiers and credentials before any AI provider request.
+    // Original text remains local to the device for the on-screen conversation.
+    private String redactForAIProvider(String value) {
+        if (value == null) return "";
+        return value
+                .replaceAll("(?i)\\\\b(?:password|passcode|pin)\\\\s*[:=-]?\\\\s*[^\\\\s,;]+", "[REDACTED_SECRET]")
+                .replaceAll("(?i)\\\\b(?:otp|one[- ]time password|verification code)\\\\s*[:=-]?\\\\s*\\\\d{4,8}\\\\b", "[REDACTED_OTP]")
+                .replaceAll("\\\\b\\\\d{4}\\\\s?\\\\d{4}\\\\s?\\\\d{4}\\\\b", "[REDACTED_ID]")
+                .replaceAll("(?i)\\\\b[A-Z]{5}\\\\d{4}[A-Z]\\\\b", "[REDACTED_TAX_ID]")
+                .replaceAll("(?i)\\\\b[A-Z]{4}0[A-Z0-9]{6}\\\\b", "[REDACTED_BANK_CODE]")
+                .replaceAll("[A-Z0-9._%+-]+@[A-Z0-9.-]+\\\\.[A-Z]{2,}", "[REDACTED_EMAIL]")
+                .replaceAll("\\\\beyJ[A-Za-z0-9_-]{20,}\\\\.[A-Za-z0-9_-]{10,}\\\\.[A-Za-z0-9_-]{10,}\\\\b", "[REDACTED_TOKEN]")
+                .replaceAll("(?i)\\\\b(?:account|a/c|bank account)\\\\s*(?:number|no|#)?\\\\s*[:=-]?\\\\s*\\\\d{8,20}\\\\b", "[REDACTED_BANK_ACCOUNT]")
+                .replaceAll("\\\\b(?:\\\\+?\\\\d{1,3}[ -]?)?(?:\\\\d[ -]?){9,12}\\\\b", "[REDACTED_PHONE_OR_NUMBER]");
+    }
+
     // Calls the secured server-side AI endpoint; local help remains as a fallback.
     private void askAIMasterBackend(String question) {
         final String token = accessToken;
@@ -3667,7 +3683,7 @@ public class MainActivity extends Activity {
                 connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
                 connection.setDoOutput(true);
                 JSONObject payload = new JSONObject();
-                payload.put("question", question);
+                payload.put("question", redactForAIProvider(question));
                 payload.put("language", aiLocale == null ? "en" : aiLocale.toLanguageTag());
                 try (OutputStream os = connection.getOutputStream()) {
                     os.write(payload.toString().getBytes(StandardCharsets.UTF_8));
