@@ -37,7 +37,7 @@ form{display:grid;gap:12px;max-width:440px}label{display:grid;gap:6px;color:var(
     </div>
     <section style="margin-top:24px;padding-top:20px;border-top:1px solid var(--line)">
       <h2>Funded work orders awaiting review</h2>
-      <p class="muted">Only orders with a confirmed matching deposit appear here. Approving publishes the job to workers; rejecting does not automatically refund the company.</p>
+      <p class="muted">Only orders with a confirmed matching deposit appear here. Approving opens the funded job and adds it to the worker-matching queue; process the queue below to send invitations. Rejecting does not automatically refund the company.</p>
       <div id="reviewJobs" class="muted">Loading funded work orders…</div>
       <div id="reviewMessage" class="message" role="status" aria-live="polite"></div>
       <section style="margin-top:24px;padding-top:20px;border-top:1px solid var(--line)">
@@ -114,7 +114,7 @@ function renderReviewJobs(items) {
       '<div style="margin-top:6px">Worker reserve target: '+escapeHtml(j.currency||'INR')+' '+share.toLocaleString('en-IN')+' · Platform reserve target: '+platformReserve.toLocaleString('en-IN')+
       ' · Total funding target: '+(share+platformReserve).toLocaleString('en-IN')+'</div><div class="muted">'+Number(j.task_limit||1)+' task slot(s) · '+escapeHtml(j.currency||'INR')+
       ' · '+new Date(j.created_at).toLocaleString()+'</div>'+(j.description?'<p>'+escapeHtml(j.description)+'</p>':'')+
-      '<div class="actions"><button type="button" data-review-action="approve_job" data-job-id="'+escapeHtml(j.id)+'">Approve & publish</button>'+
+      '<div class="actions"><button type="button" data-review-action="approve_job" data-job-id="'+escapeHtml(j.id)+'">Approve & queue for matching</button>'+
       '<button type="button" class="secondary" data-review-action="reject_job" data-job-id="'+escapeHtml(j.id)+'">Reject</button></div></article>';
   }).join('');
 }
