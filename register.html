@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101014"><meta name="description" content="Create a separate Viyzo Worker or company account with secure Supabase authentication.">
+<link rel="canonical" href="https://ashikurrahmanbarbhuiya775-creator.github.io/Viyzo-Work-/register.html">
+<title>Register — Viyzo Worker</title>
+<style>
+:root{color-scheme:dark;--bg:#101014;--panel:#191e2b;--line:#343d54;--text:#f5f7ff;--muted:#b4bdd2;--blue:#7897ff;--mint:#74dfc8;--warn:#ffd17b}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 90% 0%,#202d55,transparent 38%),var(--bg);color:var(--text);font:15px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{width:min(760px,calc(100% - 28px));margin:auto;padding:18px 0 58px}nav{display:flex;justify-content:space-between;gap:14px;align-items:center;padding:10px 0 18px;border-bottom:1px solid #ffffff20}a{color:#bdccff}.brand{font-weight:900;letter-spacing:.08em;color:white;text-decoration:none}
+h1{font-size:clamp(2.1rem,6vw,3.4rem);line-height:1.08;letter-spacing:-.04em;margin:38px 0 8px}.muted{color:var(--muted)}.panel{background:linear-gradient(145deg,#1c2231,#151821);border:1px solid var(--line);border-radius:20px;padding:clamp(17px,4vw,26px);margin:20px 0}
+.tabs{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}.tabs button{flex:1;min-width:130px}.tabs button[aria-pressed=true]{background:linear-gradient(120deg,#7897ff,#536fe3);border-color:transparent}
+button{border:1px solid #46516b;border-radius:11px;padding:12px 17px;background:#252d40;color:white;font:inherit;font-weight:750;cursor:pointer}button.primary{background:linear-gradient(120deg,#7897ff,#536fe3);border:0}button:disabled{opacity:.55;cursor:wait}
+.field{display:grid;gap:6px;margin:13px 0}label{font-size:.92rem;color:#d8deef}input,select{width:100%;padding:13px 14px;border:1px solid #3a4560;border-radius:10px;background:#10141e;color:white;font:inherit}input:focus,select:focus{outline:2px solid #7897ff;outline-offset:2px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}.wide{grid-column:1/-1}.check{display:flex;gap:10px;align-items:flex-start;margin:18px 0;color:var(--muted)}.check input{width:auto;margin-top:5px}
+.status{margin-top:14px;white-space:pre-wrap;color:var(--warn);overflow-wrap:anywhere}.success{color:var(--mint)}.notice{border-left:3px solid var(--mint);padding:12px 14px;background:#74dfc810;border-radius:0 10px 10px 0;color:#d1e9e4;font-size:.92rem}
+.hidden{display:none!important}.foot{border-top:1px solid #ffffff20;padding-top:20px;margin-top:38px;color:var(--muted);font-size:.9rem}
+@media(max-width:560px){.grid{grid-template-columns:1fr}.wide{grid-column:auto}}
+</style>
+</head>
+<body><main>
+<nav><a class="brand" href="./">VIYZO WORKER</a><span><a href="company-dashboard.html">Company</a> · <a href="worker-dashboard.html">Worker</a></span></nav>
+<h1>Create your Viyzo account</h1>
+<p class="muted">Company and worker accounts are kept separate. Use your own email address and a strong password.</p>
+<div class="tabs" role="group" aria-label="Choose account type">
+<button id="workerTab" type="button" aria-pressed="true">Worker account</button>
+<button id="companyTab" type="button" aria-pressed="false">Company account</button>
+</div>
+<section class="panel">
+<form id="registerForm">
+<div id="workerFields" class="grid">
+<div class="field wide"><label for="workerName">Full name</label><input id="workerName" autocomplete="name" maxlength="120" required></div>
+<div class="field"><label for="workerCountry">Country</label><input id="workerCountry" autocomplete="country-name" maxlength="80" placeholder="e.g. India" required></div>
+<div class="field"><label for="language">Preferred language</label><select id="language"><option value="en">English</option><option value="hi">Hindi</option><option value="bn">Bengali</option><option value="ar">Arabic</option><option value="fr">French</option><option value="es">Spanish</option><option value="other">Other</option></select></div>
+</div>
+<div id="companyFields" class="grid hidden">
+<div class="field wide"><label for="legalName">Registered legal company name</label><input id="legalName" maxlength="160" autocomplete="organization"></div>
+<div class="field wide"><label for="displayName">Public company / brand name</label><input id="displayName" maxlength="120"></div>
+<div class="field"><label for="companyCountry">Country</label><input id="companyCountry" autocomplete="country-name" maxlength="80" placeholder="e.g. India"></div>
+<div class="field"><label for="companyPhone">Company phone (with country code)</label><input id="companyPhone" type="tel" autocomplete="tel" maxlength="24" placeholder="+91…"></div>
+</div>
+<div class="grid">
+<div class="field wide"><label for="email">Email address</label><input id="email" type="email" autocomplete="email" maxlength="254" required></div>
+<div class="field wide" id="workerPhoneWrap"><label for="workerPhone">Phone number (with country code)</label><input id="workerPhone" type="tel" autocomplete="tel" maxlength="24" placeholder="+91…"></div>
+<div class="field wide"><label for="password">Password (minimum 8 characters)</label><input id="password" type="password" autocomplete="new-password" minlength="8" required></div>
+<div class="field wide"><label for="confirmPassword">Confirm password</label><input id="confirmPassword" type="password" autocomplete="new-password" minlength="8" required></div>
+</div>
+<label class="check"><input id="accept" type="checkbox" required><span>I have read the <a href="terms.html">Terms of Use (Draft)</a> and <a href="privacy.html">Privacy Policy (Draft)</a>, and confirm the information is accurate.</span></label>
+<div class="notice">Registration does not approve identity, activate company jobs, collect deposits, or guarantee work or earnings. Companies remain pending review. Work must not begin until funding is confirmed by Viyzo's payment system.</div>
+<p id="status" class="status" role="status" aria-live="polite"></p>
+<button id="submit" class="primary" type="submit">Create Worker Account</button>
+</form>
+</section>
+<section class="panel">
+<h2>Already registered?</h2>
+<form id="loginForm">
+<div class="field"><label for="loginEmail">Email</label><input id="loginEmail" type="email" autocomplete="username" required></div>
+<div class="field"><label for="loginPassword">Password</label><input id="loginPassword" type="password" autocomplete="current-password" required></div>
+<button id="loginButton" type="submit">Sign in</button>
+<p id="loginStatus" class="status" role="status" aria-live="polite"></p>
+</form>
+</section>
+<footer class="foot"><a href="./">Home</a> · <a href="faq.html">About</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a> · <a href="support.html">Support</a><p>Viyzo Worker · Secure account access via Supabase Auth</p></footer>
+</main>
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+const supabase=createClient("https://jxnfsqxyrakkblizziel.supabase.co","sb_publishable_skl_ZZCN1w0m6AaKYzBucQ_8AmS6Wvx",{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+let accountType="worker";
+const $=id=>document.getElementById(id);
+function choose(type){
+ accountType=type;
+ $("workerTab").setAttribute("aria-pressed",String(type==="worker"));
+ $("companyTab").setAttribute("aria-pressed",String(type==="company"));
+ $("workerFields").classList.toggle("hidden",type!=="worker");
+ $("companyFields").classList.toggle("hidden",type!=="company");
+ $("workerPhoneWrap").classList.toggle("hidden",type!=="worker");
+ $("workerName").required=type==="worker";
+ $("workerCountry").required=type==="worker";
+ $("legalName").required=type==="company";
+ $("displayName").required=type==="company";
+ $("companyCountry").required=type==="company";
+ $("submit").textContent="Create "+(type==="company"?"Company":"Worker")+" Account";
+ $("status").textContent="";
+}
+$("workerTab").addEventListener("click",()=>choose("worker"));
+$("companyTab").addEventListener("click",()=>choose("company"));
+function setStatus(id,msg,ok=false){$(id).textContent=msg;$(id).classList.toggle("success",ok)}
+function validPhone(v){const digits=String(v||"").replace(/\D/g,"");return !v||digits.length>=8&&digits.length<=15}
+$("registerForm").addEventListener("submit",async e=>{
+ e.preventDefault();
+ const password=$("password").value, confirm=$("confirmPassword").value;
+ if(password.length<8){setStatus("status","Use a password with at least 8 characters.");return}
+ if(password!==confirm){setStatus("status","The passwords do not match.");return}
+ const phone=accountType==="worker"?$("workerPhone").value.trim():$("companyPhone").value.trim();
+ if(!validPhone(phone)){setStatus("status","Enter a valid phone number including country code.");return}
+ if(!$("accept").checked){setStatus("status","Please accept the Terms and Privacy Policy.");return}
+ const email=$("email").value.trim();
+ const metadata=accountType==="worker"
+  ?{account_type:"worker",full_name:$("workerName").value.trim(),country:$("workerCountry").value.trim(),preferred_language:$("language").value,phone}
+  :{account_type:"company",full_name:$("displayName").value.trim(),legal_name:$("legalName").value.trim(),display_name:$("displayName").value.trim(),country:$("companyCountry").value.trim(),phone};
+ $("submit").disabled=true;setStatus("status","Creating your account securely…");
+ try{
+  const {data,error}=await supabase.auth.signUp({email,password,options:{data:metadata,emailRedirectTo:location.origin+location.pathname}});
+  if(error)throw error;
+  if(data.session){
+   setStatus("status","Account created. Opening your dashboard…",true);
+   location.href=accountType==="company"?"company-dashboard.html":"worker-dashboard.html";
+  }else{
+   setStatus("status","Registration request accepted. Check your email and confirm the address, then return here to sign in. Your profile is created securely after account creation; company verification remains pending.",true);
+  }
+ }catch(err){setStatus("status",err.message||"Registration failed. Please try again.");}
+ finally{$("submit").disabled=false;}
+});
+$("loginForm").addEventListener("submit",async e=>{
+ e.preventDefault();$("loginButton").disabled=true;setStatus("loginStatus","Signing in securely…");
+ try{
+  const {data,error}=await supabase.auth.signInWithPassword({email:$("loginEmail").value.trim(),password:$("loginPassword").value});
+  if(error)throw error;
+  const type=String(data.user?.user_metadata?.account_type||"worker").toLowerCase();
+  location.href=type==="company"?"company-dashboard.html":"worker-dashboard.html";
+ }catch(err){setStatus("loginStatus",err.message||"Sign in failed.");}
+ finally{$("loginButton").disabled=false;}
+});
+</script>
+</body></html>
