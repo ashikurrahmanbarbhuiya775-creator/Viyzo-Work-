@@ -31,18 +31,18 @@ button{border:1px solid #46516b;border-radius:11px;padding:12px 17px;background:
 <form id="registerForm">
 <div id="workerFields" class="grid">
 <div class="field wide"><label for="workerName">Full name</label><input id="workerName" autocomplete="name" maxlength="120" required></div>
-<div class="field"><label for="workerCountry">Country</label><input id="workerCountry" autocomplete="country-name" maxlength="80" placeholder="e.g. India" required></div>
+<div class="field"><label for="workerCountry">Country code (2 letters)</label><input id="workerCountry" autocomplete="country" maxlength="2" minlength="2" pattern="[A-Za-z]{2}" placeholder="IN" title="Enter a 2-letter ISO country code, such as IN, US or GB" required></div>
 <div class="field"><label for="language">Preferred language</label><select id="language"><option value="en">English</option><option value="hi">Hindi</option><option value="bn">Bengali</option><option value="ar">Arabic</option><option value="fr">French</option><option value="es">Spanish</option><option value="other">Other</option></select></div>
 </div>
 <div id="companyFields" class="grid hidden">
 <div class="field wide"><label for="legalName">Registered legal company name</label><input id="legalName" maxlength="160" autocomplete="organization"></div>
 <div class="field wide"><label for="displayName">Public company / brand name</label><input id="displayName" maxlength="120"></div>
-<div class="field"><label for="companyCountry">Country</label><input id="companyCountry" autocomplete="country-name" maxlength="80" placeholder="e.g. India"></div>
-<div class="field"><label for="companyPhone">Company phone (with country code)</label><input id="companyPhone" type="tel" autocomplete="tel" maxlength="24" placeholder="+91…"></div>
+<div class="field"><label for="companyCountry">Country code (2 letters)</label><input id="companyCountry" autocomplete="country" maxlength="2" minlength="2" pattern="[A-Za-z]{2}" placeholder="IN" title="Enter a 2-letter ISO country code, such as IN, US or GB"></div>
+<div class="field"><label for="companyPhone">Company phone (with country code)</label><input id="companyPhone" type="tel" autocomplete="tel" maxlength="24" placeholder="+91…" required></div>
 </div>
 <div class="grid">
 <div class="field wide"><label for="email">Email address</label><input id="email" type="email" autocomplete="email" maxlength="254" required></div>
-<div class="field wide" id="workerPhoneWrap"><label for="workerPhone">Phone number (with country code)</label><input id="workerPhone" type="tel" autocomplete="tel" maxlength="24" placeholder="+91…"></div>
+<div class="field wide" id="workerPhoneWrap"><label for="workerPhone">Phone number (with country code)</label><input id="workerPhone" type="tel" autocomplete="tel" maxlength="24" placeholder="+91…" required></div>
 <div class="field wide"><label for="password">Password (minimum 8 characters)</label><input id="password" type="password" autocomplete="new-password" minlength="8" required></div>
 <div class="field wide"><label for="confirmPassword">Confirm password</label><input id="confirmPassword" type="password" autocomplete="new-password" minlength="8" required></div>
 </div>
@@ -93,7 +93,7 @@ $("registerForm").addEventListener("submit",async e=>{
  if(password.length<8){setStatus("status","Use a password with at least 8 characters.");return}
  if(password!==confirm){setStatus("status","The passwords do not match.");return}
  const phone=accountType==="worker"?$("workerPhone").value.trim():$("companyPhone").value.trim();
- if(!validPhone(phone)){setStatus("status","Enter a valid phone number including country code.");return}
+ if(!validPhone(phone)){setStatus("status","Enter a valid phone number including country code.");return}\n const countryValue=(accountType==="worker"?$("workerCountry").value:$("companyCountry").value).trim();\n if(!/^[A-Za-z]{2}$/.test(countryValue)){setStatus("status","Enter a 2-letter ISO country code, for example IN, US or GB.");return}
  if(!$("accept").checked){setStatus("status","Please accept the Terms and Privacy Policy.");return}
  const email=$("email").value.trim();
  const metadata=accountType==="worker"
