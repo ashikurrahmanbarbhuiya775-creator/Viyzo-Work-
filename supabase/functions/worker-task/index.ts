@@ -24,7 +24,7 @@ Deno.serve(async (req: Request) => {
   const workerId = authData.user.id;
 
   if (req.method === "GET") {
-    const [{ data: submissions, error: submissionError }, { data: queue, error: queueError }] = await Promise.all([
+    const [{ data: submissions, error: submissionError }, { data: queue, error: queueError }, { data: availability, error: availabilityError }] = await Promise.all([
       admin.from("worker_task_submissions")
         .select("id,job_id,application_id,completion_note,proof_url,status,review_note,created_at,reviewed_at")
         .eq("worker_id", workerId).order("created_at", { ascending: false }).limit(100),
@@ -33,9 +33,11 @@ Deno.serve(async (req: Request) => {
         .eq("worker_id", workerId).eq("channel", "in_app")
         .in("status", ["queued", "sent", "delivered"])
         .order("created_at", { ascending: false }).limit(50),
+      admin.rpc("manage_worker_availability", { p_worker_id: workerId, p_action: "get", p_status: null }),
     ]);
     if (submissionError) return json({ error: "submissions_load_failed" }, 500);
     if (queueError) return json({ error: "invitations_load_failed" }, 500);
+    if (availabilityError) return json({ error: "availability_load_failed" }, 500);
 
     const jobIds = [...new Set((queue ?? []).map((item) => item.job_id))];
     let jobs: any[] = [];
@@ -50,11 +52,26 @@ Deno.serve(async (req: Request) => {
     const invitations = (queue ?? [])
       .filter((item) => byId.has(item.job_id))
       .map((item) => ({ ...item, job: byId.get(item.job_id) }));
-    return json({ ok: true, submissions: submissions ?? [], invitations });
+    return json({ ok: true, submissions: submissions ?? [], invitations, availability });
   }
 
   let body: any;
   try { body = await req.json(); } catch { return json({ error: "invalid_json" }, 400); }
+
+  if (body.action === "set_availability") {
+    const status = body.status;
+    if (!["available", "busy", "unavailable", "paused"].includes(status)) {
+      return json({ error: "invalid_availability_status" }, 400);
+    }
+    const { data, error } = await admin.rpc("manage_worker_availability", {
+      p_worker_id: workerId, p_action: "set", p_status: status,
+    });
+    if (error) {
+      console.error("availability update failed", error.message);
+      return json({ error: "availability_update_failed" }, 500);
+    }
+    return json({ ok: true, availability: data });
+  }
 
   if (body.action === "respond_invitation") {
     const jobId = typeof body.job_id === "string" ? body.job_id.trim() : "";
